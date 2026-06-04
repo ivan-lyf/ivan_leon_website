@@ -14,12 +14,13 @@
   const TEX_W = 1024, TEX_H = 768;
 
   const MOODS = {
+    room:     { bg: 'radial-gradient(120% 95% at 50% 20%, #c9c8c4 0%, #a7a6a2 60%, #8e8d89 100%)', hemi: 0.55, key: 1.05, fill: 0.4, rim: 0.4, shadow: 0.32 },
     peach:    { bg: 'radial-gradient(120% 95% at 50% 18%, #ffe9cf 0%, #f6cda0 58%, #e9b988 100%)', hemi: 0.6, key: 1.15, fill: 0.42, rim: 0.55, shadow: 0.26 },
     spotlight:{ bg: 'radial-gradient(95% 80% at 50% 30%, #2a2622 0%, #141210 70%, #0a0908 100%)', hemi: 0.18, key: 1.7, fill: 0.16, rim: 0.85, shadow: 0.42 },
     white:    { bg: 'radial-gradient(120% 95% at 50% 16%, #ffffff 0%, #eef0f2 60%, #dfe3e7 100%)', hemi: 0.78, key: 1.0, fill: 0.55, rim: 0.4, shadow: 0.2 }
   };
 
-  let scene, camera, glRenderer, controls, lights = {}, shadowMat;
+  let scene, camera, glRenderer, controls, lights = {}, shadowMat, groundMesh, texLoader;
   let machine, screenMesh, screenTex, texCanvas, texCtx, screenEl, raycaster;
   let mood = 'peach', autoRotate = false, ready = false;
   let refreshQueued = false, refreshing = false;
@@ -58,6 +59,221 @@
     const m = new T.Mesh(geo, mat);
     m.castShadow = true; m.receiveShadow = true;
     return m;
+  }
+
+  /* ---------- PBR texture loading ---------- */
+  function loadTex(url, rx, ry, srgb) {
+    if (!texLoader) texLoader = new T.TextureLoader();
+    const t = texLoader.load(url);
+    t.wrapS = t.wrapT = (rx === 1 && ry === 1) ? T.ClampToEdgeWrapping : T.RepeatWrapping;
+    t.repeat.set(rx, ry);
+    t.anisotropy = 8;
+    if (srgb) t.encoding = T.sRGBEncoding;
+    return t;
+  }
+  function pbrMat(base, rx, ry, opts) {
+    opts = opts || {};
+    return new T.MeshStandardMaterial(Object.assign({
+      map: loadTex(base + '_color.jpg', rx, ry, true),
+      roughnessMap: loadTex(base + '_rough.jpg', rx, ry, false),
+      normalMap: loadTex(base + '_normal.jpg', rx, ry, false),
+      roughness: 1.0, metalness: 0.0
+    }, opts));
+  }
+
+  /* ---------- wooden desk ---------- */
+  function makeWood() {
+    const W = 1024, H = 1024;
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const x = c.getContext('2d');
+    const planks = 5, ph = H / planks;
+    const cols = ['#6f4626', '#7c4f29', '#653f22', '#774a27', '#704825'];
+    for (let p = 0; p < planks; p++) {
+      const y0 = p * ph;
+      x.fillStyle = cols[p % cols.length];
+      x.fillRect(0, y0, W, ph);
+      // long wavy grain lines
+      for (let g = 0; g < 90; g++) {
+        const gy = y0 + Math.random() * ph;
+        const dark = Math.random() < 0.7;
+        x.strokeStyle = dark
+          ? 'rgba(' + (40 + Math.random() * 26 | 0) + ',' + (24 + Math.random() * 18 | 0) + ',12,' + (0.05 + Math.random() * 0.13) + ')'
+          : 'rgba(' + (190 + Math.random() * 50 | 0) + ',' + (150 + Math.random() * 40 | 0) + ',110,' + (0.03 + Math.random() * 0.06) + ')';
+        x.lineWidth = 0.5 + Math.random() * 1.6;
+        const amp = 1.5 + Math.random() * 4, ph2 = Math.random() * 6.28;
+        x.beginPath(); x.moveTo(0, gy);
+        for (let xx = 0; xx <= W; xx += 26) x.lineTo(xx, gy + Math.sin(xx * 0.012 + ph2) * amp + (Math.random() - 0.5) * 1.6);
+        x.stroke();
+      }
+      // occasional knot
+      if (Math.random() < 0.6) {
+        const kx = Math.random() * W, ky = y0 + ph * (0.3 + Math.random() * 0.4);
+        for (let rr = 7; rr > 0; rr--) {
+          x.strokeStyle = 'rgba(36,22,10,' + (0.05 + rr * 0.015) + ')';
+          x.lineWidth = 1.2;
+          x.beginPath(); x.ellipse(kx, ky, rr * 2.4, rr * 1.4, 0.4, 0, 6.28); x.stroke();
+        }
+      }
+      // dark plank seam + top highlight
+      x.fillStyle = 'rgba(18,11,5,0.6)'; x.fillRect(0, y0 + ph - 2, W, 3);
+      x.fillStyle = 'rgba(255,222,176,0.05)'; x.fillRect(0, y0 + 1, W, 2);
+    }
+    const t = new T.CanvasTexture(c);
+    t.wrapS = t.wrapT = T.RepeatWrapping; t.encoding = T.sRGBEncoding; t.anisotropy = 8;
+    return t;
+  }
+
+  function buildDesk() {
+    const topMat  = pbrMat('textures/wood', 1.6, 1.0);
+    const sideMat = pbrMat('textures/wood', 2.2, 0.32);
+    const legMat  = pbrMat('textures/wood', 0.4, 2.2);
+
+    const desk = new T.Group();
+    const TW = 36, TD = 21, TT = 1.0;        // tabletop width / depth / thickness (top surface at y=0)
+    const legH = 13.5, legT = 1.6, inset = 1.6;
+    const apronH = 1.7;
+    const floorY = -(TT + legH);
+
+    // tabletop — top face uses the plank texture, sides a stretched edge grain
+    const top = new T.Mesh(new T.BoxGeometry(TW, TT, TD), [sideMat, sideMat, topMat, sideMat, sideMat, sideMat]);
+    top.position.set(0, -TT / 2, 0);
+    top.castShadow = true; top.receiveShadow = true; desk.add(top);
+
+    // apron / skirt just under the top
+    const apronY = -TT - apronH / 2 + 0.15;
+    [TD / 2 - inset - legT / 2, -(TD / 2 - inset - legT / 2)].forEach(function (z) {
+      const a = new T.Mesh(new T.BoxGeometry(TW - 2 * inset - legT, apronH, 0.55), legMat);
+      a.position.set(0, apronY, z); a.castShadow = true; a.receiveShadow = true; desk.add(a);
+    });
+    [TW / 2 - inset - legT / 2, -(TW / 2 - inset - legT / 2)].forEach(function (xx) {
+      const a = new T.Mesh(new T.BoxGeometry(0.55, apronH, TD - 2 * inset - legT), legMat);
+      a.position.set(xx, apronY, 0); a.castShadow = true; a.receiveShadow = true; desk.add(a);
+    });
+
+    // four legs
+    const lx = TW / 2 - inset - legT / 2, lz = TD / 2 - inset - legT / 2;
+    [[-lx, -lz], [lx, -lz], [-lx, lz], [lx, lz]].forEach(function (p) {
+      const leg = new T.Mesh(new T.BoxGeometry(legT, legH, legT), legMat);
+      leg.position.set(p[0], -TT - legH / 2, p[1]);
+      leg.castShadow = true; leg.receiveShadow = true; desk.add(leg);
+    });
+
+    scene.add(desk);
+    // drop the invisible shadow-catcher to the floor under the legs
+    if (groundMesh) groundMesh.position.y = floorY;
+    return floorY;
+  }
+
+  /* ---------- concrete room ---------- */
+  function makeConcrete() {
+    const S = 1024, c = document.createElement('canvas'); c.width = S; c.height = S;
+    const x = c.getContext('2d');
+    x.fillStyle = '#adaca7'; x.fillRect(0, 0, S, S);
+    // soft mottled blotches (patchy plaster)
+    for (let i = 0; i < 70; i++) {
+      const r = 80 + Math.random() * 280, gx = Math.random() * S, gy = Math.random() * S;
+      const g = x.createRadialGradient(gx, gy, 0, gx, gy, r);
+      const dk = Math.random() < 0.5;
+      g.addColorStop(0, dk ? 'rgba(118,116,112,' + (0.04 + Math.random() * 0.08) + ')' : 'rgba(214,213,208,' + (0.04 + Math.random() * 0.08) + ')');
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      x.fillStyle = g; x.fillRect(0, 0, S, S);
+    }
+    // fine aggregate speckle
+    for (let i = 0; i < 11000; i++) {
+      const v = 92 + Math.random() * 116 | 0;
+      x.fillStyle = 'rgba(' + v + ',' + v + ',' + (v - 5) + ',' + (0.04 + Math.random() * 0.1) + ')';
+      x.fillRect(Math.random() * S, Math.random() * S, 1, 1);
+    }
+    // a few hairline cracks
+    for (let i = 0; i < 6; i++) {
+      x.strokeStyle = 'rgba(68,66,62,' + (0.1 + Math.random() * 0.12) + ')';
+      x.lineWidth = 0.5 + Math.random();
+      let px = Math.random() * S, py = Math.random() * S;
+      x.beginPath(); x.moveTo(px, py);
+      const seg = 8 + Math.random() * 14;
+      for (let s = 0; s < seg; s++) { px += (Math.random() - 0.5) * 130; py += (Math.random() - 0.3) * 130; x.lineTo(px, py); }
+      x.stroke();
+    }
+    const t = new T.CanvasTexture(c);
+    t.wrapS = t.wrapT = T.RepeatWrapping; t.encoding = T.sRGBEncoding; t.anisotropy = 8;
+    return t;
+  }
+
+  function buildRoom(floorY) {
+    const RX = 58, RZ = 52, RH = 50;          // half-width, half-depth, height
+    const ceilY = floorY + RH;
+    // one concrete texture stretched per surface (no tiling, per request)
+    function cMat(tint) {
+      return pbrMat('textures/concrete', 1, 1, { color: tint || 0xffffff, side: T.DoubleSide });
+    }
+    const room = new T.Group();
+
+    // floor (also catches the desk/computer shadow)
+    const floor = new T.Mesh(new T.PlaneGeometry(RX * 2, RZ * 2), cMat(0x9f9e9a));
+    floor.rotation.x = -Math.PI / 2; floor.position.set(0, floorY, 0);
+    floor.receiveShadow = true; room.add(floor);
+    groundMesh = floor;
+
+    // ceiling
+    const ceil = new T.Mesh(new T.PlaneGeometry(RX * 2, RZ * 2), cMat(0xbab9b4));
+    ceil.rotation.x = Math.PI / 2; ceil.position.set(0, ceilY, 0); room.add(ceil);
+
+    // four walls (one texture each)
+    const back = new T.Mesh(new T.PlaneGeometry(RX * 2, RH), cMat(0xb2b1ac));
+    back.position.set(0, floorY + RH / 2, -RZ); room.add(back);
+
+    const front = new T.Mesh(new T.PlaneGeometry(RX * 2, RH), cMat(0xaaa9a4));
+    front.position.set(0, floorY + RH / 2, RZ); front.rotation.y = Math.PI; room.add(front);
+
+    const left = new T.Mesh(new T.PlaneGeometry(RZ * 2, RH), cMat(0xafaea9));
+    left.position.set(-RX, floorY + RH / 2, 0); left.rotation.y = Math.PI / 2; room.add(left);
+
+    const right = new T.Mesh(new T.PlaneGeometry(RZ * 2, RH), cMat(0xafaea9));
+    right.position.set(RX, floorY + RH / 2, 0); right.rotation.y = -Math.PI / 2; room.add(right);
+
+    scene.add(room);
+    return { RX: RX, RZ: RZ, RH: RH, floorY: floorY };
+  }
+
+  /* ---------- skis leaning on the back wall ---------- */
+  let skisGroup = null;
+  const SKIS_URL = 'low-poly_freeride_skis.glb';   // committed locally (no remote/CORS dependency)
+  function buildSkis(room) {
+    if (!T.GLTFLoader) return;
+    const loader = new T.GLTFLoader();
+    loader.load(SKIS_URL, function (gltf) {
+      const inner = gltf.scene;
+      // scale so the longest dimension (ski length) is ~26 world units
+      let box = new T.Box3().setFromObject(inner);
+      let size = box.getSize(new T.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      inner.scale.setScalar(26 / maxDim);
+
+      // re-evaluate axes; rotate the longest one to vertical (Y)
+      box = new T.Box3().setFromObject(inner); size = box.getSize(new T.Vector3());
+      if (size.x >= size.y && size.x >= size.z) inner.rotation.z = Math.PI / 2;      // long axis X -> Y
+      else if (size.z >= size.y && size.z >= size.x) inner.rotation.x = -Math.PI / 2; // long axis Z -> Y
+
+      // center on x/z and drop bottom to y=0 inside a pivot
+      const pivot = new T.Group();
+      pivot.add(inner);
+      let pb = new T.Box3().setFromObject(pivot);
+      const pc = pb.getCenter(new T.Vector3());
+      inner.position.x -= pc.x; inner.position.z -= pc.z; inner.position.y -= pb.min.y;
+
+      inner.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+
+      // lean group: tilt the top toward the back wall (-z), rest base on floor
+      const lean = new T.Group();
+      lean.add(pivot);
+      lean.rotation.x = -0.2;          // ~11.5° lean
+      lean.rotation.y = 0.16;          // slight skew so the pair reads as two skis
+      lean.position.set(-30, room.floorY, -(room.RZ) + 6.5);  // left side, just off the back wall
+      scene.add(lean);
+      skisGroup = lean;
+      window.__skis = lean;
+      renderNow();
+    }, undefined, function (err) { console.warn('skis load failed', err); });
   }
 
   /* ---------- procedural Macintosh (carved-recess construction) ---------- */
@@ -416,8 +632,8 @@
     screenEl = document.getElementById('screen');
 
     camera = new T.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.1, 1000);
-    // start front-on and centered (matches the intended landing view)
-    camera.position.set(0, 7.3, 22);
+    // start front-on and centered, pulled back to show the desk/room/skis
+    camera.position.set(0, 7.6, 30);
 
     glRenderer = new T.WebGLRenderer({ antialias: true, alpha: true });
     glRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -433,25 +649,31 @@
     lights.key = new T.DirectionalLight(0xffffff, 1.15);
     lights.key.position.set(-9, 16, 13); lights.key.castShadow = true;
     lights.key.shadow.mapSize.set(2048, 2048); lights.key.shadow.radius = 7; lights.key.shadow.bias = -0.0004;
-    const sc = lights.key.shadow.camera; sc.left = -16; sc.right = 16; sc.top = 18; sc.bottom = -18; sc.near = 1; sc.far = 60;
+    const sc = lights.key.shadow.camera; sc.left = -24; sc.right = 24; sc.top = 26; sc.bottom = -26; sc.near = 1; sc.far = 80;
     scene.add(lights.key);
     lights.fill = new T.DirectionalLight(0xffffff, 0.42); lights.fill.position.set(12, 8, 9); scene.add(lights.fill);
     lights.rim = new T.DirectionalLight(0xffffff, 0.55); lights.rim.position.set(2, 9, -14); scene.add(lights.rim);
 
     shadowMat = new T.ShadowMaterial({ opacity: 0.26 });
-    const ground = new T.Mesh(new T.PlaneGeometry(140, 140), shadowMat);
-    ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+    // (the concrete room floor, built below, receives the shadow)
 
     controls = new T.OrbitControls(camera, glRenderer.domElement);
     controls.enableDamping = true; controls.dampingFactor = 0.07; controls.enablePan = true;
     controls.target.set(0, 6.4, 0);
-    controls.minDistance = 8; controls.maxDistance = 46; controls.maxPolarAngle = Math.PI * 0.9;
+    controls.minDistance = 8; controls.maxDistance = 42;
+    // lock vertical orbit so the camera stays inside the room (no going under the
+    // floor / "underground", and not up through the ceiling) at any zoom level
+    controls.minPolarAngle = Math.PI * 0.27;   // can't rise above the scene
+    controls.maxPolarAngle = Math.PI * 0.52;   // can't drop below ~eye level (no underground)
     controls.update();
 
-    applyMood('peach');
+    applyMood('room');
     window.addEventListener('resize', onResize);
 
     buildMac();
+    const floorY = buildDesk();
+    const room = buildRoom(floorY);
+    buildSkis(room);
     ready = true;
     window.__dbg = function () { return { ready: ready, f: window.__frames }; };
     burstRefresh();
@@ -534,9 +756,8 @@
     const host = document.getElementById('screen-host');
     glRenderer.domElement.style.display = 'block';
     requestAnimationFrame(function () { glRenderer.domElement.style.opacity = '1'; });
-    // keep pointer-events 'auto' (its initial CSS value): forwardClick's
-    // elementsFromPoint hit-test needs the host hittable. The #gl canvas sits above
-    // it (z-index 1 > 0), so real events still reach OrbitControls.
+    // keep pointer-events 'auto' (initial state) so forwardClick's elementsFromPoint
+    // hit-test keeps working after exiting screen view; the #gl canvas sits above it.
     host.style.transform = ''; host.style.opacity = '0'; host.style.pointerEvents = 'auto'; host.style.zIndex = '0';
     const bd = document.getElementById('sv-backdrop'); if (bd) { bd.style.opacity = '0'; clearTimeout(window.__svBd); window.__svBd = setTimeout(function () { if (!inScreenView) bd.style.display = 'none'; }, 460); }
     document.querySelectorAll('#hud,#title').forEach(function (e) { e.style.opacity = ''; });
@@ -553,6 +774,7 @@
   window.MacScene = {
     init, applyTweaks, applyMood, renderNow, refresh: refreshTexture,
     enterScreenView, exitScreenView,
+    setSkis: function (p) { if (!skisGroup) return; if (p.x != null) skisGroup.position.x = p.x; if (p.z != null) skisGroup.position.z = p.z; if (p.lean != null) skisGroup.rotation.x = p.lean; if (p.skew != null) skisGroup.rotation.y = p.skew; renderNow(); return skisGroup.position; },
     setBulge: function (b) { BULGE = b; rebuildScreen(); return BULGE; },
     setScreen: function (p) { Object.assign(SCREEN, p); rebuildScreen(); return SCREEN; },
     debugAzimuth: function (deg, elevDeg, dist) {
