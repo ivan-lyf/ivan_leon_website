@@ -42,6 +42,14 @@
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
 
+  // In the 3D scene the desktop is rendered inside a CSS-scaled #screen-host. Drag
+  // handlers read viewport-pixel deltas (clientX/Y) but write unscaled style.left/top,
+  // so divide deltas by this scale to keep the cursor and the dragged element together.
+  function dragScale() {
+    const r = desktop.getBoundingClientRect();
+    return (desktop.clientWidth && r.width) ? r.width / desktop.clientWidth : 1;
+  }
+
   /* ============================================================
      SOUND  — System beeps synthesized with Web Audio (no asset files).
      Browsers block audio until a user gesture, so we unlock on first click.
@@ -362,7 +370,7 @@
     let last = 0;
     let down = null;
     node.addEventListener("mousedown", (e) => {
-      down = { x: e.clientX, y: e.clientY, ox: parseInt(node.style.left), oy: parseInt(node.style.top), moved: false };
+      down = { x: e.clientX, y: e.clientY, ox: parseInt(node.style.left), oy: parseInt(node.style.top), moved: false, s: dragScale() };
       $$(".icon", desktop).forEach((n) => n.classList.remove("selected"));
       node.classList.add("selected");
       const onMove = (ev) => {
@@ -370,8 +378,8 @@
         const dx = ev.clientX - down.x, dy = ev.clientY - down.y;
         if (Math.abs(dx) + Math.abs(dy) > 3) down.moved = true;
         if (down.moved) {
-          node.style.left = down.ox + dx + "px";
-          node.style.top = down.oy + dy + "px";
+          node.style.left = down.ox + dx / down.s + "px";
+          node.style.top = down.oy + dy / down.s + "px";
         }
       };
       const onUp = () => {
@@ -541,6 +549,7 @@
       e.preventDefault();
       focusWindow(win);
       const startX = e.clientX, startY = e.clientY;
+      const scale = dragScale();
       const ox = parseInt(win.style.left), oy = parseInt(win.style.top);
       let ghost = null;
       if (!liveDrag) {
@@ -552,8 +561,8 @@
         desktop.appendChild(ghost);
       }
       const onMove = (ev) => {
-        const nx = ox + (ev.clientX - startX);
-        const ny = Math.max(0, oy + (ev.clientY - startY));
+        const nx = ox + (ev.clientX - startX) / scale;
+        const ny = Math.max(0, oy + (ev.clientY - startY) / scale);
         if (liveDrag) {
           win.style.left = nx + "px";
           win.style.top = ny + "px";
@@ -566,8 +575,8 @@
         document.removeEventListener("mousemove", onMove);
         document.removeEventListener("mouseup", onUp);
         if (!liveDrag) {
-          win.style.left = ox + (ev.clientX - startX) + "px";
-          win.style.top = Math.max(0, oy + (ev.clientY - startY)) + "px";
+          win.style.left = ox + (ev.clientX - startX) / scale + "px";
+          win.style.top = Math.max(0, oy + (ev.clientY - startY) / scale) + "px";
           ghost.remove();
         }
       };
@@ -583,10 +592,11 @@
       e.stopPropagation();
       focusWindow(win);
       const startX = e.clientX, startY = e.clientY;
+      const scale = dragScale();
       const ow = win.offsetWidth, oh = win.offsetHeight;
       const onMove = (ev) => {
-        win.style.width = Math.max(240, ow + (ev.clientX - startX)) + "px";
-        win.style.height = Math.max(150, oh + (ev.clientY - startY)) + "px";
+        win.style.width = Math.max(240, ow + (ev.clientX - startX) / scale) + "px";
+        win.style.height = Math.max(150, oh + (ev.clientY - startY) / scale) + "px";
         const content = $(".content", win);
         const scroll = $(".scroll-v", win);
         updateThumb(content, scroll);
@@ -1197,13 +1207,15 @@
     bar.addEventListener("mousedown", (e) => {
       if (e.target.closest(".np-min")) return;
       e.preventDefault();
-      const dr = desktop.getBoundingClientRect();
-      const br = box.getBoundingClientRect();
-      const offX = e.clientX - br.left, offY = e.clientY - br.top;
+      const scale = dragScale();
+      const startX = e.clientX, startY = e.clientY;
+      const ox = box.offsetLeft, oy = box.offsetTop;   // current position in local coords
       box.style.bottom = "auto";
+      box.style.left = ox + "px";
+      box.style.top = oy + "px";
       const onMove = (ev) => {
-        let nx = ev.clientX - dr.left - offX;
-        let ny = ev.clientY - dr.top - offY;
+        let nx = ox + (ev.clientX - startX) / scale;
+        let ny = oy + (ev.clientY - startY) / scale;
         nx = Math.max(0, Math.min(nx, desktop.clientWidth - box.offsetWidth));
         ny = Math.max(0, Math.min(ny, desktop.clientHeight - box.offsetHeight));
         box.style.left = nx + "px";
