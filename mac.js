@@ -828,6 +828,10 @@
       const key = item.dataset.menu;
       item.classList.add("open");
       const dd = el("div", "dropdown");
+      // Keep the document-level "close on mousedown" from firing when you press
+      // a row — otherwise the dropdown is removed before the row's click lands,
+      // and every menu action silently does nothing.
+      dd.addEventListener("mousedown", (e) => e.stopPropagation());
       MENUS[key].items.forEach((it) => {
         if (it.divider) { dd.appendChild(el("div", "divider")); return; }
         const disabled = typeof it.disabled === "function" ? it.disabled() : !!it.disabled;
