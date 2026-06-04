@@ -1,0 +1,9 @@
+# gstack tool artifacts
+.gstack/
+
+# macOS
+.DS_Store
+
+# editor/OS noise
+*.swp
+*~

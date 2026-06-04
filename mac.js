@@ -60,59 +60,103 @@
      ============================================================ */
   const PROJECTS = [
     {
-      id: "ubc-rocket", name: "UBC Rocket — IMU SPI Driver", icon: "g-doc",
-      blurb: "Low-level SPI driver for IMU sensor communication on an embedded flight computer. Bare-metal C on an STM32, talking to the avionics stack in real time.",
-      stack: ["C", "STM32", "SPI", "Real-time"],
-      info: "Embedded · 2023–present",
+      id: "rate-my-dish", name: "Rate My Dish UBC", icon: "g-doc",
+      blurb: "Full-stack web app for UBC students to rate and comment on dining-hall dishes. It fetches the dining-hall menu daily to stay current, surfaces a leaderboard of top dishes across halls, and ships a custom chatbot to help you find something good to eat.",
+      stack: ["Next.js", "TypeScript", "Vercel", "LLM chatbot"],
+      info: "Web · live",
+      links: [{ label: "Live site", href: "https://rate-my-dish-ubc.vercel.app/" }],
+      shots: [
+        { src: "assets/projects/rate-my-dish-ubc-01.png", cap: "Home screen" },
+        { src: "assets/projects/rate-my-dish-ubc-02.png", cap: "Menu list" },
+        { src: "assets/projects/rate-my-dish-ubc-03.png", cap: "Dish detail" },
+        { src: "assets/projects/rate-my-dish-ubc-04.png", cap: "Chatbot" },
+      ],
     },
     {
-      id: "ski-forecast", name: "Whistler Ski Forecasting", icon: "g-doc",
-      blurb: "A platform that ingests weather-data APIs to analyze and predict ski conditions on Whistler Blackcomb. Built on a modern web stack with charted forecasts.",
-      stack: ["Next.js", "TypeScript", "APIs", "Data viz"],
-      info: "Web · 2024",
+      id: "cs2-tactics", name: "CS2 Tactics", icon: "g-doc",
+      blurb: "Collaborative mobile app that helps Counter-Strike 2 teams plan, visualize, and share strategies in real time — design tactical lineups, coordinate roles, and iterate together during prep sessions on a real-time backend.",
+      stack: ["React Native", "Real-time backend", "Canvas"],
+      info: "Mobile · in development",
+      links: [{ label: "GitHub", href: "https://github.com/thomasc-0316/CS2" }],
+      shots: [
+        { src: "assets/projects/cs2-tactics-01.png", cap: "Lobby" },
+        { src: "assets/projects/cs2-tactics-02.png", cap: "Map tactics" },
+        { src: "assets/projects/cs2-tactics-03.png", cap: "Lineup grid" },
+        { src: "assets/projects/cs2-tactics-04.png", cap: "Explore" },
+      ],
     },
     {
-      id: "cs2-tactics", name: "CS2 Tactics App", icon: "g-doc",
-      blurb: "Interactive strategy planner for Counter-Strike 2 with a canvas playbook and real-time collaboration so a team can draw a round together.",
-      stack: ["React", "WebSockets", "Canvas"],
-      info: "Web · 2024",
+      id: "gravity-sandbox", name: "GravitySandbox", icon: "g-doc",
+      blurb: "Qt Quick prototype for experimenting with 2D gravitational simulations. Bodies are integrated with a symplectic Euler solver for stable motion, trails visualize recent paths, and interactive canvas tools let you set up orbits quickly.",
+      stack: ["Qt Quick", "C++", "QML"],
+      info: "Simulation · 2024",
+      links: [{ label: "GitHub", href: "https://github.com/ivan-lyf/gravity_simulation" }],
+      shots: [
+        { src: "assets/projects/gravity-sandbox-01.png", cap: "Simulation view" },
+      ],
     },
     {
-      id: "crash-shell", name: "crash (Unix Shell)", icon: "g-doc",
-      blurb: "A Unix shell written from scratch in C: process management, pipes, redirection and job control. A study in syscalls and the POSIX process model.",
-      stack: ["C", "Unix syscalls", "Job control"],
-      info: "Systems · 2023",
+      id: "unix-shell", name: "Unix Shell (crash)", icon: "g-doc",
+      blurb: "A Unix shell written from scratch in C with a REPL supporting foreground/background job execution via fork/execve and process groups. Implements job control (fg, bg, kill, jobs) and POSIX signal handlers (SIGINT, SIGTSTP, SIGCHLD), eliminating zombie processes.",
+      stack: ["C", "Linux", "POSIX", "Signals"],
+      info: "Systems · 2025",
+      links: [],
+      shots: [],
     },
     {
-      id: "simple-cpu", name: "SimpleCPU (FPGA)", icon: "g-doc",
-      blurb: "A small CPU designed and implemented on an FPGA — custom instruction set, ALU, register file and control unit, written in Verilog and run on real silicon.",
-      stack: ["Verilog", "FPGA", "Digital design"],
-      info: "Hardware · 2023",
+      id: "virtual-memory", name: "Virtual Memory System", icon: "g-doc",
+      blurb: "Virtual-to-physical address translation in C via a 3-level page-table walk, backed by a TLB cache with a miss fallback. Handles page faults and demand paging with LRU page replacement over a limited pool of physical frames.",
+      stack: ["C", "Paging", "TLB", "LRU"],
+      info: "Systems · 2025",
+      links: [],
+      shots: [],
     },
   ];
+
+  /* UBC Rocket ground-control-station screenshots (shown in Experience) */
+  const ROCKET_SHOTS = [
+    { src: "assets/rocket/gcs-flight.png", cap: "Flight view — 3D attitude" },
+    { src: "assets/rocket/gcs-tuning.png", cap: "PID tuning presets" },
+    { src: "assets/rocket/gcs-map.png", cap: "UWB satellite map" },
+  ];
+
+  /* inline framed gallery — thumbnails that enlarge in place (see CSS .shots) */
+  function galleryHTML(shots, heading) {
+    if (!shots || !shots.length) return "";
+    const tiles = shots
+      .map(
+        (s) =>
+          `<figure class="shot"><span class="shot-frame"><img loading="lazy" src="${s.src}" alt="${s.cap}"></span><figcaption>${s.cap}</figcaption></figure>`
+      )
+      .join("");
+    return `<div class="shots"><div class="shots-h">${heading || "Screenshots"}</div><div class="filmstrip">${tiles}</div></div>`;
+  }
 
   function aboutContent() {
     return `
       <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;">
-        <div class="photo-dither"><div class="cap">[ photo of ivan ]</div></div>
+        <div class="photo-dither"><div class="cap">[ ivan ]</div></div>
         <div style="flex:1 1 180px;min-width:170px;">
-          <h2>Ivan</h2>
+          <h2>Yingfan (Ivan) Luo</h2>
           <p style="font-family:'Monaco',monospace;font-size:11px;margin-top:-4px;">Computer Engineering @ UBC</p>
-          <p>Embedded software engineer who likes the layer where code meets hardware — drivers, real-time firmware and the occasional FPGA.</p>
+          <p>I build software across the stack — from embedded firmware where code meets hardware, to modern web and mobile apps.</p>
         </div>
       </div>
       <hr class="dotrule">
+      <h3>UBC Rocket — Thrust Vectoring</h3>
+      <p>I'm on UBC Rocket's TVR team, working toward a self-landing thrust-vectoring rocket. I work on the IMU/ECU firmware, the flight-control algorithm, and the ground-control-station software.</p>
+      <hr class="dotrule">
       <h3>What I do</h3>
       <p>
-        → Building real-time systems<br>
-        → FPGA &amp; embedded development<br>
-        → Full-stack web applications<br>
+        → Real-time &amp; embedded systems (STM32)<br>
+        → Flight-control &amp; sensor pipelines<br>
+        → Full-stack web &amp; mobile applications<br>
         → Retro computing enthusiast
       </p>
       <hr class="dotrule">
       <p style="font-family:'Monaco',monospace;font-size:11px;">
-        Currently: flight-computer firmware @ UBC Rocket.<br>
-        Previously: full-stack co-op @ Ruboss / Leanpub.
+        Open to internship opportunities — reach out at<br>
+        <a href="mailto:yingfanluo@gmail.com">yingfanluo@gmail.com</a>.
       </p>`;
   }
 
@@ -120,36 +164,54 @@
     return `
       <h2>Experience</h2>
       <hr class="rule">
-      <h3>Full-Stack Developer — Co-op</h3>
-      <p style="font-family:'Monaco',monospace;font-size:11px;margin:0 0 4px;">Ruboss / Leanpub · 2024–2025</p>
-      <p>Built web applications, API integrations and publishing tools for the Leanpub platform across the full stack.</p>
+      <h3>Full-Stack Software Engineer — Ruboss</h3>
+      <p style="font-family:'Monaco',monospace;font-size:11px;margin:0 0 4px;">Ruboss Technology Corp. · May–Aug 2026 · Vancouver, BC</p>
+      <p>
+        • Co-developed Leanpub's native iOS app from scratch in SwiftUI as one of two developers — secure auth, book creation, and voice-input dictation against a GraphQL backend via Apollo iOS.<br>
+        • Built a dual-mode chapter editor supporting raw Markua markup and a visual editor, then shipped a formatting toolbar and keyboard shortcuts shared across the web app and iOS.<br>
+        • Fixed a production GraphQL bug where a non-nullable price field returned null and nulled entire book queries; shipped a fallback resolver with a regression test in Ruby on Rails.<br>
+        • Built an AI-assisted workflow with Claude Code — custom skill files and MCP integrations (Linear, Harvest) — reviewing all generated code before merge.
+      </p>
       <hr class="dotrule">
-      <h3>Embedded Software Engineer</h3>
-      <p style="font-family:'Monaco',monospace;font-size:11px;margin:0 0 4px;">UBC Rocket · 2023–present</p>
-      <p>Developing flight-computer firmware and sensor drivers for rocket avionics — real-time, bare-metal, and unforgiving.</p>
+      <h3>Embedded Software Engineer — UBC Rocket</h3>
+      <p style="font-family:'Monaco',monospace;font-size:11px;margin:0 0 4px;">TVR Team · Sept 2025 – present · Vancouver, BC</p>
+      <p>
+        • Engineer a high-performance ground control station in C++ and Qt — 100+ Hz telemetry, 3D attitude visualization, and a satellite-view map for real-time position tracking.<br>
+        • Built the bidirectional radio link: COBS-encoded message framing, an updated Protobuf schema, and CSV logging of received packets for post-flight analysis.<br>
+        • Developed and validated PID and flight-control-loop algorithms with CTest, catching regressions across tuning cycles; added in-station PID tuning presets.<br>
+        • Delivered a 1 kHz IMU data pipeline with consistent timing via non-blocking SPI firmware on STM32.<br>
+        • Developed STM32 firmware for a Qorvo DW3000 ultra-wideband (UWB) ranging module over UART for precise distance/position tracking.<br>
+        • Tuned ESC/motor-control firmware and built a Python data-collection pipeline measuring force/torque vs. thrust %.
+      </p>
+      <p style="font-family:'Chicago';font-size:11px;"><a href="https://github.com/UBC-Rocket/thrust_vectoring_consolidated" target="_blank" rel="noopener">GitHub →</a></p>
+      ${galleryHTML(ROCKET_SHOTS, "Ground Control Station")}
       <hr class="dotrule">
       <h3>Education</h3>
-      <p style="font-family:'Monaco',monospace;font-size:11px;">B.A.Sc. Computer Engineering<br>University of British Columbia</p>`;
+      <p style="font-family:'Monaco',monospace;font-size:11px;">B.A.Sc. Computer Engineering — University of British Columbia<br>GPA 86% · Class of 2028</p>`;
   }
 
   function resumeContent() {
     return `
       <h2 style="text-align:center;">RÉSUMÉ</h2>
       <hr class="rule">
-      <h3>Ivan — Computer Engineering @ UBC</h3>
-      <p style="font-family:'Monaco',monospace;font-size:11px;">Vancouver, BC · ivan.xyz</p>
+      <h3>Yingfan (Ivan) Luo — Computer Engineering @ UBC</h3>
+      <p style="font-family:'Monaco',monospace;font-size:11px;">Vancouver, BC · ivanluo.xyz<br>yingfanluo@gmail.com · 778-228-6477</p>
       <hr class="dotrule">
       <h3>Experience</h3>
-      <p>• Ruboss / Leanpub — Full-Stack Co-op<br>• UBC Rocket — Embedded Engineer</p>
+      <p>• Ruboss Technology — Full-Stack Software Engineer (2026)<br>• UBC Rocket — Embedded Software Engineer (2025–present)</p>
+      <h3>Projects</h3>
+      <p>• Rate My Dish UBC · CS2 Tactics · GravitySandbox<br>• Unix Shell (C) · Virtual Memory System (C)</p>
       <h3>Skills</h3>
       <p>
         <span class="tag">C</span><span class="tag">C++</span><span class="tag">Python</span>
-        <span class="tag">TypeScript</span><span class="tag">React</span><span class="tag">Next.js</span>
-        <span class="tag">STM32</span><span class="tag">FPGA</span><span class="tag">Verilog</span>
-        <span class="tag">Unix</span><span class="tag">Git</span><span class="tag">RTOS</span>
+        <span class="tag">Java</span><span class="tag">TypeScript</span><span class="tag">Swift</span>
+        <span class="tag">Ruby</span><span class="tag">SystemVerilog</span><span class="tag">ARM Asm</span>
+        <span class="tag">React</span><span class="tag">Next.js</span><span class="tag">SwiftUI</span>
+        <span class="tag">Rails</span><span class="tag">GraphQL</span><span class="tag">Qt</span>
+        <span class="tag">STM32</span><span class="tag">Protobuf</span><span class="tag">Git</span>
       </p>
       <div style="text-align:center;margin-top:16px;">
-        <button class="mac-btn default" onclick="Mac.alert('Download Résumé','The PDF would download here. Wire this button to your real résumé file when you ship.','OK')">Download PDF…</button>
+        <a class="mac-btn default" href="assets/resume/Ivan_Luo_Resume.pdf" download="Ivan_Luo_Resume.pdf" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block;">Download PDF…</a>
       </div>`;
   }
 
@@ -157,9 +219,9 @@
     return `
       <h2 style="text-align:center;">Get in Touch</h2>
       <hr class="rule">
-      <p><strong>Email</strong><br><a href="mailto:ivan@ivan.xyz">ivan@ivan.xyz</a></p>
-      <p><strong>GitHub</strong><br><a href="https://github.com/" target="_blank" rel="noopener">github.com/ivan</a></p>
-      <p><strong>LinkedIn</strong><br><a href="https://linkedin.com/" target="_blank" rel="noopener">linkedin.com/in/ivan</a></p>
+      <p><strong>Email</strong><br><a href="mailto:yingfanluo@gmail.com">yingfanluo@gmail.com</a></p>
+      <p><strong>GitHub</strong><br><a href="https://github.com/ivan-lyf" target="_blank" rel="noopener">github.com/ivan-lyf</a></p>
+      <p><strong>LinkedIn</strong><br><a href="https://www.linkedin.com/in/ivan-yingfan-luo/" target="_blank" rel="noopener">linkedin.com/in/ivan-yingfan-luo</a></p>
       <hr class="dotrule">
       <p style="font-family:'Monaco',monospace;font-size:11px;text-align:center;">
         Looking for Leon?<br>
@@ -198,14 +260,22 @@
 
   function openProject(p) {
     const body = el("div");
+    const linksHTML =
+      p.links && p.links.length
+        ? `<p style="font-family:'Chicago';font-size:11px;">${p.links
+            .map((l) => `<a href="${l.href}" target="_blank" rel="noopener">${l.label} →</a>`)
+            .join(" &nbsp;·&nbsp; ")}</p>`
+        : "";
     body.innerHTML = `
       <h2>${p.name}</h2>
       <p style="font-family:'Monaco',monospace;font-size:11px;margin-top:-4px;">${p.info}</p>
       <hr class="dotrule">
       <p>${p.blurb}</p>
+      ${linksHTML}
       <h3>Tech</h3>
-      <p>${p.stack.map((s) => `<span class="tag">${s}</span>`).join("")}</p>`;
-    openWindow("proj-" + p.id, p.name, body, p.info, { w: 360, h: 280 });
+      <p>${p.stack.map((s) => `<span class="tag">${s}</span>`).join("")}</p>
+      ${galleryHTML(p.shots, "Screenshots")}`;
+    openWindow("proj-" + p.id, p.name, body, p.info, { w: 404, h: 360 });
   }
 
   function projectsFolderBody() {
@@ -625,7 +695,7 @@
           Built with HTML · CSS · JavaScript<br>
           A faithful 1984 Macintosh, for Ivan.
         </p>
-        <p style="font-family:'Monaco',monospace;font-size:10px;margin-top:10px;">© 2026 ivan.xyz</p>
+        <p style="font-family:'Monaco',monospace;font-size:10px;margin-top:10px;">© 2026 ivanluo.xyz</p>
       </div>`;
   }
 
@@ -815,6 +885,18 @@
     if (mh) mh.innerHTML = svgGlyph("machead", 44);
     document.querySelectorAll('[data-glyph="avatar"]').forEach((a) => { a.innerHTML = svgGlyph("avatar", 52); });
     buildMenuBar();
+
+    // Inline gallery: click a framed thumbnail to enlarge it in place.
+    desktop.addEventListener("click", (e) => {
+      const fig = e.target.closest(".shot");
+      if (!fig || !desktop.contains(fig)) return;
+      fig.classList.toggle("expanded");
+      const content = fig.closest(".content");
+      const wbody = content && content.parentElement;
+      const scroll = wbody && wbody.querySelector(".scroll-v");
+      if (content && scroll) updateThumb(content, scroll);
+    });
+
     runBoot(showLogin);
   }
 
