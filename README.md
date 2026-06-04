@@ -21,9 +21,11 @@ Pure HTML/CSS/JS — no build step. Open index.html or drop the folder on any st
 Screenshots live inside the relevant project/experience window as a framed
 "picture" filmstrip (`galleryHTML()` in mac.js, `.shots` styles in mac.css).
 Thumbnails sit in a white matte with a black keyline and are monochrome at rest
-to live in the 1-bit world; hovering shows full colour, and clicking enlarges the
-picture in place (full width, full colour). Edit a project's `shots: [...]` array
-or `ROCKET_SHOTS` to change which pictures appear.
+to live in the 1-bit world; hovering shows full colour, and clicking opens the
+picture enlarged in its own framed window (`openLightbox()` in mac.js, `.lightbox`
+/ `.picwin` styles in mac.css) — full colour, dimmed desktop behind, dismissed by
+the close box, a click outside, or Esc. Edit a project's `shots: [...]` array or
+`ROCKET_SHOTS` to change which pictures appear.
 
 ## How the two-domain idea maps to this code
 - **Login chooser** (`#login` in index.html): two cards — Ivan (THIS MAC) and Leon (→ OTHER DISK).
