@@ -425,13 +425,19 @@
 
     const win = el("div", "win active");
     win.dataset.id = id;
+    // Clamp size + position to the desktop so windows can't exceed the screen
+    // (the 3D screen-host is a fixed, smaller viewport than the original site).
+    const deskW = desktop.clientWidth || 640;
+    const deskH = desktop.clientHeight || 447;
+    const w = Math.min(size.w, deskW - 8);
+    const h = Math.min(size.h, deskH - 8);
     const offset = openWindows.size * 22;
-    const startX = 70 + offset;
-    const startY = 40 + offset;
+    const startX = Math.max(4, Math.min(70 + offset, deskW - w - 4));
+    const startY = Math.max(4, Math.min(40 + offset, deskH - h - 4));
     win.style.left = startX + "px";
     win.style.top = startY + "px";
-    win.style.width = size.w + "px";
-    win.style.height = size.h + "px";
+    win.style.width = w + "px";
+    win.style.height = h + "px";
     win.style.zIndex = ++zTop;
 
     const tb = el("div", "titlebar");
