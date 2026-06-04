@@ -44,17 +44,33 @@
     }
     #hud b { color: #ffd9a8; font-weight: 600; }
     #hud .sep { opacity: 0.35; }
+    /* boot overlay — Macintosh terminal, shown until the whole 3D scene loads */
     #loading {
       position: fixed; inset: 0; z-index: 9; display: flex; align-items: center; justify-content: center;
-      font-family: ui-monospace, 'Courier New', monospace; font-size: 26px; color: #7a5a30;
-      -webkit-font-smoothing: antialiased;
-      background: radial-gradient(120% 95% at 50% 18%, #ffe9cf 0%, #f6cda0 58%, #e9b988 100%);
-      transition: opacity 0.5s;
+      background: #050505;
+      transition: opacity 0.45s;
     }
+    #loading .term {
+      margin: 0;
+      font-family: 'Monaco', ui-monospace, 'Courier New', monospace;
+      font-size: 15px; line-height: 1.55;
+      color: #eaeaea;
+      -webkit-font-smoothing: none;
+      width: min(560px, 86vw);
+      text-shadow: 0 0 2px rgba(220,220,220,0.35);
+    }
+    #loading .term .dim { color: #7d7d7d; }
+    #loading .term .blink { animation: term-blink 1s steps(1) infinite; }
+    @keyframes term-blink { 50% { opacity: 0; } }
   </style>
 </head>
 <body>
-  <div id="loading">building Macintosh…</div>
+  <div id="loading"><pre class="term"><span class="dim">Macintosh</span>
+System Software 7.0.1
+
+Initializing 3D environment ...
+<span id="boot-status">Loading assets ... 0/8</span>
+<span id="boot-bar-term">[······················]</span> <span class="blink">█</span></pre></div>
   <div id="hud">
     <span><b>Drag</b> to orbit</span><span class="sep">·</span>
     <span><b>Scroll in</b> to enter</span><span class="sep">·</span>
@@ -130,13 +146,16 @@
       var hud = document.getElementById('hud');
       var t0 = Date.now();
       var iv = setInterval(function () {
-        var d = window.__dbg ? window.__dbg() : {};
-        if (d.ready || Date.now() - t0 > 8000) {
+        // wait for the ENTIRE scene (textures + skis) to load; 30s safety fallback
+        if (window.__sceneLoaded || Date.now() - t0 > 30000) {
           clearInterval(iv);
-          ld.style.opacity = '0';
-          setTimeout(function () { ld.remove(); }, 520);
-          // fade the controls hint out after a few seconds
-          setTimeout(function () { if (hud) hud.style.opacity = '0'; }, 6000);
+          // let "Ready." sit for a beat, then reveal the scene
+          setTimeout(function () {
+            ld.style.opacity = '0';
+            setTimeout(function () { ld.remove(); }, 500);
+            // fade the controls hint out after a few seconds
+            setTimeout(function () { if (hud) hud.style.opacity = '0'; }, 6000);
+          }, 450);
         }
       }, 120);
     })();

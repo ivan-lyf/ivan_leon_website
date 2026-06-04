@@ -22,7 +22,7 @@
 
   let scene, camera, glRenderer, controls, lights = {}, shadowMat, groundMesh, texLoader;
   let machine, screenMesh, screenTex, texCanvas, texCtx, screenEl, raycaster;
-  let mood = 'peach', autoRotate = false, ready = false;
+  let mood = 'peach', autoRotate = false, ready = false, loadMgr = null;
   let refreshQueued = false, refreshing = false;
   let inScreenView = false;
 
@@ -63,7 +63,7 @@
 
   /* ---------- PBR texture loading ---------- */
   function loadTex(url, rx, ry, srgb) {
-    if (!texLoader) texLoader = new T.TextureLoader();
+    if (!texLoader) texLoader = new T.TextureLoader(loadMgr || undefined);
     const t = texLoader.load(url);
     t.wrapS = t.wrapT = (rx === 1 && ry === 1) ? T.ClampToEdgeWrapping : T.RepeatWrapping;
     t.repeat.set(rx, ry);
@@ -240,7 +240,7 @@
   const SKIS_URL = 'low-poly_freeride_skis.glb';   // committed locally (no remote/CORS dependency)
   function buildSkis(room) {
     if (!T.GLTFLoader) return;
-    const loader = new T.GLTFLoader();
+    const loader = new T.GLTFLoader(loadMgr || undefined);
     loader.load(SKIS_URL, function (gltf) {
       const inner = gltf.scene;
       // scale so the longest dimension (ski length) is ~26 world units
@@ -480,7 +480,7 @@
   }
   let _logoTex = null;
   function logoTexture() {
-    if (!_logoTex) { _logoTex = new T.TextureLoader().load('front-logo.png'); _logoTex.encoding = T.sRGBEncoding; _logoTex.anisotropy = 8; }
+    if (!_logoTex) { _logoTex = new T.TextureLoader(loadMgr || undefined).load('front-logo.png'); _logoTex.encoding = T.sRGBEncoding; _logoTex.anisotropy = 8; }
     return _logoTex;
   }
   function drawApple(x, W, H) {
@@ -669,6 +669,27 @@
 
     applyMood('room');
     window.addEventListener('resize', onResize);
+
+    // Track every async asset (PBR textures, skis model, logo) through one manager
+    // so the boot terminal only clears once the WHOLE scene has finished loading.
+    loadMgr = new T.LoadingManager();
+    const bootStatus = document.getElementById('boot-status');
+    const bootBar = document.getElementById('boot-bar-term');
+    function setBoot(loaded, total) {
+      if (bootStatus) bootStatus.textContent = 'Loading assets ... ' + loaded + '/' + total;
+      if (bootBar) {
+        const n = total ? Math.round((loaded / total) * 22) : 0;
+        bootBar.textContent = '[' + '█'.repeat(n) + '·'.repeat(22 - n) + ']';
+      }
+    }
+    setBoot(0, 8);
+    loadMgr.onProgress = function (url, loaded, total) { setBoot(loaded, total); };
+    loadMgr.onError = function () { /* a failed asset must not hang the boot; onLoad still fires */ };
+    loadMgr.onLoad = function () {
+      if (bootStatus) bootStatus.textContent = 'Ready.';
+      if (bootBar) bootBar.textContent = '[' + '█'.repeat(22) + ']';
+      window.__sceneLoaded = true;
+    };
 
     buildMac();
     const floorY = buildDesk();
