@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ivan's Macintosh — ivan.xyz</title>
+  <link rel="stylesheet" href="mac.css">
+</head>
+<body>
+  <div class="stage">
+    <div class="chassis crt-on" id="chassis">
+      <div class="led"></div>
+      <div class="vents"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+
+      <div class="bezel">
+        <div class="screen" id="screen">
+
+          <!-- CRT overlays -->
+          <div class="crt-scanlines"></div>
+          <div class="crt-vignette"></div>
+          <div class="crt-flicker"></div>
+
+          <!-- Menu bar -->
+          <div class="menubar" id="menubar"></div>
+
+          <!-- Desktop -->
+          <div class="desktop hidden" id="desktop">
+            <div class="desktop-bg dither-50"></div>
+          </div>
+
+          <!-- Login / user chooser -->
+          <div class="login hidden" id="login">
+            <div class="login-bg dither-50"></div>
+            <div class="login-dialog">
+              <div class="titlebar"><div class="t">Welcome</div></div>
+              <div class="login-body">
+                <div class="machead" id="login-machead"></div>
+                <h2>Welcome to Macintosh</h2>
+                <p class="sub">Two people share this network. Who's signing in?</p>
+                <div class="users">
+                  <div class="user-card" id="user-ivan">
+                    <div class="avatar" data-glyph="avatar"></div>
+                    <div class="uname">Ivan</div>
+                    <div class="udom">ivan.xyz</div>
+                    <div class="ext">THIS MAC</div>
+                  </div>
+                  <div class="user-card" id="user-leon">
+                    <div class="avatar" data-glyph="avatar"></div>
+                    <div class="uname">Leon</div>
+                    <div class="udom">leon.xyz</div>
+                    <div class="ext">→ OTHER DISK</div>
+                  </div>
+                </div>
+                <p class="login-note">You're on ivan.xyz — picking Leon hands off to his domain.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Boot sequence -->
+          <div class="boot" id="boot">
+            <div id="boot-happy">
+              <div class="happy-mac" id="happy-mac"></div>
+            </div>
+            <div id="boot-welcome" class="hidden" style="display:flex;flex-direction:column;align-items:center;gap:26px;">
+              <div class="welcome-txt">Welcome to Macintosh</div>
+              <div class="barwrap"><div class="bar" id="boot-bar"></div></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="floppy"></div>
+      <div class="badge">Macintosh</div>
+    </div>
+  </div>
+
+  <template id="__bundler_thumbnail">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+      <rect width="100" height="100" fill="#d9d0c1"/>
+      <rect x="30" y="30" width="40" height="34" rx="4" fill="#fff" stroke="#000" stroke-width="2"/>
+      <rect x="36" y="36" width="28" height="20" fill="#000"/>
+      <circle cx="44" cy="44" r="2" fill="#fff"/><circle cx="56" cy="44" r="2" fill="#fff"/>
+      <path d="M44 50 q6 5 12 0" stroke="#fff" stroke-width="2" fill="none"/>
+    </svg>
+  </template>
+
+  <script src="mac.js"></script>
+</body>
+</html>
