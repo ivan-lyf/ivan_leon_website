@@ -7,10 +7,23 @@ the other person is an external link to their domain.
 ```
 I-L-site/
 ├── index.html   # the page: boot → login chooser → desktop
-├── mac.css      # all styles (chassis, CRT, windows, icons, dither)
-└── mac.js       # engine (boot, login, window mgr, drag/resize, menus, control panel)
+├── mac.css      # all styles (chassis, CRT, windows, icons, dither, image gallery)
+├── mac.js       # engine (boot, login, window mgr, drag/resize, menus, control panel, content)
+└── assets/
+    ├── fonts/    # self-hosted Chicago + Monaco (woff2/woff)
+    ├── projects/ # Rate My Dish, CS2 Tactics, GravitySandbox screenshots
+    ├── rocket/   # UBC Rocket ground-control-station screenshots
+    └── resume/   # Ivan_Luo_Resume.pdf
 ```
-Pure HTML/CS/JS — no build step. Open index.html or drop the folder on any static host.
+Pure HTML/CSS/JS — no build step. Open index.html or drop the folder on any static host.
+
+## Images, the Macintosh way
+Screenshots live inside the relevant project/experience window as a framed
+"picture" filmstrip (`galleryHTML()` in mac.js, `.shots` styles in mac.css).
+Thumbnails sit in a white matte with a black keyline and are monochrome at rest
+to live in the 1-bit world; hovering shows full colour, and clicking enlarges the
+picture in place (full width, full colour). Edit a project's `shots: [...]` array
+or `ROCKET_SHOTS` to change which pictures appear.
 
 ## How the two-domain idea maps to this code
 - **Login chooser** (`#login` in index.html): two cards — Ivan (THIS MAC) and Leon (→ OTHER DISK).
@@ -21,10 +34,16 @@ Pure HTML/CS/JS — no build step. Open index.html or drop the folder on any sta
   `const owner = location.hostname.includes("leon") ? "leon" : "ivan";`
   and render the matching desktop + the opposite person's link.
 
-## Stubs to wire up before shipping
-- **Leon handoff** — `gotoLeon()` in mac.js → point at `https://leon.xyz`.
-- **Résumé download** — the "Download PDF…" button in `resumeContent()` → link your real file.
-- **Contact links** — github.com/ivan, linkedin.com/in/ivan, ivan@ivan.xyz in `contactContent()`.
+## Status
+Ivan's side is fully populated from his résumé and the old portfolio site:
+real About / Experience (Ruboss + UBC Rocket) / Projects / Résumé / Contact,
+self-hosted Chicago + Monaco fonts, and screenshot galleries. Wired:
+- **Résumé download** — "Download PDF…" links `assets/resume/Ivan_Luo_Resume.pdf`.
+- **Contact links** — yingfanluo@gmail.com, github.com/ivan-lyf, linkedin.com/in/ivan-yingfan-luo.
+
+Still a stub (Leon's side — intentionally untouched):
+- **Leon handoff** — `gotoLeon()` in mac.js shows a demo dialog. For production,
+  replace its body with `window.location.href = "https://leon.xyz";`.
 
 ## Deploy (Vercel, single shared app)
 1. Push this folder to a repo, import to Vercel (framework preset: Other / static).
