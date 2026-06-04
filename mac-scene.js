@@ -416,7 +416,8 @@
     screenEl = document.getElementById('screen');
 
     camera = new T.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(8, 8.5, 18);
+    // start front-on and centered (matches the intended landing view)
+    camera.position.set(0, 7.3, 22);
 
     glRenderer = new T.WebGLRenderer({ antialias: true, alpha: true });
     glRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
