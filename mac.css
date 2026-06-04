@@ -73,13 +73,13 @@ img { image-rendering: pixelated; }
   justify-content: center;
   background:
     radial-gradient(ellipse at 50% 0%, #34343c 0%, #161619 70%);
-  padding: 24px;
+  padding: 14px;
 }
 
 .chassis {
   position: relative;
-  width: min(94vw, 1100px);
-  height: min(92vh, 820px);
+  width: min(97vw, 1380px);
+  height: min(96vh, 1000px);
   border-radius: 26px 26px 30px 30px / 22px 22px 40px 40px;
   background:
     linear-gradient(160deg, var(--beige-hi) 0%, var(--beige) 38%, var(--beige-lo) 100%);
@@ -544,6 +544,7 @@ img { image-rendering: pixelated; }
   min-width: 240px;
   min-height: 150px;
   z-index: 10;
+  overflow: hidden;            /* nothing (incl. a stray scroll thumb) may paint outside the window */
 }
 .win .titlebar {
   height: 20px;
@@ -626,6 +627,8 @@ img { image-rendering: pixelated; }
   display: flex;
   flex-direction: column;
   background: var(--paper);
+  min-height: 0;              /* let the column shrink to the window, never grow past it */
+  overflow: hidden;
 }
 .win .scroll-v .arrow {
   height: 16px;
@@ -636,6 +639,8 @@ img { image-rendering: pixelated; }
 .win .scroll-v .arrow.down { border-bottom: none; border-top: 2px solid var(--ink); }
 .win .scroll-v .track {
   flex: 1 1 auto;
+  min-height: 0;             /* track height = true available space, independent of the thumb */
+  overflow: hidden;          /* clip the thumb so its margin can't inflate the track (feedback loop) */
 }
 .win .scroll-v .track.dither-50 { }
 .win .scroll-v .thumb {
@@ -699,18 +704,18 @@ img { image-rendering: pixelated; }
    ============================================================ */
 .content {
   font-family: 'Geneva', 'Monaco', 'Lucida Grande', system-ui, sans-serif;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 15px;
+  line-height: 1.55;
   color: var(--ink);
 }
 .content h2 {
   font-family: 'Chicago', sans-serif;
-  font-size: 16px;
+  font-size: 19px;
   margin: 0 0 8px;
 }
 .content h3 {
   font-family: 'Chicago', sans-serif;
-  font-size: 13px;
+  font-size: 15px;
   margin: 14px 0 4px;
 }
 .content p { margin: 0 0 9px; }
@@ -785,9 +790,9 @@ img { image-rendering: pixelated; }
   display: inline-block;
   border: 2px solid var(--ink);
   border-radius: 9px;
-  padding: 1px 9px;
+  padding: 2px 10px;
   font-family: 'Geneva','Monaco',sans-serif;
-  font-size: 11px;
+  font-size: 12px;
   margin: 0 4px 4px 0;
 }
 
@@ -806,7 +811,7 @@ img { image-rendering: pixelated; }
 }
 .content .shot {
   margin: 0;
-  width: 108px;
+  width: 124px;
   cursor: zoom-in;
   flex: 0 0 auto;
 }
@@ -821,7 +826,7 @@ img { image-rendering: pixelated; }
 .content .shot .shot-frame img {
   display: block;
   width: 100%;
-  height: 74px;
+  height: 84px;
   object-fit: cover;
   object-position: top center;
   image-rendering: auto;               /* override global pixelated for photos */
@@ -833,7 +838,7 @@ img { image-rendering: pixelated; }
 .content .shot:hover .shot-frame img { filter: none; }
 .content .shot figcaption {
   font-family: 'Monaco', monospace;
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.2;
   text-align: center;
   margin-top: 4px;
@@ -842,22 +847,89 @@ img { image-rendering: pixelated; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* click to enlarge in place — full width, full colour, full image */
-.content .shot.expanded {
-  width: 100%;
+/* green-phosphor mode: tint resting thumbnails to match the monitor */
+.mono-green .content .shot:not(:hover) .shot-frame img {
+  filter: grayscale(1) sepia(1) hue-rotate(58deg) saturate(2.2) brightness(0.92);
+}
+
+/* ---- picture viewer (click a thumbnail → opens enlarged in its own window) ---- */
+.lightbox {
+  position: absolute;
+  inset: 0;
+  z-index: 9600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
   cursor: zoom-out;
 }
-.content .shot.expanded .shot-frame img {
-  height: auto;
-  max-height: 60vh;
-  object-fit: contain;
-  filter: none;
+.lightbox .lb-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.55;             /* dim the desktop behind the picture */
 }
-.content .shot.expanded figcaption { white-space: normal; }
-
-/* green-phosphor mode: tint resting thumbnails to match the monitor */
-.mono-green .content .shot:not(.expanded):not(:hover) .shot-frame img {
-  filter: grayscale(1) sepia(1) hue-rotate(58deg) saturate(2.2) brightness(0.92);
+.picwin {
+  position: relative;
+  z-index: 1;
+  max-width: 92%;
+  max-height: 92%;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 0 var(--ink), 0 0 0 4px var(--paper), 4px 4px 0 4px var(--ink);
+  display: flex;
+  flex-direction: column;
+  cursor: default;
+  animation: picpop 0.14s steps(3) both;
+}
+@keyframes picpop { from { transform: scale(0.82); } to { transform: scale(1); } }
+.picwin .titlebar {
+  height: 22px;
+  flex: 0 0 auto;
+  border-bottom: 2px solid var(--ink);
+  background: repeating-linear-gradient(0deg, var(--ink) 0, var(--ink) 1px, var(--paper) 1px, var(--paper) 2px);
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+.picwin .titlebar .close-box {
+  width: 12px; height: 12px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  margin-left: 6px;
+  cursor: default;
+}
+.picwin .titlebar .close-box:hover {
+  background: repeating-linear-gradient(45deg, var(--ink) 0, var(--ink) 1px, var(--paper) 1px, var(--paper) 2px);
+}
+.picwin .titlebar .t {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--paper);
+  padding: 0 10px;
+  font-size: 14px;
+  max-width: 76%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.picwin .pic-body {
+  padding: 10px;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+.picwin .pic-body img {
+  display: block;
+  max-width: 100%;
+  max-height: 78vh;
+  object-fit: contain;
+  image-rendering: auto;     /* show the photo, not pixelated */
+  border: 2px solid var(--ink);
+  background: var(--paper);
 }
 
 /* ============================================================

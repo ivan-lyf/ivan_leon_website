@@ -138,7 +138,7 @@
         <div class="photo-dither"><div class="cap">[ ivan ]</div></div>
         <div style="flex:1 1 180px;min-width:170px;">
           <h2>Yingfan (Ivan) Luo</h2>
-          <p style="font-family:'Monaco',monospace;font-size:11px;margin-top:-4px;">Computer Engineering @ UBC</p>
+          <p style="font-family:'Monaco',monospace;font-size:13px;margin-top:-4px;">Computer Engineering @ UBC</p>
           <p>I build software across the stack — from embedded firmware where code meets hardware, to modern web and mobile apps.</p>
         </div>
       </div>
@@ -154,7 +154,7 @@
         → Retro computing enthusiast
       </p>
       <hr class="dotrule">
-      <p style="font-family:'Monaco',monospace;font-size:11px;">
+      <p style="font-family:'Monaco',monospace;font-size:13px;">
         Open to internship opportunities — reach out at<br>
         <a href="mailto:yingfanluo@gmail.com">yingfanluo@gmail.com</a>.
       </p>`;
@@ -165,7 +165,7 @@
       <h2>Experience</h2>
       <hr class="rule">
       <h3>Full-Stack Software Engineer — Ruboss</h3>
-      <p style="font-family:'Monaco',monospace;font-size:11px;margin:0 0 4px;">Ruboss Technology Corp. · May–Aug 2026 · Vancouver, BC</p>
+      <p style="font-family:'Monaco',monospace;font-size:13px;margin:0 0 4px;">Ruboss Technology Corp. · May–Aug 2026 · Vancouver, BC</p>
       <p>
         • Co-developed Leanpub's native iOS app from scratch in SwiftUI as one of two developers — secure auth, book creation, and voice-input dictation against a GraphQL backend via Apollo iOS.<br>
         • Built a dual-mode chapter editor supporting raw Markua markup and a visual editor, then shipped a formatting toolbar and keyboard shortcuts shared across the web app and iOS.<br>
@@ -174,7 +174,7 @@
       </p>
       <hr class="dotrule">
       <h3>Embedded Software Engineer — UBC Rocket</h3>
-      <p style="font-family:'Monaco',monospace;font-size:11px;margin:0 0 4px;">TVR Team · Sept 2025 – present · Vancouver, BC</p>
+      <p style="font-family:'Monaco',monospace;font-size:13px;margin:0 0 4px;">TVR Team · Sept 2025 – present · Vancouver, BC</p>
       <p>
         • Engineer a high-performance ground control station in C++ and Qt — 100+ Hz telemetry, 3D attitude visualization, and a satellite-view map for real-time position tracking.<br>
         • Built the bidirectional radio link: COBS-encoded message framing, an updated Protobuf schema, and CSV logging of received packets for post-flight analysis.<br>
@@ -183,11 +183,11 @@
         • Developed STM32 firmware for a Qorvo DW3000 ultra-wideband (UWB) ranging module over UART for precise distance/position tracking.<br>
         • Tuned ESC/motor-control firmware and built a Python data-collection pipeline measuring force/torque vs. thrust %.
       </p>
-      <p style="font-family:'Chicago';font-size:11px;"><a href="https://github.com/UBC-Rocket/thrust_vectoring_consolidated" target="_blank" rel="noopener">GitHub →</a></p>
+      <p style="font-family:'Chicago';font-size:13px;"><a href="https://github.com/UBC-Rocket/thrust_vectoring_consolidated" target="_blank" rel="noopener">GitHub →</a></p>
       ${galleryHTML(ROCKET_SHOTS, "Ground Control Station")}
       <hr class="dotrule">
       <h3>Education</h3>
-      <p style="font-family:'Monaco',monospace;font-size:11px;">B.A.Sc. Computer Engineering — University of British Columbia<br>GPA 86% · Class of 2028</p>`;
+      <p style="font-family:'Monaco',monospace;font-size:13px;">B.A.Sc. Computer Engineering — University of British Columbia<br>GPA 86% · Class of 2028</p>`;
   }
 
   function resumeContent() {
@@ -195,7 +195,7 @@
       <h2 style="text-align:center;">RÉSUMÉ</h2>
       <hr class="rule">
       <h3>Yingfan (Ivan) Luo — Computer Engineering @ UBC</h3>
-      <p style="font-family:'Monaco',monospace;font-size:11px;">Vancouver, BC · ivanluo.xyz<br>yingfanluo@gmail.com · 778-228-6477</p>
+      <p style="font-family:'Monaco',monospace;font-size:13px;">Vancouver, BC · ivanluo.xyz<br>yingfanluo@gmail.com · 778-228-6477</p>
       <hr class="dotrule">
       <h3>Experience</h3>
       <p>• Ruboss Technology — Full-Stack Software Engineer (2026)<br>• UBC Rocket — Embedded Software Engineer (2025–present)</p>
@@ -223,7 +223,7 @@
       <p><strong>GitHub</strong><br><a href="https://github.com/ivan-lyf" target="_blank" rel="noopener">github.com/ivan-lyf</a></p>
       <p><strong>LinkedIn</strong><br><a href="https://www.linkedin.com/in/ivan-yingfan-luo/" target="_blank" rel="noopener">linkedin.com/in/ivan-yingfan-luo</a></p>
       <hr class="dotrule">
-      <p style="font-family:'Monaco',monospace;font-size:11px;text-align:center;">
+      <p style="font-family:'Monaco',monospace;font-size:13px;text-align:center;">
         Looking for Leon?<br>
         <a href="#" onclick="Mac.gotoLeon();return false;">→ leon.xyz</a>
       </p>`;
@@ -234,7 +234,7 @@
       <div style="text-align:center;padding:18px 4px;">
         <div style="margin:0 auto 14px;width:44px;">${svgGlyph('g-trash',44)}</div>
         <h3 style="font-family:'Chicago';">The Trash is empty.</h3>
-        <p style="font-family:'Monaco',monospace;font-size:11px;">Nothing has been thrown away.<br>(Try dragging an icon onto me.)</p>
+        <p style="font-family:'Monaco',monospace;font-size:13px;">Nothing has been thrown away.<br>(Try dragging an icon onto me.)</p>
       </div>`;
   }
 
@@ -262,20 +262,20 @@
     const body = el("div");
     const linksHTML =
       p.links && p.links.length
-        ? `<p style="font-family:'Chicago';font-size:11px;">${p.links
+        ? `<p style="font-family:'Chicago';font-size:13px;">${p.links
             .map((l) => `<a href="${l.href}" target="_blank" rel="noopener">${l.label} →</a>`)
             .join(" &nbsp;·&nbsp; ")}</p>`
         : "";
     body.innerHTML = `
       <h2>${p.name}</h2>
-      <p style="font-family:'Monaco',monospace;font-size:11px;margin-top:-4px;">${p.info}</p>
+      <p style="font-family:'Monaco',monospace;font-size:13px;margin-top:-4px;">${p.info}</p>
       <hr class="dotrule">
       <p>${p.blurb}</p>
       ${linksHTML}
       <h3>Tech</h3>
       <p>${p.stack.map((s) => `<span class="tag">${s}</span>`).join("")}</p>
       ${galleryHTML(p.shots, "Screenshots")}`;
-    openWindow("proj-" + p.id, p.name, body, p.info, { w: 404, h: 360 });
+    openWindow("proj-" + p.id, p.name, body, p.info, { w: 480, h: 440 });
   }
 
   function projectsFolderBody() {
@@ -301,19 +301,19 @@
   const ICONS = [
     { id: "harddrive", label: "Ivan's Mac", glyph: "g-hd", x: 0, y: 0, corner: "tr",
       title: "Ivan's Mac", info: "5 items · 512K in disk · 256K available",
-      build: harddriveBody, size: { w: 300, h: 230 } },
+      build: harddriveBody, size: { w: 360, h: 270 } },
     { id: "about", label: "About Me", glyph: "g-doc", x: 24, y: 14,
-      title: "About Me", info: "About · 24K", build: () => htmlBody(aboutContent()), size: { w: 380, h: 300 } },
+      title: "About Me", info: "About · 24K", build: () => htmlBody(aboutContent()), size: { w: 460, h: 380 } },
     { id: "projects", label: "Projects", glyph: "g-folder", x: 24, y: 120,
-      title: "Projects", info: "5 items · 128K in folder", build: projectsFolderBody, size: { w: 320, h: 250 } },
+      title: "Projects", info: "5 items · 128K in folder", build: projectsFolderBody, size: { w: 380, h: 300 } },
     { id: "experience", label: "Experience", glyph: "g-doc", x: 24, y: 226,
-      title: "Experience", info: "Experience · 18K", build: () => htmlBody(experienceContent()), size: { w: 360, h: 300 } },
+      title: "Experience", info: "Experience · 18K", build: () => htmlBody(experienceContent()), size: { w: 460, h: 380 } },
     { id: "resume", label: "Résumé", glyph: "g-resume", x: 0, y: 0, corner: "tr2",
-      title: "Résumé", info: "Résumé · 32K", build: () => htmlBody(resumeContent()), size: { w: 340, h: 320 } },
+      title: "Résumé", info: "Résumé · 32K", build: () => htmlBody(resumeContent()), size: { w: 420, h: 400 } },
     { id: "contact", label: "Contact", glyph: "g-mail", x: 0, y: 0, corner: "tr3",
-      title: "Contact", info: "Contact · 8K", build: () => htmlBody(contactContent()), size: { w: 300, h: 300 } },
+      title: "Contact", info: "Contact · 8K", build: () => htmlBody(contactContent()), size: { w: 360, h: 340 } },
     { id: "trash", label: "Trash", glyph: "g-trash", x: 0, y: 0, corner: "br",
-      title: "Trash", info: "Empty", build: () => htmlBody(trashContent()), size: { w: 280, h: 230 } },
+      title: "Trash", info: "Empty", build: () => htmlBody(trashContent()), size: { w: 320, h: 260 } },
   ];
 
   function htmlBody(html) {
@@ -437,6 +437,17 @@
     makeResizable(win, grow, size);
     updateThumb(content, scroll);
     content.addEventListener("scroll", () => updateThumb(content, scroll));
+    // Recompute the thumb whenever the content reflows — late font swap, lazy
+    // images loading, or the window being resized — so it never goes stale.
+    if (window.ResizeObserver) {
+      const ro = new ResizeObserver(() => updateThumb(content, scroll));
+      ro.observe(content);
+      const inner = content.firstElementChild;
+      if (inner) ro.observe(inner);
+    }
+    $$("img", content).forEach((img) => {
+      img.addEventListener("load", () => updateThumb(content, scroll));
+    });
 
     setActive(win);
 
@@ -456,7 +467,7 @@
     const track = $(".track", scroll);
     if (!thumb || !track) return;
     const ratio = content.clientHeight / content.scrollHeight;
-    if (ratio >= 1) {
+    if (!(ratio < 1)) { // also covers NaN (empty content) -> hide
       thumb.style.display = "none";
       track.classList.remove("dither-50");
       track.style.background = "var(--paper)";
@@ -465,9 +476,15 @@
     track.classList.add("dither-50");
     track.style.background = "";
     thumb.style.display = "block";
-    const th = Math.max(22, track.clientHeight * ratio - 4);
-    const maxTop = track.clientHeight - th - 4;
-    const top = (content.scrollTop / (content.scrollHeight - content.clientHeight)) * maxTop;
+    // trackH is the true available height; `overflow:hidden` on .track keeps the
+    // thumb's own margin from inflating it (which used to feed back and march the
+    // thumb off the bottom of the window onto the desktop).
+    const trackH = track.clientHeight;
+    const th = Math.min(trackH - 4, Math.max(22, trackH * ratio - 4));
+    const maxTop = Math.max(0, trackH - th - 4);
+    const scrollable = content.scrollHeight - content.clientHeight;
+    const frac = scrollable > 0 ? content.scrollTop / scrollable : 0;
+    const top = Math.min(maxTop, Math.max(0, frac * maxTop));
     thumb.style.height = th + "px";
     thumb.style.marginTop = (2 + top) + "px";
   }
@@ -582,6 +599,25 @@
     setTimeout(() => { win.style.visibility = "visible"; }, 110);
   }
 
+  /* ---------- picture viewer (lightbox) ---------- */
+  function openLightbox(src, cap) {
+    const lb = el("div", "lightbox");
+    lb.innerHTML =
+      `<div class="lb-backdrop dither-50"></div>` +
+      `<div class="picwin">` +
+        `<div class="titlebar"><div class="close-box"></div><div class="t">${cap || "Picture"}</div></div>` +
+        `<div class="pic-body"><img src="${src}" alt="${cap || ""}"></div>` +
+      `</div>`;
+    const close = () => { lb.remove(); document.removeEventListener("keydown", onKey); };
+    const onKey = (e) => { if (e.key === "Escape") close(); };
+    // click the backdrop (anywhere outside the framed picture) or the close box to dismiss
+    lb.addEventListener("click", (e) => {
+      if (!e.target.closest(".picwin") || e.target.closest(".close-box")) close();
+    });
+    document.addEventListener("keydown", onKey);
+    screen.appendChild(lb);
+  }
+
   /* ============================================================
      MENU BAR
      ============================================================ */
@@ -589,7 +625,7 @@
     apple: {
       glyph: true,
       items: [
-        { label: "About This Macintosh…", action: () => openWindow("about-mac", "About This Macintosh", htmlBody(aboutMacBody()), null, { w: 340, h: 230 }) },
+        { label: "About This Macintosh…", action: () => openWindow("about-mac", "About This Macintosh", htmlBody(aboutMacBody()), null, { w: 400, h: 270 }) },
         { divider: true },
         { label: "Control Panel", action: openControlPanel },
         { divider: true },
@@ -688,14 +724,14 @@
           <div style="margin:6px auto 10px;display:flex;justify-content:center;">${svgGlyph('machead',44)}</div>
         </div>
         <h2 style="font-family:'Chicago';">Macintosh Portfolio</h2>
-        <p style="font-family:'Monaco',monospace;font-size:11px;">System Software 1.0</p>
+        <p style="font-family:'Monaco',monospace;font-size:13px;">System Software 1.0</p>
         <hr class="dotrule">
-        <p style="font-family:'Geneva','Monaco',sans-serif;font-size:12px;">
+        <p style="font-family:'Geneva','Monaco',sans-serif;font-size:14px;">
           Total Memory: 128K<br>
           Built with HTML · CSS · JavaScript<br>
           A faithful 1984 Macintosh, for Ivan.
         </p>
-        <p style="font-family:'Monaco',monospace;font-size:10px;margin-top:10px;">© 2026 ivanluo.xyz</p>
+        <p style="font-family:'Monaco',monospace;font-size:12px;margin-top:10px;">© 2026 ivanluo.xyz</p>
       </div>`;
   }
 
@@ -721,8 +757,8 @@
       <div style="display:flex;gap:8px;margin:6px 0 4px;">
         <button class="mac-btn" id="cp-drag">${liveDrag ? "Live" : "Outline (marching ants)"}</button>
       </div>
-      <p style="font-family:'Monaco',monospace;font-size:10px;margin-top:10px;">Tip: every section is a file — double-click to open.</p>`;
-    openWindow("control", "Control Panel", body, "System · 4K", { w: 320, h: 320 });
+      <p style="font-family:'Monaco',monospace;font-size:12px;margin-top:10px;">Tip: every section is a file — double-click to open.</p>`;
+    openWindow("control", "Control Panel", body, "System · 4K", { w: 380, h: 380 });
 
     const win = openWindows.get("control");
     const syncMono = () => {
@@ -886,15 +922,13 @@
     document.querySelectorAll('[data-glyph="avatar"]').forEach((a) => { a.innerHTML = svgGlyph("avatar", 52); });
     buildMenuBar();
 
-    // Inline gallery: click a framed thumbnail to enlarge it in place.
+    // Gallery: click a framed thumbnail to open the picture enlarged in its own window.
     desktop.addEventListener("click", (e) => {
       const fig = e.target.closest(".shot");
       if (!fig || !desktop.contains(fig)) return;
-      fig.classList.toggle("expanded");
-      const content = fig.closest(".content");
-      const wbody = content && content.parentElement;
-      const scroll = wbody && wbody.querySelector(".scroll-v");
-      if (content && scroll) updateThumb(content, scroll);
+      const img = fig.querySelector("img");
+      const cap = fig.querySelector("figcaption");
+      if (img) openLightbox(img.getAttribute("src"), cap ? cap.textContent : img.alt);
     });
 
     runBoot(showLogin);
