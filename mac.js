@@ -22,6 +22,9 @@
 
   let zTop = 20;
   const openWindows = new Map(); // id -> element
+
+  // Now Playing widget state (one curated track per session + minimized disc tab)
+  let npBox = null, npDisc = null, npTracks = null, npIndex = 0;
   let liveDrag = localStorage.getItem("mac.liveDrag");
   liveDrag = liveDrag === null ? true : liveDrag === "true";
 
@@ -126,6 +129,18 @@
         return `<svg width="${size}" height="${size}" viewBox="0 0 48 48" shape-rendering="geometricPrecision" fill="none" stroke="#000" stroke-width="2" style="display:block"><defs><clipPath id="ac"><circle cx="24" cy="24" r="21"/></clipPath></defs><circle cx="24" cy="24" r="22" fill="#fff"/><g clip-path="url(#ac)"><circle cx="24" cy="20" r="7.5" fill="#000" stroke="none"/><path d="M9 44 a15 15 0 0 1 30 0 Z" fill="#000" stroke="none"/></g></svg>`;
       case "happymac":
         return `<svg width="${size}" height="${size*1.18}" viewBox="0 0 80 94" shape-rendering="crispEdges" fill="none" stroke="#000" stroke-width="3" style="display:block"><rect x="5" y="3" width="70" height="88" rx="8" fill="#fff"/><rect x="14" y="11" width="52" height="50" rx="2" fill="#fff" stroke-width="2"/><rect x="26" y="27" width="6" height="9" fill="#000" stroke="none"/><rect x="48" y="27" width="6" height="9" fill="#000" stroke="none"/><path d="M28 45 q12 11 24 0" stroke-width="3"/><line x1="14" y1="68" x2="66" y2="68" stroke-width="2"/><rect x="22" y="78" width="36" height="4" fill="#000" stroke="none"/></svg>`;
+      case "disc":
+        // Vinyl record — spins via CSS when used as the minimized Now-Playing tab
+        return `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none" stroke="#000" stroke-width="2" shape-rendering="geometricPrecision" style="display:block"><circle cx="16" cy="16" r="13" fill="#fff"/><circle cx="16" cy="16" r="4.5"/><circle cx="16" cy="16" r="1.3" fill="#000" stroke="none"/><path d="M16 3 A13 13 0 0 1 29 16" stroke-width="1.5"/></svg>`;
+      case "g-globe":
+        // Low-poly wireframe globe (GARDEROBE desktop link)
+        return `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none" stroke="#000" stroke-width="1.5" shape-rendering="geometricPrecision" style="display:block"><circle cx="16" cy="16" r="13" fill="#fff"/><ellipse cx="16" cy="16" rx="6.5" ry="13"/><line x1="16" y1="3" x2="16" y2="29"/><line x1="4.5" y1="10.5" x2="27.5" y2="10.5"/><line x1="3" y1="16" x2="29" y2="16"/><line x1="4.5" y1="21.5" x2="27.5" y2="21.5"/></svg>`;
+      case "smiley":
+        // 1-bit pixel smiley — white face, black outline + eyes + grin (Leon's user icon)
+        return `<svg width="${size}" height="${size}" viewBox="0 0 32 32" shape-rendering="crispEdges" style="display:block"><circle cx="16" cy="16" r="14.5" fill="#fff" stroke="#000" stroke-width="2"/><rect x="9.5" y="10" width="3.5" height="4.5" fill="#000"/><rect x="19" y="10" width="3.5" height="4.5" fill="#000"/><path d="M9 18 Q16 25 23 18" fill="none" stroke="#000" stroke-width="2.5"/></svg>`;
+      case "apple":
+        // WHOLE apple (NO bite) — rounded body + leaf, solid 1-bit fill
+        return `<svg width="${size}" height="${size}" viewBox="0 0 100 112" fill="#000" style="display:block"><path d="M50 32 C47 25 42 19 34 19 C18 19 8 33 8 53 C8 78 27 105 50 105 C73 105 92 78 92 53 C92 33 82 19 66 19 C58 19 53 25 50 32 Z"/><path d="M51 28 C55 12 67 6 76 7 C74 22 62 30 52 28 Z"/></svg>`;
       default:
         return s(`<rect x="6" y="4" width="20" height="24" fill="#fff"/>`);
     }
@@ -383,6 +398,7 @@
     if (!ic) return;
     const node = desktop.querySelector(`.icon[data-id="${id}"]`);
     const origin = node ? node.getBoundingClientRect() : null;
+    if (ic.kind === "link" && ic.href) { window.open(ic.href, "_blank", "noopener"); return; }
     let body;
     if (ic.kind === "harddrive") body = harddriveBody();
     else if (ic.kind === "folder") body = folderBody(ic);
@@ -812,8 +828,21 @@
       item.dataset.menu = key;
       bar.appendChild(item);
     });
+    // Right-aligned group: [ disc tab ][ clock ] — disc sits to the LEFT of the time.
+    const right = el("div", "menubar-right");
+    bar.appendChild(right);
+
+    if (ACTIVE && ACTIVE.nowPlaying && ACTIVE.nowPlaying.length) {
+      npDisc = el("div", "np-disc hidden");
+      npDisc.innerHTML = svgGlyph("disc", 18);
+      npDisc.title = "Now Playing";
+      npDisc.addEventListener("mousedown", (e) => e.stopPropagation());
+      npDisc.addEventListener("click", (e) => { e.stopPropagation(); openNowPlaying(); });
+      right.appendChild(npDisc);
+    }
+
     const clock = el("div", "clock");
-    bar.appendChild(clock);
+    right.appendChild(clock);
     tickClock(clock);
     setInterval(() => tickClock(clock), 10000);
 
@@ -955,7 +984,7 @@
     syncCrt();
 
     // Desktop pattern
-    const curPat = () => localStorage.getItem("mac.pattern") || "dither-50";
+    const curPat = () => localStorage.getItem("mac.pattern") || "plain";
     const syncPat = () => $$(".cp-pat", win).forEach((b) => b.classList.toggle("default", b.dataset.p === curPat()));
     $$(".cp-pat", win).forEach((b) => b.addEventListener("click", () => { setPattern(b.dataset.p); syncPat(); }));
     syncPat();
@@ -1083,7 +1112,8 @@
       </div>
       <p class="login-note">You're on ${ACTIVE.domain} — picking ${OTHER.name} hands off to ${OTHER.domain}.</p>`;
     $("#login-machead", body).innerHTML = svgGlyph("machead", 44);
-    $$(".avatar", body).forEach((a) => { a.innerHTML = svgGlyph("avatar", 52); });
+    $(".avatar", $("#card-owner", body)).innerHTML = svgGlyph(ACTIVE.avatarGlyph || "avatar", 52);
+    $(".avatar", $("#card-other", body)).innerHTML = svgGlyph(OTHER.avatarGlyph || "avatar", 52);
 
     login.classList.remove("hidden");
     $("#card-owner", body).addEventListener("click", () => {
@@ -1097,10 +1127,79 @@
 
   function startDesktop() {
     desktop.classList.remove("hidden");
+    renderWallpaper();
     placeIcons();
+    setupNowPlaying();
     window.addEventListener("resize", debounce(placeIcons, 200));
     // intro: glide a fake mouse to "About Me" and double-click it open
     requestAnimationFrame(() => introOpenAbout());
+  }
+
+  // Wallpaper — centered 1-bit Apple logo + serif "Be Different" caption.
+  function renderWallpaper() {
+    const wp = document.getElementById("wallpaper");
+    if (!wp) return;
+    wp.innerHTML = `<img class="wp-apple" src="assets/apple.png" alt="" draggable="false">` +
+      `<div class="wp-words">` +
+        `<div class="wp-stack">` +
+          `<span class="wp-text">Think</span>` +
+          `<span class="wp-text wp-be">Be</span>` +
+        `</div>` +
+        `<span class="wp-text wp-diff">Different</span>` +
+      `</div>`;
+  }
+
+  /* ---------- Now Playing widget (one track per page load; changes on refresh) ---------- */
+  function setupNowPlaying() {
+    const old = desktop.querySelector(".nowplaying");
+    if (old) old.remove();
+    npTracks = ACTIVE.nowPlaying;
+    if (!npTracks || !npTracks.length) return;
+    npIndex = Math.floor(Math.random() * npTracks.length);
+
+    const box = el("div", "nowplaying");
+    box.innerHTML =
+      `<div class="np-bar">` +
+        `<div class="np-min" title="Minimize"></div>` +
+        `<span class="np-title-txt">Now Playing</span>` +
+      `</div>` +
+      `<div class="np-body">` +
+        `<div class="np-art"><img alt=""></div>` +
+        `<div class="np-meta">` +
+          `<div class="np-song"></div>` +
+          `<div class="np-artist"></div>` +
+          `<div class="np-eq"><span></span><span></span><span></span><span></span></div>` +
+        `</div>` +
+      `</div>`;
+    desktop.appendChild(box);
+    npBox = box;
+
+    $(".np-min", box).addEventListener("click", (e) => { e.stopPropagation(); minimizeNowPlaying(); });
+    box.addEventListener("click", (e) => {
+      if (e.target.closest(".np-min")) return;
+      const t = npTracks[npIndex];
+      if (t && t.url) window.open(t.url, "_blank", "noopener");
+    });
+
+    renderNowPlaying();
+    openNowPlaying(); // shown on entry; ensure the minimized disc tab is hidden
+  }
+
+  function renderNowPlaying() {
+    if (!npBox || !npTracks) return;
+    const t = npTracks[npIndex];
+    $(".np-art img", npBox).src = t.art || "";
+    $(".np-song", npBox).textContent = t.title;
+    $(".np-artist", npBox).textContent = t.artist;
+  }
+
+  function minimizeNowPlaying() {
+    if (npBox) npBox.classList.add("hidden");
+    if (npDisc) npDisc.classList.remove("hidden");
+  }
+  function openNowPlaying() {
+    if (npBox) npBox.classList.remove("hidden");
+    if (npDisc) npDisc.classList.add("hidden");
   }
 
   // Welcome animation: a fake Macintosh pointer slides to the About Me icon,
