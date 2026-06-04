@@ -1,4 +1,4 @@
-Ivan × Leon's personal websites
+Ivan and Leon's personal websites
 
 A shared 1984-Macintosh personal site. Each domain renders its owner's desktop;
 the other person is an external link to their domain.
