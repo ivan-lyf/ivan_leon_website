@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ivan's Macintosh — ivanluo.xyz</title>
+  <title>Macintosh Portfolio</title>
   <link rel="stylesheet" href="mac.css">
 </head>
 <body>
@@ -28,31 +28,13 @@
             <div class="desktop-bg dither-50"></div>
           </div>
 
-          <!-- Login / user chooser -->
+          <!-- Login / user chooser (shared; populated by the engine from the
+               active + other profiles — see showLogin() in mac.js) -->
           <div class="login hidden" id="login">
             <div class="login-bg dither-50"></div>
             <div class="login-dialog">
               <div class="titlebar"><div class="t">Welcome</div></div>
-              <div class="login-body">
-                <div class="machead" id="login-machead"></div>
-                <h2>Welcome to Macintosh</h2>
-                <p class="sub">Two people share this network. Who's signing in?</p>
-                <div class="users">
-                  <div class="user-card" id="user-ivan">
-                    <div class="avatar" data-glyph="avatar"></div>
-                    <div class="uname">Ivan</div>
-                    <div class="udom">ivanluo.xyz</div>
-                    <div class="ext">THIS MAC</div>
-                  </div>
-                  <div class="user-card" id="user-leon">
-                    <div class="avatar" data-glyph="avatar"></div>
-                    <div class="uname">Leon</div>
-                    <div class="udom">leon.xyz</div>
-                    <div class="ext">→ OTHER DISK</div>
-                  </div>
-                </div>
-                <p class="login-note">You're on ivanluo.xyz — picking Leon hands off to his domain.</p>
-              </div>
+              <div class="login-body" id="login-body"></div>
             </div>
           </div>
 
@@ -85,6 +67,11 @@
     </svg>
   </template>
 
+  <!-- Per-person content (registers on window.PROFILES). Both load on both
+       domains; the engine picks the owner by hostname. -->
+  <script src="profile-ivan.js"></script>
+  <script src="profile-leon.js"></script>
+  <!-- Domain-agnostic engine: resolves owner, renders desktop + shared login -->
   <script src="mac.js"></script>
 </body>
 </html>

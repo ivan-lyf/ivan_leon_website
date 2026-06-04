@@ -1,5 +1,13 @@
 /* ============================================================
    System 1 — Macintosh Portfolio  (vanilla JS engine)
+
+   Domain-agnostic. Person-specific content lives in profile-*.js
+   (registered on window.PROFILES). On load the engine resolves the
+   "owner" from the hostname (leon.xyz → leon, otherwise ivan) and
+   renders that profile's desktop. The login screen is shared: the
+   owner is THIS MAC, the other person is an external disk.
+
+   Local preview: append ?as=ivan or ?as=leon to force a side.
    ============================================================ */
 (function () {
   "use strict";
@@ -7,6 +15,10 @@
   const screen = document.getElementById("screen");
   const desktop = document.getElementById("desktop");
   const chassis = document.getElementById("chassis");
+
+  const PROFILES = window.PROFILES || {};
+  let ACTIVE = null;   // the owner of this domain
+  let OTHER = null;    // the other person (external disk)
 
   let zTop = 20;
   const openWindows = new Map(); // id -> element
@@ -22,6 +34,19 @@
   }
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+
+  /* ---------- owner resolution ---------- */
+  function resolveOwnerId() {
+    const q = new URLSearchParams(location.search).get("as");
+    if (q && PROFILES[q]) return q;
+    if (/leon/i.test(location.hostname) && PROFILES.leon) return "leon";
+    if (PROFILES.ivan) return "ivan";
+    return Object.keys(PROFILES)[0]; // last resort: whatever loaded
+  }
+  function otherId(id) {
+    const ids = Object.keys(PROFILES);
+    return ids.find((k) => k !== id) || id;
+  }
 
   /* ============================================================
      PIXEL-SVG GLYPHS  (crisp 1-bit, render everywhere)
@@ -55,72 +80,8 @@
   }
   window.__svgGlyph = svgGlyph;
 
-  /* ============================================================
-     CONTENT  — Ivan's files
-     ============================================================ */
-  const PROJECTS = [
-    {
-      id: "rate-my-dish", name: "Rate My Dish UBC", icon: "g-doc",
-      blurb: "Full-stack web app for UBC students to rate and comment on dining-hall dishes. It fetches the dining-hall menu daily to stay current, surfaces a leaderboard of top dishes across halls, and ships a custom chatbot to help you find something good to eat.",
-      stack: ["Next.js", "TypeScript", "Vercel", "LLM chatbot"],
-      info: "Web · live",
-      links: [{ label: "Live site", href: "https://rate-my-dish-ubc.vercel.app/" }],
-      shots: [
-        { src: "assets/projects/rate-my-dish-ubc-01.png", cap: "Home screen" },
-        { src: "assets/projects/rate-my-dish-ubc-02.png", cap: "Menu list" },
-        { src: "assets/projects/rate-my-dish-ubc-03.png", cap: "Dish detail" },
-        { src: "assets/projects/rate-my-dish-ubc-04.png", cap: "Chatbot" },
-      ],
-    },
-    {
-      id: "cs2-tactics", name: "CS2 Tactics", icon: "g-doc",
-      blurb: "Collaborative mobile app that helps Counter-Strike 2 teams plan, visualize, and share strategies in real time — design tactical lineups, coordinate roles, and iterate together during prep sessions on a real-time backend.",
-      stack: ["React Native", "Real-time backend", "Canvas"],
-      info: "Mobile · in development",
-      links: [{ label: "GitHub", href: "https://github.com/thomasc-0316/CS2" }],
-      shots: [
-        { src: "assets/projects/cs2-tactics-01.png", cap: "Lobby" },
-        { src: "assets/projects/cs2-tactics-02.png", cap: "Map tactics" },
-        { src: "assets/projects/cs2-tactics-03.png", cap: "Lineup grid" },
-        { src: "assets/projects/cs2-tactics-04.png", cap: "Explore" },
-      ],
-    },
-    {
-      id: "gravity-sandbox", name: "GravitySandbox", icon: "g-doc",
-      blurb: "Qt Quick prototype for experimenting with 2D gravitational simulations. Bodies are integrated with a symplectic Euler solver for stable motion, trails visualize recent paths, and interactive canvas tools let you set up orbits quickly.",
-      stack: ["Qt Quick", "C++", "QML"],
-      info: "Simulation · 2024",
-      links: [{ label: "GitHub", href: "https://github.com/ivan-lyf/gravity_simulation" }],
-      shots: [
-        { src: "assets/projects/gravity-sandbox-01.png", cap: "Simulation view" },
-      ],
-    },
-    {
-      id: "unix-shell", name: "Unix Shell (crash)", icon: "g-doc",
-      blurb: "A Unix shell written from scratch in C with a REPL supporting foreground/background job execution via fork/execve and process groups. Implements job control (fg, bg, kill, jobs) and POSIX signal handlers (SIGINT, SIGTSTP, SIGCHLD), eliminating zombie processes.",
-      stack: ["C", "Linux", "POSIX", "Signals"],
-      info: "Systems · 2025",
-      links: [],
-      shots: [],
-    },
-    {
-      id: "virtual-memory", name: "Virtual Memory System", icon: "g-doc",
-      blurb: "Virtual-to-physical address translation in C via a 3-level page-table walk, backed by a TLB cache with a miss fallback. Handles page faults and demand paging with LRU page replacement over a limited pool of physical frames.",
-      stack: ["C", "Paging", "TLB", "LRU"],
-      info: "Systems · 2025",
-      links: [],
-      shots: [],
-    },
-  ];
-
-  /* UBC Rocket ground-control-station screenshots (shown in Experience) */
-  const ROCKET_SHOTS = [
-    { src: "assets/rocket/gcs-flight.png", cap: "Flight view — 3D attitude" },
-    { src: "assets/rocket/gcs-tuning.png", cap: "PID tuning presets" },
-    { src: "assets/rocket/gcs-map.png", cap: "UWB satellite map" },
-  ];
-
-  /* inline framed gallery — thumbnails that enlarge in place (see CSS .shots) */
+  /* inline framed gallery — thumbnails that open enlarged (see CSS .shots + openLightbox).
+     Exposed globally so profile-*.js content builders can embed galleries. */
   function galleryHTML(shots, heading) {
     if (!shots || !shots.length) return "";
     const tiles = shots
@@ -131,102 +92,12 @@
       .join("");
     return `<div class="shots"><div class="shots-h">${heading || "Screenshots"}</div><div class="filmstrip">${tiles}</div></div>`;
   }
+  window.galleryHTML = galleryHTML;
 
-  function aboutContent() {
-    return `
-      <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;">
-        <div class="photo-dither"><div class="cap">[ ivan ]</div></div>
-        <div style="flex:1 1 180px;min-width:170px;">
-          <h2>Yingfan (Ivan) Luo</h2>
-          <p style="font-family:'Monaco',monospace;font-size:13px;margin-top:-4px;">Computer Engineering @ UBC</p>
-          <p>I build software across the stack — from embedded firmware where code meets hardware, to modern web and mobile apps.</p>
-        </div>
-      </div>
-      <hr class="dotrule">
-      <h3>UBC Rocket — Thrust Vectoring</h3>
-      <p>I'm on UBC Rocket's TVR team, working toward a self-landing thrust-vectoring rocket. I work on the IMU/ECU firmware, the flight-control algorithm, and the ground-control-station software.</p>
-      <hr class="dotrule">
-      <h3>What I do</h3>
-      <p>
-        → Real-time &amp; embedded systems (STM32)<br>
-        → Flight-control &amp; sensor pipelines<br>
-        → Full-stack web &amp; mobile applications<br>
-        → Retro computing enthusiast
-      </p>
-      <hr class="dotrule">
-      <p style="font-family:'Monaco',monospace;font-size:13px;">
-        Open to internship opportunities — reach out at<br>
-        <a href="mailto:yingfanluo@gmail.com">yingfanluo@gmail.com</a>.
-      </p>`;
-  }
-
-  function experienceContent() {
-    return `
-      <h2>Experience</h2>
-      <hr class="rule">
-      <h3>Full-Stack Software Engineer — Ruboss</h3>
-      <p style="font-family:'Monaco',monospace;font-size:13px;margin:0 0 4px;">Ruboss Technology Corp. · May–Aug 2026 · Vancouver, BC</p>
-      <p>
-        • Co-developed Leanpub's native iOS app from scratch in SwiftUI as one of two developers — secure auth, book creation, and voice-input dictation against a GraphQL backend via Apollo iOS.<br>
-        • Built a dual-mode chapter editor supporting raw Markua markup and a visual editor, then shipped a formatting toolbar and keyboard shortcuts shared across the web app and iOS.<br>
-        • Fixed a production GraphQL bug where a non-nullable price field returned null and nulled entire book queries; shipped a fallback resolver with a regression test in Ruby on Rails.<br>
-        • Built an AI-assisted workflow with Claude Code — custom skill files and MCP integrations (Linear, Harvest) — reviewing all generated code before merge.
-      </p>
-      <hr class="dotrule">
-      <h3>Embedded Software Engineer — UBC Rocket</h3>
-      <p style="font-family:'Monaco',monospace;font-size:13px;margin:0 0 4px;">TVR Team · Sept 2025 – present · Vancouver, BC</p>
-      <p>
-        • Engineer a high-performance ground control station in C++ and Qt — 100+ Hz telemetry, 3D attitude visualization, and a satellite-view map for real-time position tracking.<br>
-        • Built the bidirectional radio link: COBS-encoded message framing, an updated Protobuf schema, and CSV logging of received packets for post-flight analysis.<br>
-        • Developed and validated PID and flight-control-loop algorithms with CTest, catching regressions across tuning cycles; added in-station PID tuning presets.<br>
-        • Delivered a 1 kHz IMU data pipeline with consistent timing via non-blocking SPI firmware on STM32.<br>
-        • Developed STM32 firmware for a Qorvo DW3000 ultra-wideband (UWB) ranging module over UART for precise distance/position tracking.<br>
-        • Tuned ESC/motor-control firmware and built a Python data-collection pipeline measuring force/torque vs. thrust %.
-      </p>
-      <p style="font-family:'Chicago';font-size:13px;"><a href="https://github.com/UBC-Rocket/thrust_vectoring_consolidated" target="_blank" rel="noopener">GitHub →</a></p>
-      ${galleryHTML(ROCKET_SHOTS, "Ground Control Station")}
-      <hr class="dotrule">
-      <h3>Education</h3>
-      <p style="font-family:'Monaco',monospace;font-size:13px;">B.A.Sc. Computer Engineering — University of British Columbia<br>GPA 86% · Class of 2028</p>`;
-  }
-
-  function resumeContent() {
-    return `
-      <h2 style="text-align:center;">RÉSUMÉ</h2>
-      <hr class="rule">
-      <h3>Yingfan (Ivan) Luo — Computer Engineering @ UBC</h3>
-      <p style="font-family:'Monaco',monospace;font-size:13px;">Vancouver, BC · ivanluo.xyz<br>yingfanluo@gmail.com · 778-228-6477</p>
-      <hr class="dotrule">
-      <h3>Experience</h3>
-      <p>• Ruboss Technology — Full-Stack Software Engineer (2026)<br>• UBC Rocket — Embedded Software Engineer (2025–present)</p>
-      <h3>Projects</h3>
-      <p>• Rate My Dish UBC · CS2 Tactics · GravitySandbox<br>• Unix Shell (C) · Virtual Memory System (C)</p>
-      <h3>Skills</h3>
-      <p>
-        <span class="tag">C</span><span class="tag">C++</span><span class="tag">Python</span>
-        <span class="tag">Java</span><span class="tag">TypeScript</span><span class="tag">Swift</span>
-        <span class="tag">Ruby</span><span class="tag">SystemVerilog</span><span class="tag">ARM Asm</span>
-        <span class="tag">React</span><span class="tag">Next.js</span><span class="tag">SwiftUI</span>
-        <span class="tag">Rails</span><span class="tag">GraphQL</span><span class="tag">Qt</span>
-        <span class="tag">STM32</span><span class="tag">Protobuf</span><span class="tag">Git</span>
-      </p>
-      <div style="text-align:center;margin-top:16px;">
-        <a class="mac-btn default" href="assets/resume/Ivan_Luo_Resume.pdf" download="Ivan_Luo_Resume.pdf" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block;">Download PDF…</a>
-      </div>`;
-  }
-
-  function contactContent() {
-    return `
-      <h2 style="text-align:center;">Get in Touch</h2>
-      <hr class="rule">
-      <p><strong>Email</strong><br><a href="mailto:yingfanluo@gmail.com">yingfanluo@gmail.com</a></p>
-      <p><strong>GitHub</strong><br><a href="https://github.com/ivan-lyf" target="_blank" rel="noopener">github.com/ivan-lyf</a></p>
-      <p><strong>LinkedIn</strong><br><a href="https://www.linkedin.com/in/ivan-yingfan-luo/" target="_blank" rel="noopener">linkedin.com/in/ivan-yingfan-luo</a></p>
-      <hr class="dotrule">
-      <p style="font-family:'Monaco',monospace;font-size:13px;text-align:center;">
-        Looking for Leon?<br>
-        <a href="#" onclick="Mac.gotoLeon();return false;">→ leon.xyz</a>
-      </p>`;
+  function htmlBody(html) {
+    const d = el("div");
+    d.innerHTML = html;
+    return d;
   }
 
   function trashContent() {
@@ -279,56 +150,33 @@
   }
 
   function projectsFolderBody() {
+    const projects = ACTIVE.projects || [];
+    if (!projects.length) {
+      return htmlBody(`<div style="text-align:center;padding:24px 8px;">
+        <div style="margin:0 auto 12px;width:42px;">${svgGlyph('g-folder',42)}</div>
+        <h3 style="font-family:'Chicago';">No projects yet.</h3>
+        <p style="font-family:'Monaco',monospace;font-size:13px;">This folder is empty.</p></div>`);
+    }
     return fileListWindow(
-      PROJECTS.map((p) => ({ name: p.name, icon: p.icon, open: () => openProject(p) }))
+      projects.map((p) => ({ name: p.name, icon: p.icon, open: () => openProject(p) }))
     );
   }
 
   function harddriveBody() {
-    const items = [
-      { name: "About Me", icon: "g-doc", open: () => openIcon("about") },
-      { name: "Projects", icon: "g-folder", open: () => openIcon("projects") },
-      { name: "Experience", icon: "g-doc", open: () => openIcon("experience") },
-      { name: "Résumé", icon: "g-resume", open: () => openIcon("resume") },
-      { name: "Contact", icon: "g-mail", open: () => openIcon("contact") },
-    ];
+    // List every document/folder icon on this profile's desktop (skip the HD itself + Trash).
+    const items = ACTIVE.icons
+      .filter((ic) => ic.kind !== "harddrive" && ic.kind !== "trash")
+      .map((ic) => ({ name: ic.title || ic.label, icon: ic.glyph, open: () => openIcon(ic.id) }));
     return fileListWindow(items);
   }
 
-  /* ============================================================
-     DESKTOP ICONS
-     ============================================================ */
-  const ICONS = [
-    { id: "harddrive", label: "Ivan's Mac", glyph: "g-hd", x: 0, y: 0, corner: "tr",
-      title: "Ivan's Mac", info: "5 items · 512K in disk · 256K available",
-      build: harddriveBody, size: { w: 360, h: 270 } },
-    { id: "about", label: "About Me", glyph: "g-doc", x: 24, y: 14,
-      title: "About Me", info: "About · 24K", build: () => htmlBody(aboutContent()), size: { w: 460, h: 380 } },
-    { id: "projects", label: "Projects", glyph: "g-folder", x: 24, y: 120,
-      title: "Projects", info: "5 items · 128K in folder", build: projectsFolderBody, size: { w: 380, h: 300 } },
-    { id: "experience", label: "Experience", glyph: "g-doc", x: 24, y: 226,
-      title: "Experience", info: "Experience · 18K", build: () => htmlBody(experienceContent()), size: { w: 460, h: 380 } },
-    { id: "resume", label: "Résumé", glyph: "g-resume", x: 0, y: 0, corner: "tr2",
-      title: "Résumé", info: "Résumé · 32K", build: () => htmlBody(resumeContent()), size: { w: 420, h: 400 } },
-    { id: "contact", label: "Contact", glyph: "g-mail", x: 0, y: 0, corner: "tr3",
-      title: "Contact", info: "Contact · 8K", build: () => htmlBody(contactContent()), size: { w: 360, h: 340 } },
-    { id: "trash", label: "Trash", glyph: "g-trash", x: 0, y: 0, corner: "br",
-      title: "Trash", info: "Empty", build: () => htmlBody(trashContent()), size: { w: 320, h: 260 } },
-  ];
-
-  function htmlBody(html) {
-    const d = el("div");
-    d.innerHTML = html;
-    return d;
-  }
-
-  function iconById(id) { return ICONS.find((i) => i.id === id); }
+  function iconById(id) { return ACTIVE.icons.find((i) => i.id === id); }
 
   function placeIcons() {
     desktop.querySelectorAll(".icon").forEach((n) => n.remove());
     const W = desktop.clientWidth;
     const H = desktop.clientHeight;
-    ICONS.forEach((ic) => {
+    ACTIVE.icons.forEach((ic) => {
       const node = el("div", "icon");
       node.dataset.id = ic.id;
       node.innerHTML = `<div class="glyph">${svgGlyph(ic.glyph, 44)}</div><div class="label">${ic.label}</div>`;
@@ -384,7 +232,13 @@
     if (!ic) return;
     const node = desktop.querySelector(`.icon[data-id="${id}"]`);
     const origin = node ? node.getBoundingClientRect() : null;
-    openWindow(id, ic.title, ic.build(), ic.info, ic.size, origin);
+    let body;
+    if (ic.kind === "harddrive") body = harddriveBody();
+    else if (ic.kind === "folder") body = projectsFolderBody();
+    else if (ic.kind === "trash") body = htmlBody(trashContent());
+    else if (ic.doc && typeof ACTIVE[ic.doc] === "function") body = htmlBody(ACTIVE[ic.doc](ACTIVE, OTHER));
+    else body = htmlBody("");
+    openWindow(id, ic.title || ic.label, body, ic.info, ic.size, origin);
   }
 
   function openWindow(id, title, bodyNode, info, size, originRect) {
@@ -729,9 +583,9 @@
         <p style="font-family:'Geneva','Monaco',sans-serif;font-size:14px;">
           Total Memory: 128K<br>
           Built with HTML · CSS · JavaScript<br>
-          A faithful 1984 Macintosh, for Ivan.
+          A faithful 1984 Macintosh, for ${ACTIVE.name}.
         </p>
-        <p style="font-family:'Monaco',monospace;font-size:12px;margin-top:10px;">© 2026 ivanluo.xyz</p>
+        <p style="font-family:'Monaco',monospace;font-size:12px;margin-top:10px;">© 2026 ${ACTIVE.domain}</p>
       </div>`;
   }
 
@@ -811,17 +665,18 @@
     $(".ok", layer).addEventListener("click", () => { layer.remove(); onOk && onOk(); });
   }
 
-  function gotoLeon() {
+  // Hand off to the other person's disk (their own domain / deployment).
+  function gotoOther() {
     const layer = el("div", "alert-layer");
     layer.innerHTML = `
       <div class="alert">
         <div class="ico">?</div>
         <div class="body">
-          <p><strong>Switch to Leon's Macintosh?</strong><br>
-          Leon's profile lives on its own disk at <strong>leon.xyz</strong>. You'll leave Ivan's machine to visit it.</p>
+          <p><strong>Switch to ${OTHER.name}'s Macintosh?</strong><br>
+          ${OTHER.name}'s profile lives on its own disk at <strong>${OTHER.domain}</strong>. You'll leave ${ACTIVE.name}'s machine to visit it.</p>
           <div class="btns">
             <button class="mac-btn cancel">Cancel</button>
-            <button class="mac-btn default go">Go to leon.xyz</button>
+            <button class="mac-btn default go">Go to ${OTHER.domain}</button>
           </div>
         </div>
       </div>`;
@@ -829,8 +684,13 @@
     $(".cancel", layer).addEventListener("click", () => layer.remove());
     $(".go", layer).addEventListener("click", () => {
       layer.remove();
-      // In production this is: window.location.href = "https://leon.xyz";
-      alertBox("Demo handoff", "In production this navigates to https://leon.xyz — Leon's own deployment. Wired here as a demo.", "OK");
+      const host = location.hostname;
+      if (host === "localhost" || host === "127.0.0.1" || host === "") {
+        // local preview: toggle sides in-place instead of navigating to a dead domain
+        location.search = "?as=" + OTHER.id;
+      } else {
+        window.location.href = "https://" + OTHER.domain;
+      }
     });
   }
 
@@ -873,15 +733,38 @@
     }
   }
 
+  // Shared login chooser, built from the active + other profiles.
   function showLogin() {
-    $("#login").classList.remove("hidden");
-    const ivan = $("#user-ivan");
-    const leon = $("#user-leon");
-    ivan.addEventListener("click", () => {
-      $("#login").classList.add("hidden");
+    const login = $("#login");
+    const body = $("#login-body");
+    body.innerHTML = `
+      <div class="machead" id="login-machead"></div>
+      <h2>Welcome to Macintosh</h2>
+      <p class="sub">Two people share this network. Who's signing in?</p>
+      <div class="users">
+        <div class="user-card" id="card-owner">
+          <div class="avatar"></div>
+          <div class="uname">${ACTIVE.name}</div>
+          <div class="udom">${ACTIVE.domain}</div>
+          <div class="ext">THIS MAC</div>
+        </div>
+        <div class="user-card" id="card-other">
+          <div class="avatar"></div>
+          <div class="uname">${OTHER.name}</div>
+          <div class="udom">${OTHER.domain}</div>
+          <div class="ext">→ OTHER DISK</div>
+        </div>
+      </div>
+      <p class="login-note">You're on ${ACTIVE.domain} — picking ${OTHER.name} hands off to ${OTHER.domain}.</p>`;
+    $("#login-machead", body).innerHTML = svgGlyph("machead", 44);
+    $$(".avatar", body).forEach((a) => { a.innerHTML = svgGlyph("avatar", 52); });
+
+    login.classList.remove("hidden");
+    $("#card-owner", body).addEventListener("click", () => {
+      login.classList.add("hidden");
       startDesktop();
     });
-    leon.addEventListener("click", gotoLeon);
+    $("#card-other", body).addEventListener("click", gotoOther);
   }
 
   function startDesktop() {
@@ -899,7 +782,7 @@
     openWindows.forEach((w) => w.remove());
     openWindows.clear();
     desktop.classList.add("hidden");
-    $("#login").classList.remove("hidden");
+    showLogin();
   }
 
   /* ============================================================
@@ -913,13 +796,16 @@
   }
 
   function init() {
+    const ownerId = resolveOwnerId();
+    ACTIVE = PROFILES[ownerId];
+    OTHER = PROFILES[otherId(ownerId)] || ACTIVE;
+    if (!ACTIVE) { console.error("No profile loaded — include profile-*.js before mac.js"); return; }
+    document.title = `${ACTIVE.fullName || ACTIVE.name}'s Macintosh — ${ACTIVE.domain}`;
+
     restorePrefs();
     // populate static glyphs
     const hm = document.getElementById("happy-mac");
     if (hm) hm.innerHTML = svgGlyph("happymac", 80);
-    const mh = document.getElementById("login-machead");
-    if (mh) mh.innerHTML = svgGlyph("machead", 44);
-    document.querySelectorAll('[data-glyph="avatar"]').forEach((a) => { a.innerHTML = svgGlyph("avatar", 52); });
     buildMenuBar();
 
     // Gallery: click a framed thumbnail to open the picture enlarged in its own window.
@@ -937,7 +823,8 @@
   // public API
   window.Mac = {
     alert: alertBox,
-    gotoLeon,
+    gotoOther,
+    gotoLeon: gotoOther, // backward-compat alias
     openControlPanel,
   };
 
