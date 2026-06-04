@@ -1,79 +1,144 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Macintosh Portfolio</title>
-  <link rel="stylesheet" href="mac.css">
+  <!-- 1-bit Mac OS styling (Chicago font, CRT) — unchanged engine stylesheet -->
+  <link rel="stylesheet" href="mac.css" />
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
+    body {
+      background: radial-gradient(120% 95% at 50% 18%, #ffe9cf 0%, #f6cda0 58%, #e9b988 100%);
+      font-family: ui-monospace, 'Courier New', monospace; color: #4a3f30;
+    }
+    #gl { position: fixed; inset: 0; z-index: 1; }
+
+    /* Live screen engine: rasterised to a texture for the 3D mesh + used for
+       click hit-testing. Invisible on the page; the 3D mesh shows it. When the
+       viewer zooms in, mac-scene.js scales this element up to fill the viewport
+       for direct interaction. */
+    #screen-host {
+      position: fixed; left: 0; top: 0; width: 640px; height: 469px;
+      opacity: 0; pointer-events: auto; z-index: 0; overflow: hidden;
+    }
+    #screen-host .stage { width: 100%; height: 100%; padding: 0; background: #000; }
+    #screen-host .chassis { width: 100%; height: 100%; border-radius: 0; padding: 0; background: #000; box-shadow: none; }
+    #screen-host .chassis::before { display: none; }
+    #screen-host .bezel { border-radius: 0; padding: 0; background: #000; box-shadow: none; }
+    #screen-host .screen { border-radius: 0; }
+    #screen-host .led, #screen-host .vents, #screen-host .floppy, #screen-host .badge { display: none; }
+    /* the 3D curve provides the CRT bulge; drop the flat oval vignette */
+    #screen-host .crt-vignette, #screen-host .crt-flicker { display: none !important; }
+
+    #hud {
+      position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
+      z-index: 5; display: flex; gap: 16px; align-items: center;
+      background: rgba(34, 26, 18, 0.72); color: #ffe9cf;
+      border: 1px solid rgba(255, 233, 207, 0.25);
+      padding: 9px 16px; border-radius: 999px;
+      font-family: ui-monospace, 'Courier New', monospace; font-size: 12px; letter-spacing: 0.3px;
+      -webkit-font-smoothing: antialiased; backdrop-filter: blur(6px);
+      pointer-events: none; user-select: none; transition: opacity 0.6s;
+    }
+    #hud b { color: #ffd9a8; font-weight: 600; }
+    #hud .sep { opacity: 0.35; }
+    #loading {
+      position: fixed; inset: 0; z-index: 9; display: flex; align-items: center; justify-content: center;
+      font-family: ui-monospace, 'Courier New', monospace; font-size: 26px; color: #7a5a30;
+      -webkit-font-smoothing: antialiased;
+      background: radial-gradient(120% 95% at 50% 18%, #ffe9cf 0%, #f6cda0 58%, #e9b988 100%);
+      transition: opacity 0.5s;
+    }
+  </style>
 </head>
 <body>
-  <div class="stage">
-    <div class="chassis crt-on" id="chassis">
-      <div class="led"></div>
-      <div class="vents"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+  <div id="loading">building Macintosh…</div>
+  <div id="hud">
+    <span><b>Drag</b> to orbit</span><span class="sep">·</span>
+    <span><b>Scroll in</b> to enter</span><span class="sep">·</span>
+    <span><b>Esc</b> to exit</span>
+  </div>
 
-      <div class="bezel">
-        <div class="screen" id="screen">
+  <!-- ============================================================
+       Live Mac OS engine markup (IDENTICAL to the original index.html
+       so mac.js / profile-*.js run untouched). mac-scene.js renders this
+       onto the 3D Macintosh's curved screen.
+       ============================================================ -->
+  <div id="screen-host">
+    <div class="stage">
+      <div class="chassis crt-on" id="chassis">
+        <div class="led"></div>
+        <div class="vents"><span></span><span></span><span></span><span></span><span></span><span></span></div>
 
-          <!-- CRT overlays -->
-          <div class="crt-scanlines"></div>
-          <div class="crt-vignette"></div>
-          <div class="crt-flicker"></div>
+        <div class="bezel">
+          <div class="screen" id="screen">
+            <div class="crt-scanlines"></div>
+            <div class="crt-vignette"></div>
+            <div class="crt-flicker"></div>
 
-          <!-- Menu bar -->
-          <div class="menubar" id="menubar"></div>
+            <div class="menubar" id="menubar"></div>
 
-          <!-- Desktop -->
-          <div class="desktop hidden" id="desktop">
-            <div class="desktop-bg dither-50"></div>
-            <!-- "Think Different" wallpaper: centered Happy Mac + serif caption (populated by mac.js) -->
-            <div class="wallpaper" id="wallpaper" aria-hidden="true"></div>
-          </div>
+            <div class="desktop hidden" id="desktop">
+              <div class="desktop-bg dither-50"></div>
+              <div class="wallpaper" id="wallpaper" aria-hidden="true"></div>
+            </div>
 
-          <!-- Login / user chooser (shared; populated by the engine from the
-               active + other profiles — see showLogin() in mac.js) -->
-          <div class="login hidden" id="login">
-            <div class="login-bg dither-50"></div>
-            <div class="login-dialog">
-              <div class="titlebar"><div class="t">Welcome</div></div>
-              <div class="login-body" id="login-body"></div>
+            <div class="login hidden" id="login">
+              <div class="login-bg dither-50"></div>
+              <div class="login-dialog">
+                <div class="titlebar"><div class="t">Welcome</div></div>
+                <div class="login-body" id="login-body"></div>
+              </div>
+            </div>
+
+            <div class="boot" id="boot">
+              <div id="boot-happy"><div class="happy-mac" id="happy-mac"></div></div>
+              <div id="boot-welcome" class="hidden" style="display:flex;flex-direction:column;align-items:center;gap:26px;">
+                <div class="welcome-txt">Welcome to Macintosh</div>
+                <div class="barwrap"><div class="bar" id="boot-bar"></div></div>
+              </div>
             </div>
           </div>
-
-          <!-- Boot sequence -->
-          <div class="boot" id="boot">
-            <div id="boot-happy">
-              <div class="happy-mac" id="happy-mac"></div>
-            </div>
-            <div id="boot-welcome" class="hidden" style="display:flex;flex-direction:column;align-items:center;gap:26px;">
-              <div class="welcome-txt">Welcome to Macintosh</div>
-              <div class="barwrap"><div class="bar" id="boot-bar"></div></div>
-            </div>
-          </div>
-
         </div>
-      </div>
 
-      <div class="floppy"></div>
-      <div class="badge">Macintosh</div>
+        <div class="floppy"></div>
+        <div class="badge">Macintosh</div>
+      </div>
     </div>
   </div>
 
-  <template id="__bundler_thumbnail">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-      <rect width="100" height="100" fill="#d9d0c1"/>
-      <rect x="30" y="30" width="40" height="34" rx="4" fill="#fff" stroke="#000" stroke-width="2"/>
-      <rect x="36" y="36" width="28" height="20" fill="#000"/>
-      <circle cx="44" cy="44" r="2" fill="#fff"/><circle cx="56" cy="44" r="2" fill="#fff"/>
-      <path d="M44 50 q6 5 12 0" stroke="#fff" stroke-width="2" fill="none"/>
-    </svg>
-  </template>
+  <!-- Three.js (UMD r128) + DOM-to-texture -->
+  <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://unpkg.com/html-to-image@1.11.11/dist/html-to-image.js"></script>
 
-  <!-- Per-person content (registers on window.PROFILES). Both load on both
-       domains; the engine picks the owner by hostname. -->
+  <!-- 3D Macintosh shell -->
+  <script src="mac-scene.js"></script>
+
+  <!-- Per-person content + domain-agnostic engine (UNCHANGED) -->
   <script src="profile-ivan.js"></script>
   <script src="profile-leon.js"></script>
-  <!-- Domain-agnostic engine: resolves owner, renders desktop + shared login -->
   <script src="mac.js"></script>
+
+  <script>
+    (function () {
+      window.MacScene.init();
+      var ld = document.getElementById('loading');
+      var hud = document.getElementById('hud');
+      var t0 = Date.now();
+      var iv = setInterval(function () {
+        var d = window.__dbg ? window.__dbg() : {};
+        if (d.ready || Date.now() - t0 > 8000) {
+          clearInterval(iv);
+          ld.style.opacity = '0';
+          setTimeout(function () { ld.remove(); }, 520);
+          // fade the controls hint out after a few seconds
+          setTimeout(function () { if (hud) hud.style.opacity = '0'; }, 6000);
+        }
+      }, 120);
+    })();
+  </script>
 </body>
 </html>
