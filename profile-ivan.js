@@ -172,8 +172,8 @@
       id: "sh-cat", name: "Cat", icon: "g-doc", title: "Cat",
       info: "Side Hustle · lead QA", size: { w: 470, h: 540 },
       build: () => shDoc("Cat", `
-        <p>This is my cat — lead QA engineer. Tests every build by sitting on the keyboard and knocking unfinished features off the desk.</p>
-        ${galleryHTML([{ src: SH + "cat-01.jpeg", cap: "Reviewing my commits" }], "Exhibit A")}`),
+        <p>This is <strong>Jupiter</strong> — my cat and lead QA engineer. He tests every build by sitting on the keyboard and knocking unfinished features off the desk.</p>
+        ${galleryHTML([{ src: SH + "cat-01.jpeg", cap: "Jupiter, reviewing my commits" }], "Exhibit A")}`),
     },
     {
       id: "sh-gym", name: "Gym", icon: "g-doc", title: "Gym",
