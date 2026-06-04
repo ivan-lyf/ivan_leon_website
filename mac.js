@@ -984,7 +984,7 @@
     syncCrt();
 
     // Desktop pattern
-    const curPat = () => localStorage.getItem("mac.pattern") || "plain";
+    const curPat = () => localStorage.getItem("mac.pattern") || "dither-50";
     const syncPat = () => $$(".cp-pat", win).forEach((b) => b.classList.toggle("default", b.dataset.p === curPat()));
     $$(".cp-pat", win).forEach((b) => b.addEventListener("click", () => { setPattern(b.dataset.p); syncPat(); }));
     syncPat();
@@ -1135,10 +1135,15 @@
     requestAnimationFrame(() => introOpenAbout());
   }
 
-  // Wallpaper — centered 1-bit Apple logo + serif "Be Different" caption.
+  // Wallpaper — centered Apple logo + serif "Think / Be Different" caption.
+  // Only for profiles that opt in (ACTIVE.wallpaper); others keep their pattern ground.
   function renderWallpaper() {
     const wp = document.getElementById("wallpaper");
     if (!wp) return;
+    if (!ACTIVE.wallpaper) { wp.innerHTML = ""; return; }
+    // clean (plain) ground behind the wallpaper, without persisting a pattern choice
+    const bg = document.querySelector(".desktop-bg");
+    if (bg) bg.className = "desktop-bg";
     wp.innerHTML = `<img class="wp-apple" src="assets/apple.png" alt="" draggable="false">` +
       `<div class="wp-words">` +
         `<div class="wp-stack">` +
