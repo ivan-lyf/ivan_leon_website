@@ -1144,9 +1144,11 @@
     const wp = document.getElementById("wallpaper");
     if (!wp) return;
     if (!ACTIVE.wallpaper) { wp.innerHTML = ""; return; }
-    // clean (plain) ground behind the wallpaper, without persisting a pattern choice
+    // clean OPAQUE paper ground behind the wallpaper (no pattern). The opaque fill
+    // matters for the 3D texture: a transparent ground rasterises to black, which
+    // would hide the black apple/text. (Not persisted to the pattern setting.)
     const bg = document.querySelector(".desktop-bg");
-    if (bg) bg.className = "desktop-bg";
+    if (bg) { bg.className = "desktop-bg"; bg.style.background = "var(--paper)"; }
     wp.innerHTML = `<img class="wp-apple" src="${APPLE_DATA_URI}" alt="" draggable="false">` +
       `<div class="wp-words">` +
         `<div class="wp-stack">` +
