@@ -43,6 +43,16 @@
   mix-blend-mode: multiply;
 }
 
+/* Amber phosphor monitor mode */
+.screen.mono-amber {
+  --paper: #f6e8c8;
+  --ink: #3a2600;
+  --screen-glow: rgba(255, 196, 87, 0.20);
+}
+.screen.mono-amber .crt-vignette {
+  mix-blend-mode: multiply;
+}
+
 * {
   box-sizing: border-box;
   -webkit-font-smoothing: none;
@@ -335,12 +345,21 @@ img { image-rendering: pixelated; }
   z-index: 6500;
 }
 .dropdown .row {
-  padding: 3px 22px 3px 22px;
+  padding: 3px 14px 3px 22px;
   font-size: 13px;
   white-space: nowrap;
   color: var(--ink);
   cursor: var(--cursor-arrow);
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.dropdown .row .rl { flex: 1 1 auto; }
+.dropdown .row .kbd {        /* right-aligned ⌘-shortcut hint */
+  flex: 0 0 auto;
+  font-family: 'Chicago', sans-serif;
+  opacity: 0.85;
 }
 .dropdown .row.has:hover {
   background: var(--ink);
@@ -348,6 +367,7 @@ img { image-rendering: pixelated; }
 }
 .dropdown .row.disabled { color: #9a9a9a; }
 .mono-green .dropdown .row.disabled { color: #5f8a63; }
+.mono-amber .dropdown .row.disabled { color: #9a7330; }
 .dropdown .divider {
   height: 2px;
   margin: 3px 0;
@@ -892,10 +912,21 @@ img { image-rendering: pixelated; }
   color: var(--ink);
 }
 .content .car-meta .car-count { flex: 0 0 auto; white-space: nowrap; }
-/* green-phosphor mode: tint the photo to match the monitor */
+/* phosphor modes: tint the photo to match the monitor */
 .mono-green .content .shot .shot-frame img {
   filter: sepia(1) hue-rotate(58deg) saturate(1.8) brightness(0.96);
 }
+.mono-amber .content .shot .shot-frame img {
+  filter: sepia(1) hue-rotate(-12deg) saturate(2) brightness(1);
+}
+
+/* Get Info window — classic two-column fact table */
+.content table.ginfo { border-collapse: collapse; font-size: 14px; margin: 2px 0; }
+.content table.ginfo td { padding: 2px 0; vertical-align: top; }
+.content table.ginfo td:first-child { width: 78px; color: var(--ink); opacity: 0.75; padding-right: 10px; }
+
+/* Control Panel — one row of buttons per setting */
+.content .cp-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 12px; }
 
 /* ---- picture viewer (click a thumbnail → opens enlarged in its own window) ---- */
 .lightbox {

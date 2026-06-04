@@ -151,23 +151,54 @@
       </p>`;
   }
 
-  /* ---------- Side Hustle folder — life outside the terminal (placeholders) ---------- */
-  function hobby(title, blurb) {
-    const slug = title.toLowerCase();
-    return `
-      <h2>${title}</h2>
-      <hr class="dotrule">
-      <p>${blurb}</p>
-      <div class="photo-dither" style="width:100%;height:170px;"><div class="cap">[ ${slug} — photos coming soon ]</div></div>
-      <p class="meta" style="margin-top:10px;">Placeholder — I'll fill this in soon.</p>`;
+  /* ---------- Side Hustle folder — life outside the terminal ----------
+     `build()` runs at open time so it can embed galleries via galleryHTML.
+     Tone: keep it light and human. */
+  const SH = "assets/sidehustle/";
+  function shDoc(title, body) {
+    return `<h2>${title}</h2><hr class="dotrule">${body}`;
   }
 
   const sideHustle = [
-    { id: "sh-gaming",     name: "Gaming",       icon: "g-doc", title: "Gaming",       info: "Side Hustle · placeholder", size: { w: 420, h: 360 }, html: hobby("Gaming", "CS2, strategy games, and the occasional ranked grind with friends.") },
-    { id: "sh-cat",        name: "Cat",          icon: "g-doc", title: "Cat",          info: "Side Hustle · placeholder", size: { w: 420, h: 360 }, html: hobby("Cat", "My cat runs QA on everything I build (mostly by sitting on the keyboard).") },
-    { id: "sh-gym",        name: "Gym",          icon: "g-doc", title: "Gym",          info: "Side Hustle · placeholder", size: { w: 420, h: 360 }, html: hobby("Gym", "Lifting — chasing PRs away from the terminal.") },
-    { id: "sh-photo",      name: "Photography",  icon: "g-doc", title: "Photography",  info: "Side Hustle · placeholder", size: { w: 420, h: 360 }, html: hobby("Photography", "Shooting the city, the coast, and the mountains around Vancouver.") },
-    { id: "sh-snowboard",  name: "Snowboarding", icon: "g-doc", title: "Snowboarding", info: "Side Hustle · placeholder", size: { w: 420, h: 360 }, html: hobby("Snowboarding", "Winters on the local hills whenever the snow is good.") },
+    {
+      id: "sh-gaming", name: "Gaming", icon: "g-doc", title: "Gaming",
+      info: "Side Hustle · CS2 & League", size: { w: 440, h: 320 },
+      build: () => shDoc("Gaming", `
+        <p>I play CS2 and League — hit me up if you want me to carry you. (Carry success rate: not legally guaranteed.)</p>
+        <p><strong>Riot ID</strong> &nbsp;Floral Sea #000<br>
+        <strong>Steam</strong> &nbsp;<a href="https://steamcommunity.com/profiles/76561198832913764/" target="_blank" rel="noopener">add me here</a></p>`),
+    },
+    {
+      id: "sh-cat", name: "Cat", icon: "g-doc", title: "Cat",
+      info: "Side Hustle · lead QA", size: { w: 470, h: 540 },
+      build: () => shDoc("Cat", `
+        <p>This is my cat — lead QA engineer. Tests every build by sitting on the keyboard and knocking unfinished features off the desk.</p>
+        ${galleryHTML([{ src: SH + "cat-01.jpeg", cap: "Reviewing my commits" }], "Exhibit A")}`),
+    },
+    {
+      id: "sh-gym", name: "Gym", icon: "g-doc", title: "Gym",
+      info: "Side Hustle · loading…", size: { w: 440, h: 280 },
+      build: () => shDoc("Gym", `
+        <p>No picture until I bench two plates. :))</p>
+        <p class="meta">Check back in a few months. Maybe a few more.</p>`),
+    },
+    {
+      id: "sh-photo", name: "Photography", icon: "g-doc", title: "Photography",
+      info: "Side Hustle · digital + film", size: { w: 460, h: 340 },
+      build: () => shDoc("Photography", `
+        <p>Digital and film — I like chasing light on both, and occasionally a shot even comes out in focus.</p>
+        <p><strong>Instagram</strong> &nbsp;<a href="https://www.instagram.com/ivan_photo_studio/" target="_blank" rel="noopener">@ivan_photo_studio</a></p>`),
+    },
+    {
+      id: "sh-snowboard", name: "Snowboarding", icon: "g-doc", title: "Snowboarding",
+      info: "Side Hustle · CASI L2", size: { w: 490, h: 560 },
+      build: () => shDoc("Snowboarding", `
+        <p>CASI Level 2 and Park Level 1 instructor. Catch me at Whistler all winter — come say hi, or book a lesson and let me talk your ear off about edge control.</p>
+        ${galleryHTML([
+          { src: SH + "snowboard-01.jpeg", cap: "Peak of Whistler" },
+          { src: SH + "snowboard-02.jpeg", cap: "Found an ice cave" },
+        ], "On the hill")}`),
+    },
   ];
 
   /* ---------- desktop layout ----------
@@ -200,6 +231,7 @@
     email: "yingfanluo@gmail.com",
     machineName: "Ivan's Mac",
     avatarGlyph: "avatar",
+    resumePdf: "assets/resume/Ivan_Luo_Resume.pdf",
     projects,
     rocketShots,
     about,
