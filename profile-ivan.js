@@ -69,20 +69,19 @@
     { src: "assets/rocket/gcs-map.png", cap: "UWB satellite map" },
   ];
 
-  /* ---------- document windows ---------- */
+  /* ---------- document windows ----------
+     One typeface throughout: Chicago for headings, Geneva (the .content
+     default) for everything else. `.meta` is the one info-line style. */
   function about(P, O) {
     return `
       <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;">
         <div class="photo-dither"><div class="cap">[ ivan ]</div></div>
         <div style="flex:1 1 180px;min-width:170px;">
           <h2>Yingfan (Ivan) Luo</h2>
-          <p style="font-family:'Monaco',monospace;font-size:13px;margin-top:-4px;">Computer Engineering @ UBC</p>
+          <p class="meta">3rd-year Computer Engineering (CPEN) @ UBC</p>
           <p>I build software across the stack — from embedded firmware where code meets hardware, to modern web and mobile apps.</p>
         </div>
       </div>
-      <hr class="dotrule">
-      <h3>UBC Rocket — Thrust Vectoring</h3>
-      <p>I'm on UBC Rocket's TVR team, working toward a self-landing thrust-vectoring rocket. I work on the IMU/ECU firmware, the flight-control algorithm, and the ground-control-station software.</p>
       <hr class="dotrule">
       <h3>What I do</h3>
       <p>
@@ -92,40 +91,25 @@
         → Retro computing enthusiast
       </p>
       <hr class="dotrule">
-      <p style="font-family:'Monaco',monospace;font-size:13px;">
-        Open to internship opportunities — reach out at<br>
-        <a href="mailto:${P.email}">${P.email}</a>.
-      </p>`;
+      <p>Open to internship opportunities — reach out at <a href="mailto:${P.email}">${P.email}</a>.</p>`;
   }
 
   function experience(P, O) {
     return `
       <h2>Experience</h2>
       <hr class="rule">
-      <h3>Full-Stack Software Engineer — Ruboss</h3>
-      <p style="font-family:'Monaco',monospace;font-size:13px;margin:0 0 4px;">Ruboss Technology Corp. · May–Aug 2026 · Vancouver, BC</p>
-      <p>
-        • Co-developed Leanpub's native iOS app from scratch in SwiftUI as one of two developers — secure auth, book creation, and voice-input dictation against a GraphQL backend via Apollo iOS.<br>
-        • Built a dual-mode chapter editor supporting raw Markua markup and a visual editor, then shipped a formatting toolbar and keyboard shortcuts shared across the web app and iOS.<br>
-        • Fixed a production GraphQL bug where a non-nullable price field returned null and nulled entire book queries; shipped a fallback resolver with a regression test in Ruby on Rails.<br>
-        • Built an AI-assisted workflow with Claude Code — custom skill files and MCP integrations (Linear, Harvest) — reviewing all generated code before merge.
-      </p>
+      <h3>Ruboss — Full-Stack Software Engineer</h3>
+      <p class="meta">Summer 2026 · Vancouver, BC</p>
+      <p>Building Leanpub's iOS v3 in SwiftUI against a GraphQL API on a Ruby on Rails backend — a better tool for readers and authors to write and publish books.</p>
       <hr class="dotrule">
-      <h3>Embedded Software Engineer — UBC Rocket</h3>
-      <p style="font-family:'Monaco',monospace;font-size:13px;margin:0 0 4px;">TVR Team · Sept 2025 – present · Vancouver, BC</p>
-      <p>
-        • Engineer a high-performance ground control station in C++ and Qt — 100+ Hz telemetry, 3D attitude visualization, and a satellite-view map for real-time position tracking.<br>
-        • Built the bidirectional radio link: COBS-encoded message framing, an updated Protobuf schema, and CSV logging of received packets for post-flight analysis.<br>
-        • Developed and validated PID and flight-control-loop algorithms with CTest, catching regressions across tuning cycles; added in-station PID tuning presets.<br>
-        • Delivered a 1 kHz IMU data pipeline with consistent timing via non-blocking SPI firmware on STM32.<br>
-        • Developed STM32 firmware for a Qorvo DW3000 ultra-wideband (UWB) ranging module over UART for precise distance/position tracking.<br>
-        • Tuned ESC/motor-control firmware and built a Python data-collection pipeline measuring force/torque vs. thrust %.
-      </p>
-      <p style="font-family:'Chicago';font-size:13px;"><a href="https://github.com/UBC-Rocket/thrust_vectoring_consolidated" target="_blank" rel="noopener">GitHub →</a></p>
+      <h3>UBC Rocket — Embedded Software Engineer</h3>
+      <p class="meta">TVR Team · 2025–present · Vancouver, BC</p>
+      <p>Building the ground control station in C++/Qt, plus the firmware and drivers (STM32, IMU, UWB ranging) for the self-landing thrust-vectoring rocket.</p>
+      <p><a href="https://github.com/UBC-Rocket/thrust_vectoring_consolidated" target="_blank" rel="noopener">GitHub →</a></p>
       ${galleryHTML(P.rocketShots, "Ground Control Station")}
       <hr class="dotrule">
       <h3>Education</h3>
-      <p style="font-family:'Monaco',monospace;font-size:13px;">B.A.Sc. Computer Engineering — University of British Columbia<br>GPA 86% · Class of 2028</p>`;
+      <p class="meta">B.A.Sc. Computer Engineering — University of British Columbia · GPA 86% · Class of 2028</p>`;
   }
 
   function resume(P, O) {
@@ -133,7 +117,7 @@
       <h2 style="text-align:center;">RÉSUMÉ</h2>
       <hr class="rule">
       <h3>Yingfan (Ivan) Luo — Computer Engineering @ UBC</h3>
-      <p style="font-family:'Monaco',monospace;font-size:13px;">Vancouver, BC · ${P.domain}<br>${P.email} · 778-228-6477</p>
+      <p class="meta">Vancouver, BC · ${P.domain}<br>${P.email} · 778-228-6477</p>
       <hr class="dotrule">
       <h3>Experience</h3>
       <p>• Ruboss Technology — Full-Stack Software Engineer (2026)<br>• UBC Rocket — Embedded Software Engineer (2025–present)</p>
@@ -161,11 +145,30 @@
       <p><strong>GitHub</strong><br><a href="https://github.com/ivan-lyf" target="_blank" rel="noopener">github.com/ivan-lyf</a></p>
       <p><strong>LinkedIn</strong><br><a href="https://www.linkedin.com/in/ivan-yingfan-luo/" target="_blank" rel="noopener">linkedin.com/in/ivan-yingfan-luo</a></p>
       <hr class="dotrule">
-      <p style="font-family:'Monaco',monospace;font-size:13px;text-align:center;">
+      <p class="meta" style="text-align:center;">
         Looking for ${O.name}?<br>
         <a href="#" onclick="Mac.gotoOther();return false;">→ ${O.domain}</a>
       </p>`;
   }
+
+  /* ---------- Side Hustle folder — life outside the terminal (placeholders) ---------- */
+  function hobby(title, blurb) {
+    const slug = title.toLowerCase();
+    return `
+      <h2>${title}</h2>
+      <hr class="dotrule">
+      <p>${blurb}</p>
+      <div class="photo-dither" style="width:100%;height:170px;"><div class="cap">[ ${slug} — photos coming soon ]</div></div>
+      <p class="meta" style="margin-top:10px;">Placeholder — I'll fill this in soon.</p>`;
+  }
+
+  const sideHustle = [
+    { id: "sh-gaming",     name: "Gaming",       icon: "g-doc", title: "Gaming",       info: "Side Hustle · placeholder", size: { w: 420, h: 360 }, html: hobby("Gaming", "CS2, strategy games, and the occasional ranked grind with friends.") },
+    { id: "sh-cat",        name: "Cat",          icon: "g-doc", title: "Cat",          info: "Side Hustle · placeholder", size: { w: 420, h: 360 }, html: hobby("Cat", "My cat runs QA on everything I build (mostly by sitting on the keyboard).") },
+    { id: "sh-gym",        name: "Gym",          icon: "g-doc", title: "Gym",          info: "Side Hustle · placeholder", size: { w: 420, h: 360 }, html: hobby("Gym", "Lifting — chasing PRs away from the terminal.") },
+    { id: "sh-photo",      name: "Photography",  icon: "g-doc", title: "Photography",  info: "Side Hustle · placeholder", size: { w: 420, h: 360 }, html: hobby("Photography", "Shooting the city, the coast, and the mountains around Vancouver.") },
+    { id: "sh-snowboard",  name: "Snowboarding", icon: "g-doc", title: "Snowboarding", info: "Side Hustle · placeholder", size: { w: 420, h: 360 }, html: hobby("Snowboarding", "Winters on the local hills whenever the snow is good.") },
+  ];
 
   /* ---------- desktop layout ----------
      kind: "harddrive" | "folder" | "trash" | undefined (document via `doc`) */
@@ -178,6 +181,8 @@
       title: "Projects", info: "5 items · 128K in folder", size: { w: 380, h: 300 } },
     { id: "experience", doc: "experience", label: "Experience", glyph: "g-doc", x: 24, y: 226,
       title: "Experience", info: "Experience · 18K", size: { w: 460, h: 380 } },
+    { id: "sidehustle", kind: "folder", items: sideHustle, label: "Side Hustle", glyph: "g-folder", x: 24, y: 332,
+      title: "Side Hustle", info: "5 items · 64K in folder", size: { w: 420, h: 300 } },
     { id: "resume", doc: "resume", label: "Résumé", glyph: "g-resume", corner: "tr2",
       title: "Résumé", info: "Résumé · 32K", size: { w: 420, h: 400 } },
     { id: "contact", doc: "contact", label: "Contact", glyph: "g-mail", corner: "tr3",
