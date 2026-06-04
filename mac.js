@@ -1135,6 +1135,9 @@
     requestAnimationFrame(() => introOpenAbout());
   }
 
+  // apple.png inlined so the 3D texture (html-to-image) always renders it
+  const APPLE_DATA_URI = "data:image/png;base64,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";
+
   // Wallpaper — centered Apple logo + serif "Think / Be Different" caption.
   // Only for profiles that opt in (ACTIVE.wallpaper); others keep their pattern ground.
   function renderWallpaper() {
@@ -1144,7 +1147,7 @@
     // clean (plain) ground behind the wallpaper, without persisting a pattern choice
     const bg = document.querySelector(".desktop-bg");
     if (bg) bg.className = "desktop-bg";
-    wp.innerHTML = `<img class="wp-apple" src="assets/apple.png" alt="" draggable="false">` +
+    wp.innerHTML = `<img class="wp-apple" src="${APPLE_DATA_URI}" alt="" draggable="false">` +
       `<div class="wp-words">` +
         `<div class="wp-stack">` +
           `<span class="wp-text">Think</span>` +
@@ -1181,9 +1184,35 @@
 
     $(".np-min", box).addEventListener("click", (e) => { e.stopPropagation(); minimizeNowPlaying(); });
     box.addEventListener("click", (e) => {
-      if (e.target.closest(".np-min")) return;
+      // title bar is the drag handle; the artwork/text opens the track
+      if (e.target.closest(".np-min") || e.target.closest(".np-bar")) return;
       const t = npTracks[npIndex];
       if (t && t.url) window.open(t.url, "_blank", "noopener");
+    });
+
+    // drag the widget by its title bar
+    const bar = $(".np-bar", box);
+    bar.addEventListener("mousedown", (e) => {
+      if (e.target.closest(".np-min")) return;
+      e.preventDefault();
+      const dr = desktop.getBoundingClientRect();
+      const br = box.getBoundingClientRect();
+      const offX = e.clientX - br.left, offY = e.clientY - br.top;
+      box.style.bottom = "auto";
+      const onMove = (ev) => {
+        let nx = ev.clientX - dr.left - offX;
+        let ny = ev.clientY - dr.top - offY;
+        nx = Math.max(0, Math.min(nx, desktop.clientWidth - box.offsetWidth));
+        ny = Math.max(0, Math.min(ny, desktop.clientHeight - box.offsetHeight));
+        box.style.left = nx + "px";
+        box.style.top = ny + "px";
+      };
+      const onUp = () => {
+        document.removeEventListener("mousemove", onMove);
+        document.removeEventListener("mouseup", onUp);
+      };
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", onUp);
     });
 
     renderNowPlaying();

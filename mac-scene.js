@@ -462,6 +462,30 @@
         .observe(screenEl, { childList: true, subtree: true, attributes: true, characterData: true });
     }
     glRenderer.domElement.addEventListener('click', forwardClick);
+
+    // Wheel: over the screen -> scroll the live page (and block zoom);
+    // anywhere else -> let OrbitControls zoom the machine.
+    window.addEventListener('wheel', function (e) {
+      if (inScreenView || !screenMesh || !screenEl) return;   // screen view scrolls the DOM natively
+      const rect = glRenderer.domElement.getBoundingClientRect();
+      const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      const ny = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera({ x: nx, y: ny }, camera);
+      const hit = raycaster.intersectObject(screenMesh)[0];
+      if (!hit || !hit.uv) return;                            // off-screen -> OrbitControls zooms
+      e.preventDefault();
+      e.stopPropagation();                                    // keep OrbitControls from zooming
+      const r = screenEl.getBoundingClientRect();
+      const cx = r.left + hit.uv.x * screenEl.offsetWidth;
+      const cy = r.top + (1 - hit.uv.y) * screenEl.offsetHeight;
+      const stack = document.elementsFromPoint(cx, cy).filter(function (n) { return screenEl.contains(n); });
+      for (let i = 0; i < stack.length; i++) {
+        const n = stack[i], oy = getComputedStyle(n).overflowY;
+        if ((oy === 'auto' || oy === 'scroll') && n.scrollHeight > n.clientHeight) { n.scrollTop += e.deltaY; break; }
+      }
+      burstRefresh();
+    }, { capture: true, passive: false });
+
     controls._userActive = false;
     glRenderer.domElement.addEventListener('pointerdown', () => controls._userActive = true);
     // zoom-in-to-fullscreen: press Esc to leave
