@@ -25,6 +25,10 @@
   let liveDrag = localStorage.getItem("mac.liveDrag");
   liveDrag = liveDrag === null ? true : liveDrag === "true";
 
+  // Finder view mode (by Icon/Name/Size/Kind) + double-click speed (Control Panel)
+  let viewMode = localStorage.getItem("mac.view") || "icon";
+  let dblThreshold = parseInt(localStorage.getItem("mac.dblspeed") || "380", 10);
+
   /* ---------- helpers ---------- */
   function el(tag, cls, html) {
     const n = document.createElement(tag);
@@ -34,6 +38,54 @@
   }
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+
+  /* ============================================================
+     SOUND  — System beeps synthesized with Web Audio (no asset files).
+     Browsers block audio until a user gesture, so we unlock on first click.
+     ============================================================ */
+  const Sound = (function () {
+    let ctx = null;
+    let on = localStorage.getItem("mac.sound");
+    on = on === null ? true : on === "true";
+    function ensure() {
+      if (!ctx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) { try { ctx = new AC(); } catch (e) { ctx = null; } }
+      }
+      if (ctx && ctx.state === "suspended") ctx.resume();
+      return ctx;
+    }
+    function blip(freq, start, dur, type, peak) {
+      const c = ctx, t = c.currentTime + start;
+      const osc = c.createOscillator(), g = c.createGain();
+      osc.type = type || "square";
+      osc.frequency.setValueAtTime(freq, t);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(peak || 0.12, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      osc.connect(g).connect(c.destination);
+      osc.start(t); osc.stop(t + dur + 0.02);
+    }
+    function play(name) {
+      if (!on) return;
+      const c = ensure();
+      if (!c) return;
+      switch (name) {
+        case "click": blip(950, 0, 0.05, "square", 0.08); break;
+        case "open":  blip(620, 0, 0.06, "triangle", 0.1); blip(930, 0.05, 0.07, "triangle", 0.08); break;
+        case "close": blip(760, 0, 0.06, "triangle", 0.1); blip(500, 0.05, 0.07, "triangle", 0.08); break;
+        case "beep":  blip(440, 0, 0.16, "square", 0.12); blip(330, 0.07, 0.18, "square", 0.1); break; // error
+        case "trash": blip(300, 0, 0.12, "sawtooth", 0.12); blip(200, 0.08, 0.16, "sawtooth", 0.1); break;
+        case "chime": [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => blip(f, i * 0.11, 0.42, "sine", 0.13)); break;
+      }
+    }
+    return {
+      play,
+      isOn: () => on,
+      set(v) { on = !!v; localStorage.setItem("mac.sound", on); },
+      unlock() { ensure(); },
+    };
+  })();
 
   /* ---------- owner resolution ---------- */
   function resolveOwnerId() {
@@ -142,6 +194,7 @@
   /* ---------- folder/HD windows ---------- */
   function fileListWindow(items) {
     const wrap = el("div", "filelist");
+    if (viewMode !== "icon") items = items.slice().sort((a, b) => (a.name || "").localeCompare(b.name || ""));
     items.forEach((it) => {
       const row = el("div", "file");
       row.innerHTML = `<span class="mini">${svgGlyph(it.icon, 24)}</span><span class="fname">${it.name}</span>`;
@@ -150,7 +203,7 @@
         $$(".file", wrap).forEach((f) => f.classList.remove("selected"));
         row.classList.add("selected");
         const now = Date.now();
-        if (now - last < 380) it.open();
+        if (now - last < dblThreshold) it.open();
         last = now;
       });
       row.addEventListener("dblclick", it.open);
@@ -191,7 +244,8 @@
   }
 
   function openFolderItem(it) {
-    openWindow(it.id, it.title || it.name, htmlBody(it.html || ""), it.info, it.size || { w: 400, h: 320 });
+    const html = typeof it.build === "function" ? it.build() : (it.html || "");
+    openWindow(it.id, it.title || it.name, htmlBody(html), it.info, it.size || { w: 400, h: 320 });
   }
 
   function projectsFolderBody() {
@@ -217,19 +271,71 @@
 
   function iconById(id) { return ACTIVE.icons.find((i) => i.id === id); }
 
+  /* ---------- Finder metadata (used by Get Info + View sorting) ---------- */
+  function iconKind(ic) {
+    if (ic.kind === "harddrive") return "disk";
+    if (ic.kind === "folder") return "folder";
+    if (ic.kind === "trash") return "trash";
+    return "document";
+  }
+  function iconSizeK(ic) {
+    const m = (ic.info || "").match(/(\d+)\s*K/);
+    if (m) return parseInt(m[1], 10);
+    if (ic.kind === "harddrive") return 512;
+    if (ic.kind === "folder") return 128;
+    return 16;
+  }
+  function sortIcons(list, mode) {
+    const arr = list.slice();
+    const byName = (a, b) => (a.label || "").localeCompare(b.label || "");
+    if (mode === "name") arr.sort(byName);
+    else if (mode === "size") arr.sort((a, b) => iconSizeK(b) - iconSizeK(a) || byName(a, b));
+    else if (mode === "kind") arr.sort((a, b) => iconKind(a).localeCompare(iconKind(b)) || byName(a, b));
+    return arr;
+  }
+  function setView(mode) {
+    viewMode = mode;
+    localStorage.setItem("mac.view", mode);
+    placeIcons();
+  }
+
+  /* ---------- Control Panel settings (also applied on boot by restorePrefs) ---------- */
+  function setMono(mode) {
+    screen.classList.toggle("mono-green", mode === "green");
+    screen.classList.toggle("mono-amber", mode === "amber");
+    localStorage.setItem("mac.mono", mode);
+  }
+  function setPattern(p) {
+    const bg = $(".desktop-bg", desktop);
+    if (bg) bg.className = "desktop-bg" + (p && p !== "plain" ? " " + p : "");
+    localStorage.setItem("mac.pattern", p);
+  }
+  function setDblSpeed(ms) {
+    dblThreshold = ms;
+    localStorage.setItem("mac.dblspeed", ms);
+  }
+
   function placeIcons() {
     desktop.querySelectorAll(".icon").forEach((n) => n.remove());
     const W = desktop.clientWidth;
     const H = desktop.clientHeight;
-    ACTIVE.icons.forEach((ic) => {
+    const sorted = viewMode === "icon" ? ACTIVE.icons : sortIcons(ACTIVE.icons, viewMode);
+    const cols = Math.max(1, Math.floor((W - 20) / 96));
+    sorted.forEach((ic, idx) => {
       const node = el("div", "icon");
       node.dataset.id = ic.id;
       node.innerHTML = `<div class="glyph">${svgGlyph(ic.glyph, 44)}</div><div class="label">${ic.label}</div>`;
       let x = ic.x, y = ic.y;
-      if (ic.corner === "tr") { x = W - 108; y = 14; }
-      if (ic.corner === "tr2") { x = W - 108; y = 120; }
-      if (ic.corner === "tr3") { x = W - 108; y = 226; }
-      if (ic.corner === "br") { x = W - 104; y = H - 110; }
+      if (viewMode === "icon") {
+        if (ic.corner === "tr") { x = W - 108; y = 14; }
+        if (ic.corner === "tr2") { x = W - 108; y = 120; }
+        if (ic.corner === "tr3") { x = W - 108; y = 226; }
+        if (ic.corner === "br") { x = W - 104; y = H - 110; }
+      } else {
+        // by Name/Size/Kind — snap into a tidy sorted grid
+        x = 20 + (idx % cols) * 96;
+        y = 14 + Math.floor(idx / cols) * 92;
+      }
       node.style.left = x + "px";
       node.style.top = y + "px";
       wireIcon(node, ic);
@@ -263,7 +369,7 @@
     });
     node.addEventListener("click", () => {
       const now = Date.now();
-      if (now - last < 380) openIcon(ic.id);
+      if (now - last < dblThreshold) openIcon(ic.id);
       last = now;
     });
     node.addEventListener("dblclick", () => openIcon(ic.id));
@@ -328,6 +434,7 @@
 
     desktop.appendChild(win);
     openWindows.set(id, win);
+    Sound.play("open");
 
     // focus handling
     win.addEventListener("mousedown", () => focusWindow(win));
@@ -399,6 +506,7 @@
   function closeWindow(id) {
     const win = openWindows.get(id);
     if (!win) return;
+    Sound.play("close");
     win.remove();
     openWindows.delete(id);
     // activate top-most remaining
@@ -545,11 +653,117 @@
   /* ============================================================
      MENU BAR
      ============================================================ */
+  /* ---------- Finder actions (wired into the menus) ---------- */
+  function selectedIconEl() { return desktop.querySelector(".icon.selected"); }
+  function selectedIcon() { const n = selectedIconEl(); return n ? iconById(n.dataset.id) : null; }
+  function hasSelectionText() { const s = window.getSelection && window.getSelection().toString(); return !!(s && s.trim()); }
+
+  function openSelectedOrHD() { const ic = selectedIcon(); openIcon(ic ? ic.id : "harddrive"); }
+  function selectAllIcons() { $$(".icon", desktop).forEach((n) => n.classList.add("selected")); Sound.play("click"); }
+  function copySelection() {
+    const s = window.getSelection().toString();
+    if (s && navigator.clipboard) navigator.clipboard.writeText(s).catch(() => {});
+    Sound.play("click");
+  }
+  function emptyTrash() { Sound.play("trash"); alertBox("Empty Trash", "The Trash is already empty. There is nothing to throw away.", "OK"); }
+  function aboutThisMac() { openWindow("about-mac", "About This Macintosh", htmlBody(aboutMacBody()), null, { w: 400, h: 320 }); }
+
+  function infoMeta(ic) {
+    const kind = iconKind(ic);
+    const kindLabel = { disk: "disk", folder: "folder", trash: "Trash", document: "document" }[kind] || "document";
+    const size = ic.kind === "trash" ? "zero K" : iconSizeK(ic) + "K on disk";
+    const comments = {
+      about: "Everything you'd want to know, and a few things you wouldn't.",
+      projects: "Things I built on purpose.",
+      experience: "Where I've been getting paid to debug.",
+      resume: "One page. Curly quotes. Recruiter-approved.",
+      contact: "The fastest way to reach me.",
+      sidehustle: "Proof I occasionally close the laptop.",
+      harddrive: "512K of pure hustle.",
+      trash: "Drag the System in here. I dare you.",
+    };
+    return {
+      kind: kindLabel,
+      size,
+      created: "Saturday, January 24, 1984",
+      modified: "Today",
+      comment: ic.comment || comments[ic.id] || "No comment.",
+    };
+  }
+  function getInfoSelected() {
+    const ic = selectedIcon();
+    if (!ic) { Sound.play("beep"); return; }
+    openGetInfo(ic);
+  }
+  function openGetInfo(ic) {
+    const m = infoMeta(ic);
+    const body = el("div");
+    body.innerHTML = `
+      <div style="display:flex;gap:14px;align-items:flex-start;">
+        <div style="flex:0 0 auto;">${svgGlyph(ic.glyph, 44)}</div>
+        <div><h2 style="margin:0;">${ic.title || ic.label}</h2>
+        <p class="meta" style="margin:2px 0 0;">${m.kind}</p></div>
+      </div>
+      <hr class="rule">
+      <table class="ginfo">
+        <tr><td>Kind:</td><td>${m.kind}</td></tr>
+        <tr><td>Size:</td><td>${m.size}</td></tr>
+        <tr><td>Where:</td><td>${ACTIVE.machineName}</td></tr>
+        <tr><td>Created:</td><td>${m.created}</td></tr>
+        <tr><td>Modified:</td><td>${m.modified}</td></tr>
+      </table>
+      <hr class="dotrule">
+      <h3>Comments</h3>
+      <p>${m.comment}</p>`;
+    openWindow("info-" + ic.id, ic.label + " Info", body, null, { w: 340, h: 340 });
+  }
+
+  function printDialog() {
+    const layer = el("div", "alert-layer");
+    layer.innerHTML = `
+      <div class="alert" style="width:360px;">
+        <div class="body" style="flex:1 1 auto;">
+          <p style="font-family:'Chicago';font-size:15px;margin:0 0 8px;">ImageWriter</p>
+          <p class="meta" style="margin:0 0 4px;">Quality:&nbsp; Faster &nbsp;·&nbsp; Copies: 1</p>
+          <p class="meta" style="margin:0 0 14px;">Pages:&nbsp; ◉ All&nbsp; ○ From ___ To ___</p>
+          <div class="btns"><button class="mac-btn cancel">Cancel</button><button class="mac-btn default ok">Print</button></div>
+        </div>
+      </div>`;
+    screen.appendChild(layer);
+    $(".cancel", layer).addEventListener("click", () => { Sound.play("click"); layer.remove(); });
+    $(".ok", layer).addEventListener("click", () => {
+      Sound.play("click"); layer.remove();
+      if (ACTIVE.resumePdf) window.open(ACTIVE.resumePdf, "_blank", "noopener");
+      else alertBox("Print", "No printer is connected.", "OK");
+    });
+  }
+  function pageSetupDialog() {
+    const layer = el("div", "alert-layer");
+    layer.innerHTML = `
+      <div class="alert" style="width:360px;">
+        <div class="body" style="flex:1 1 auto;">
+          <p style="font-family:'Chicago';font-size:15px;margin:0 0 8px;">Page Setup</p>
+          <p class="meta" style="margin:0 0 4px;">Paper:&nbsp; US Letter</p>
+          <p class="meta" style="margin:0 0 14px;">Orientation:&nbsp;
+            <button class="mac-btn ps-o default" data-o="portrait" style="padding:1px 10px;">Portrait</button>
+            <button class="mac-btn ps-o" data-o="landscape" style="padding:1px 10px;">Landscape</button></p>
+          <div class="btns"><button class="mac-btn cancel">Cancel</button><button class="mac-btn default ok">OK</button></div>
+        </div>
+      </div>`;
+    screen.appendChild(layer);
+    $$(".ps-o", layer).forEach((b) => b.addEventListener("click", () => {
+      $$(".ps-o", layer).forEach((x) => x.classList.remove("default"));
+      b.classList.add("default"); Sound.play("click");
+    }));
+    $(".cancel", layer).addEventListener("click", () => { Sound.play("click"); layer.remove(); });
+    $(".ok", layer).addEventListener("click", () => { Sound.play("click"); layer.remove(); });
+  }
+
   const MENUS = {
     apple: {
       glyph: true,
       items: [
-        { label: "About This Macintosh…", action: () => openWindow("about-mac", "About This Macintosh", htmlBody(aboutMacBody()), null, { w: 400, h: 270 }) },
+        { label: "About This Macintosh…", action: aboutThisMac },
         { divider: true },
         { label: "Control Panel", action: openControlPanel },
         { divider: true },
@@ -557,26 +771,33 @@
       ],
     },
     File: { items: [
-      { label: "Open", action: () => openIcon("harddrive") },
-      { label: "Close Window", action: closeFront },
+      { label: "Open", key: "⌘O", action: openSelectedOrHD },
+      { label: "Close Window", key: "⌘W", action: closeFront, disabled: () => openWindows.size === 0 },
+      { label: "Get Info", key: "⌘I", action: getInfoSelected, disabled: () => !selectedIcon() },
       { divider: true },
-      { label: "Page Setup…", disabled: true },
-      { label: "Print…", disabled: true },
+      { label: "Page Setup…", action: pageSetupDialog },
+      { label: "Print…", key: "⌘P", action: printDialog },
     ]},
     Edit: { items: [
-      { label: "Undo", disabled: true }, { divider: true },
-      { label: "Cut", disabled: true }, { label: "Copy", disabled: true },
-      { label: "Paste", disabled: true }, { label: "Clear", disabled: true },
+      { label: "Undo", key: "⌘Z", disabled: () => true }, { divider: true },
+      { label: "Cut", key: "⌘X", disabled: () => true },
+      { label: "Copy", key: "⌘C", action: copySelection, disabled: () => !hasSelectionText() },
+      { label: "Paste", key: "⌘V", disabled: () => true },
+      { label: "Clear", disabled: () => true },
+      { divider: true },
+      { label: "Select All", key: "⌘A", action: selectAllIcons },
     ]},
     View: { items: [
-      { label: "by Icon", check: true }, { label: "by Name", disabled: true },
-      { label: "by Size", disabled: true }, { label: "by Kind", disabled: true },
+      { label: "by Icon", check: () => viewMode === "icon", action: () => setView("icon") },
+      { label: "by Name", check: () => viewMode === "name", action: () => setView("name") },
+      { label: "by Size", check: () => viewMode === "size", action: () => setView("size") },
+      { label: "by Kind", check: () => viewMode === "kind", action: () => setView("kind") },
     ]},
     Special: { items: [
       { label: "Clean Up Desktop", action: placeIcons },
-      { label: "Empty Trash", action: () => Mac.alert("Empty Trash", "The Trash is already empty. There is nothing to throw away.", "OK") },
+      { label: "Empty Trash", action: emptyTrash },
       { divider: true },
-      { label: "Restart", action: () => location.reload() },
+      { label: "Restart", action: () => { Sound.play("click"); location.reload(); } },
       { label: "Shut Down", action: shutDown },
     ]},
   };
@@ -609,9 +830,19 @@
       const dd = el("div", "dropdown");
       MENUS[key].items.forEach((it) => {
         if (it.divider) { dd.appendChild(el("div", "divider")); return; }
-        const row = el("div", "row" + (it.disabled ? " disabled" : " has"));
-        row.innerHTML = (it.check ? `<span class="check">✓</span>` : "") + it.label;
-        if (!it.disabled) row.addEventListener("click", () => { close(); it.action && it.action(); });
+        const disabled = typeof it.disabled === "function" ? it.disabled() : !!it.disabled;
+        const checked = typeof it.check === "function" ? it.check() : !!it.check;
+        const row = el("div", "row" + (disabled ? " disabled" : " has"));
+        row.innerHTML =
+          (checked ? `<span class="check">✓</span>` : "") +
+          `<span class="rl">${it.label}</span>` +
+          (it.key ? `<span class="kbd">${it.key}</span>` : "");
+        row.addEventListener("click", () => {
+          close();
+          if (disabled) { Sound.play("beep"); return; }   // error feedback on dimmed items
+          Sound.play("click");
+          it.action && it.action();
+        });
         dd.appendChild(row);
       });
       item.appendChild(dd);
@@ -642,20 +873,23 @@
   }
 
   function aboutMacBody() {
+    const used = Math.min(96, 18 + openWindows.size * 16);   // playful "memory in use" gauge
     return `
       <div style="text-align:center;">
-        <div class="login-body" style="padding:0;">
-          <div style="margin:6px auto 10px;display:flex;justify-content:center;">${svgGlyph('machead',44)}</div>
-        </div>
+        <div style="margin:6px auto 8px;display:flex;justify-content:center;">${svgGlyph('machead',44)}</div>
         <h2 style="font-family:'Chicago';">Macintosh Portfolio</h2>
-        <p style="font-family:'Monaco',monospace;font-size:13px;">System Software 1.0</p>
+        <p class="meta">System Software 1.0</p>
         <hr class="dotrule">
-        <p style="font-family:'Geneva','Monaco',sans-serif;font-size:14px;">
-          Total Memory: 128K<br>
-          Built with HTML · CSS · JavaScript<br>
-          A faithful 1984 Macintosh, for ${ACTIVE.name}.
-        </p>
-        <p style="font-family:'Monaco',monospace;font-size:12px;margin-top:10px;">© 2026 ${ACTIVE.domain}</p>
+        <div style="text-align:left;max-width:260px;margin:0 auto;">
+          <p class="meta" style="margin:0 0 4px;">Total Memory&nbsp;&nbsp;128K</p>
+          <div style="border:2px solid var(--ink);height:14px;padding:1px;">
+            <div style="height:100%;width:${used}%;background:repeating-linear-gradient(90deg,var(--ink) 0,var(--ink) 3px,var(--paper) 3px,var(--paper) 5px);"></div>
+          </div>
+          <p class="meta" style="margin:4px 0 0;">${openWindows.size} window(s) open · Largest Unused Block: ${128 - Math.round(used * 1.28)}K</p>
+        </div>
+        <hr class="dotrule">
+        <p style="font-size:14px;">Built with HTML · CSS · JavaScript<br>A faithful 1984 Macintosh, for ${ACTIVE.name}.</p>
+        <p class="meta" style="margin-top:8px;">© 2026 ${ACTIVE.domain}</p>
       </div>`;
   }
 
@@ -669,51 +903,69 @@
       <h2>Control Panel</h2>
       <hr class="rule">
       <h3>Monitor</h3>
-      <div id="cp-monitor" style="display:flex;gap:8px;margin:6px 0 12px;">
+      <div class="cp-row">
         <button class="mac-btn cp-mono" data-mode="bw">Black &amp; White</button>
-        <button class="mac-btn cp-mono" data-mode="green">Green Phosphor</button>
+        <button class="mac-btn cp-mono" data-mode="green">Green</button>
+        <button class="mac-btn cp-mono" data-mode="amber">Amber</button>
       </div>
+      <h3>Sound</h3>
+      <div class="cp-row"><button class="mac-btn" id="cp-sound"></button></div>
       <h3>CRT Effects</h3>
-      <div style="display:flex;gap:8px;margin:6px 0 12px;">
-        <button class="mac-btn" id="cp-crt">Scanlines &amp; Glow: ON</button>
+      <div class="cp-row"><button class="mac-btn" id="cp-crt"></button></div>
+      <h3>Desktop Pattern</h3>
+      <div class="cp-row">
+        <button class="mac-btn cp-pat" data-p="dither-50">50%</button>
+        <button class="mac-btn cp-pat" data-p="dither-25">25%</button>
+        <button class="mac-btn cp-pat" data-p="pinstripe">Pinstripe</button>
+        <button class="mac-btn cp-pat" data-p="plain">Plain</button>
+      </div>
+      <h3>Double-Click Speed</h3>
+      <div class="cp-row">
+        <button class="mac-btn cp-d" data-ms="600">Slow</button>
+        <button class="mac-btn cp-d" data-ms="380">Medium</button>
+        <button class="mac-btn cp-d" data-ms="220">Fast</button>
       </div>
       <h3>Window Dragging</h3>
-      <div style="display:flex;gap:8px;margin:6px 0 4px;">
-        <button class="mac-btn" id="cp-drag">${liveDrag ? "Live" : "Outline (marching ants)"}</button>
-      </div>
-      <p style="font-family:'Monaco',monospace;font-size:12px;margin-top:10px;">Tip: every section is a file — double-click to open.</p>`;
-    openWindow("control", "Control Panel", body, "System · 4K", { w: 380, h: 380 });
+      <div class="cp-row"><button class="mac-btn" id="cp-drag"></button></div>
+      <p class="meta" style="margin-top:10px;">Preferences are saved on this Macintosh.</p>`;
+    openWindow("control", "Control Panel", body, "System · 4K", { w: 400, h: 560 });
 
     const win = openWindows.get("control");
-    const syncMono = () => {
-      const green = screen.classList.contains("mono-green");
-      $$(".cp-mono", win).forEach((b) => {
-        const on = (b.dataset.mode === "green") === green;
-        b.classList.toggle("default", on);
-      });
-    };
-    $$(".cp-mono", win).forEach((b) => {
-      b.addEventListener("click", () => {
-        screen.classList.toggle("mono-green", b.dataset.mode === "green");
-        localStorage.setItem("mac.mono", b.dataset.mode);
-        syncMono();
-      });
-    });
+
+    // Monitor (B&W / Green / Amber)
+    const curMono = () => screen.classList.contains("mono-amber") ? "amber" : screen.classList.contains("mono-green") ? "green" : "bw";
+    const syncMono = () => $$(".cp-mono", win).forEach((b) => b.classList.toggle("default", b.dataset.mode === curMono()));
+    $$(".cp-mono", win).forEach((b) => b.addEventListener("click", () => { setMono(b.dataset.mode); syncMono(); }));
     syncMono();
 
-    const crtBtn = $("#cp-crt", win);
-    crtBtn.addEventListener("click", () => {
-      const on = chassis.classList.toggle("crt-on");
-      crtBtn.textContent = "Scanlines & Glow: " + (on ? "ON" : "OFF");
-      localStorage.setItem("mac.crt", on);
-    });
+    // Sound on/off
+    const soundBtn = $("#cp-sound", win);
+    const syncSound = () => { soundBtn.textContent = "Sound: " + (Sound.isOn() ? "ON" : "OFF"); };
+    soundBtn.addEventListener("click", () => { Sound.set(!Sound.isOn()); syncSound(); Sound.play("click"); });
+    syncSound();
 
+    // CRT scanlines/glow
+    const crtBtn = $("#cp-crt", win);
+    const syncCrt = () => { crtBtn.textContent = "Scanlines & Glow: " + (chassis.classList.contains("crt-on") ? "ON" : "OFF"); };
+    crtBtn.addEventListener("click", () => { const on = chassis.classList.toggle("crt-on"); localStorage.setItem("mac.crt", on); syncCrt(); });
+    syncCrt();
+
+    // Desktop pattern
+    const curPat = () => localStorage.getItem("mac.pattern") || "dither-50";
+    const syncPat = () => $$(".cp-pat", win).forEach((b) => b.classList.toggle("default", b.dataset.p === curPat()));
+    $$(".cp-pat", win).forEach((b) => b.addEventListener("click", () => { setPattern(b.dataset.p); syncPat(); }));
+    syncPat();
+
+    // Double-click speed
+    const syncDbl = () => $$(".cp-d", win).forEach((b) => b.classList.toggle("default", parseInt(b.dataset.ms, 10) === dblThreshold));
+    $$(".cp-d", win).forEach((b) => b.addEventListener("click", () => { setDblSpeed(parseInt(b.dataset.ms, 10)); syncDbl(); }));
+    syncDbl();
+
+    // Window dragging
     const dragBtn = $("#cp-drag", win);
-    dragBtn.addEventListener("click", () => {
-      liveDrag = !liveDrag;
-      localStorage.setItem("mac.liveDrag", liveDrag);
-      dragBtn.textContent = liveDrag ? "Live" : "Outline (marching ants)";
-    });
+    const syncDrag = () => { dragBtn.textContent = liveDrag ? "Live" : "Outline (marching ants)"; };
+    dragBtn.addEventListener("click", () => { liveDrag = !liveDrag; localStorage.setItem("mac.liveDrag", liveDrag); syncDrag(); });
+    syncDrag();
   }
 
   /* ============================================================
@@ -831,6 +1083,8 @@
 
     login.classList.remove("hidden");
     $("#card-owner", body).addEventListener("click", () => {
+      Sound.unlock();          // first user gesture — unlock audio
+      Sound.play("chime");     // startup chime as the desktop comes up
       login.classList.add("hidden");
       startDesktop();
     });
@@ -916,9 +1170,24 @@
      ============================================================ */
   function restorePrefs() {
     const mono = localStorage.getItem("mac.mono");
-    if (mono === "green") screen.classList.add("mono-green");
+    if (mono === "green" || mono === "amber") setMono(mono);
     const crt = localStorage.getItem("mac.crt");
     if (crt === null || crt === "true") chassis.classList.add("crt-on");
+    const pat = localStorage.getItem("mac.pattern");
+    if (pat) setPattern(pat);
+  }
+
+  // Finder keyboard shortcuts (⌘/Ctrl). Stay out of the way of text fields.
+  function wireShortcuts() {
+    document.addEventListener("keydown", (e) => {
+      if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
+      const k = e.key.toLowerCase();
+      if (k === "w") { e.preventDefault(); closeFront(); }
+      else if (k === "o") { e.preventDefault(); openSelectedOrHD(); }
+      else if (k === "i") { if (selectedIcon()) { e.preventDefault(); getInfoSelected(); } }
+      else if (k === "p") { e.preventDefault(); printDialog(); }
+      else if (k === "a") { if (!e.target.closest(".content")) { e.preventDefault(); selectAllIcons(); } }
+    });
   }
 
   function init() {
@@ -929,10 +1198,17 @@
     document.title = `${ACTIVE.fullName || ACTIVE.name}'s Macintosh — ${ACTIVE.domain}`;
 
     restorePrefs();
+    wireShortcuts();
     // populate static glyphs
     const hm = document.getElementById("happy-mac");
     if (hm) hm.innerHTML = svgGlyph("happymac", 80);
     buildMenuBar();
+
+    // click feedback for any Mac button (dialogs, control panel) + audio unlock
+    screen.addEventListener("mousedown", (e) => {
+      Sound.unlock();
+      if (e.target.closest(".mac-btn")) Sound.play("click");
+    });
 
     // Gallery interactions (event-delegated):
     //  • ‹ › buttons step the carousel
