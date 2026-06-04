@@ -121,6 +121,7 @@
     email: "leonm6@uci.edu",
     machineName: "Leon's Mac",
     avatarGlyph: "smiley",
+    wallpaper: true,   // show the Apple "Think / Be Different" wallpaper (Leon's page only)
     projects,
     nowPlaying,
     about,
