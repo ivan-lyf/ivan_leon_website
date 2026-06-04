@@ -3,7 +3,7 @@
 
    Domain-agnostic. Person-specific content lives in profile-*.js
    (registered on window.PROFILES). On load the engine resolves the
-   "owner" from the hostname (leon.xyz → leon, otherwise ivan) and
+   "owner" from the hostname (leonmeng.xyz → leon, otherwise ivan) and
    renders that profile's desktop. The login screen is shared: the
    owner is THIS MAC, the other person is an external disk.
 
@@ -80,19 +80,49 @@
   }
   window.__svgGlyph = svgGlyph;
 
-  /* inline framed gallery — thumbnails that open enlarged (see CSS .shots + openLightbox).
-     Exposed globally so profile-*.js content builders can embed galleries. */
+  /* Framed picture carousel — one image at a time, ‹ › to step through
+     (see CSS .gallery / carNav() / openLightbox()). Exposed globally so
+     profile-*.js content builders can embed galleries. */
   function galleryHTML(shots, heading) {
     if (!shots || !shots.length) return "";
-    const tiles = shots
+    const multi = shots.length > 1;
+    const slides = shots
       .map(
-        (s) =>
-          `<figure class="shot"><span class="shot-frame"><img loading="lazy" src="${s.src}" alt="${s.cap}"></span><figcaption>${s.cap}</figcaption></figure>`
+        (s, i) =>
+          `<figure class="shot${i === 0 ? " active" : ""}" data-i="${i}"><span class="shot-frame"><img loading="lazy" src="${s.src}" alt="${s.cap}"></span></figure>`
       )
       .join("");
-    return `<div class="shots"><div class="shots-h">${heading || "Screenshots"}</div><div class="filmstrip">${tiles}</div></div>`;
+    const prev = multi ? `<button class="car-nav prev" type="button" aria-label="Previous picture">‹</button>` : "";
+    const next = multi ? `<button class="car-nav next" type="button" aria-label="Next picture">›</button>` : "";
+    const count = multi ? `<span class="car-count">1 / ${shots.length}</span>` : "";
+    return (
+      `<div class="shots"><div class="shots-h">${heading || "Screenshots"}</div>` +
+      `<div class="gallery" data-i="0">${prev}<div class="car-stage">${slides}</div>${next}</div>` +
+      `<div class="car-meta"><span class="car-cap">${shots[0].cap || ""}</span>${count}</div></div>`
+    );
   }
   window.galleryHTML = galleryHTML;
+
+  // Step a carousel to the next/prev slide and refresh caption + counter.
+  function carNav(gallery, dir) {
+    if (!gallery) return;
+    const figs = $$(".shot", gallery);
+    const n = figs.length;
+    if (!n) return;
+    let i = (parseInt(gallery.dataset.i || "0", 10) + dir + n) % n;
+    gallery.dataset.i = i;
+    figs.forEach((f, k) => f.classList.toggle("active", k === i));
+    const shots = gallery.closest(".shots");
+    const cap = $(".car-cap", shots);
+    const count = $(".car-count", shots);
+    if (cap) cap.textContent = figs[i].querySelector("img").alt || "";
+    if (count) count.textContent = `${i + 1} / ${n}`;
+    // image height can differ → recompute the window's scroll thumb
+    const content = gallery.closest(".content");
+    const wbody = content && content.parentElement;
+    const scroll = wbody && wbody.querySelector(".scroll-v");
+    if (content && scroll) updateThumb(content, scroll);
+  }
 
   function htmlBody(html) {
     const d = el("div");
@@ -147,6 +177,21 @@
       <p>${p.stack.map((s) => `<span class="tag">${s}</span>`).join("")}</p>
       ${galleryHTML(p.shots, "Screenshots")}`;
     openWindow("proj-" + p.id, p.name, body, p.info, { w: 480, h: 440 });
+  }
+
+  // A folder either lists this profile's projects (default) or a custom `items`
+  // array (e.g. the Side Hustle folder), where each item opens its own window.
+  function folderBody(ic) {
+    if (ic.items && ic.items.length) {
+      return fileListWindow(
+        ic.items.map((it) => ({ name: it.name, icon: it.icon || "g-doc", open: () => openFolderItem(it) }))
+      );
+    }
+    return projectsFolderBody();
+  }
+
+  function openFolderItem(it) {
+    openWindow(it.id, it.title || it.name, htmlBody(it.html || ""), it.info, it.size || { w: 400, h: 320 });
   }
 
   function projectsFolderBody() {
@@ -234,7 +279,7 @@
     const origin = node ? node.getBoundingClientRect() : null;
     let body;
     if (ic.kind === "harddrive") body = harddriveBody();
-    else if (ic.kind === "folder") body = projectsFolderBody();
+    else if (ic.kind === "folder") body = folderBody(ic);
     else if (ic.kind === "trash") body = htmlBody(trashContent());
     else if (ic.doc && typeof ACTIVE[ic.doc] === "function") body = htmlBody(ACTIVE[ic.doc](ACTIVE, OTHER));
     else body = htmlBody("");
@@ -453,22 +498,47 @@
     setTimeout(() => { win.style.visibility = "visible"; }, 110);
   }
 
-  /* ---------- picture viewer (lightbox) ---------- */
-  function openLightbox(src, cap) {
+  /* ---------- picture viewer (lightbox, with ‹ › navigation) ---------- */
+  function openLightbox(shots, index) {
+    if (!Array.isArray(shots)) shots = [{ src: shots, cap: index || "" }], index = 0; // back-compat
+    let i = index || 0;
+    const multi = shots.length > 1;
     const lb = el("div", "lightbox");
     lb.innerHTML =
       `<div class="lb-backdrop dither-50"></div>` +
       `<div class="picwin">` +
-        `<div class="titlebar"><div class="close-box"></div><div class="t">${cap || "Picture"}</div></div>` +
-        `<div class="pic-body"><img src="${src}" alt="${cap || ""}"></div>` +
+        `<div class="titlebar"><div class="close-box"></div><div class="t"></div></div>` +
+        `<div class="pic-body">` +
+          (multi ? `<button class="lb-nav prev" type="button" aria-label="Previous picture">‹</button>` : "") +
+          `<img src="" alt="">` +
+          (multi ? `<button class="lb-nav next" type="button" aria-label="Next picture">›</button>` : "") +
+        `</div>` +
+        `<div class="lb-cap"></div>` +
       `</div>`;
+    const img = $(".pic-body img", lb);
+    const titleEl = $(".titlebar .t", lb);
+    const capEl = $(".lb-cap", lb);
+    function render() {
+      const s = shots[i];
+      img.src = s.src; img.alt = s.cap || "";
+      titleEl.textContent = s.cap || "Picture";
+      capEl.textContent = multi ? `${i + 1} / ${shots.length}` + (s.cap ? ` · ${s.cap}` : "") : (s.cap || "");
+    }
+    function go(d) { i = (i + d + shots.length) % shots.length; render(); }
     const close = () => { lb.remove(); document.removeEventListener("keydown", onKey); };
-    const onKey = (e) => { if (e.key === "Escape") close(); };
-    // click the backdrop (anywhere outside the framed picture) or the close box to dismiss
+    const onKey = (e) => {
+      if (e.key === "Escape") close();
+      else if (multi && e.key === "ArrowRight") go(1);
+      else if (multi && e.key === "ArrowLeft") go(-1);
+    };
     lb.addEventListener("click", (e) => {
+      if (e.target.closest(".lb-nav.next")) { go(1); return; }
+      if (e.target.closest(".lb-nav.prev")) { go(-1); return; }
+      // click the backdrop (anywhere outside the framed picture) or the close box to dismiss
       if (!e.target.closest(".picwin") || e.target.closest(".close-box")) close();
     });
     document.addEventListener("keydown", onKey);
+    render();
     screen.appendChild(lb);
   }
 
@@ -771,6 +841,62 @@
     desktop.classList.remove("hidden");
     placeIcons();
     window.addEventListener("resize", debounce(placeIcons, 200));
+    // intro: glide a fake mouse to "About Me" and double-click it open
+    requestAnimationFrame(() => introOpenAbout());
+  }
+
+  // Welcome animation: a fake Macintosh pointer slides to the About Me icon,
+  // "double-clicks" it, and the window opens. Skipped (instant open) under
+  // reduced-motion or if the user clicks first.
+  function introOpenAbout() {
+    const aboutNode = desktop.querySelector('.icon[data-id="about"]');
+    if (!aboutNode) return;
+    const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) { openIcon("about"); return; }
+
+    const sRect = screen.getBoundingClientRect();
+    const iRect = aboutNode.getBoundingClientRect();
+    const tx = iRect.left - sRect.left + 22;            // aim at the glyph
+    const ty = iRect.top - sRect.top + 16;
+    const startX = sRect.width * 0.6;
+    const startY = sRect.height * 0.86;
+
+    const fc = el("div", "fake-cursor");
+    fc.innerHTML =
+      "<svg width='20' height='24' viewBox='0 0 20 24' shape-rendering='crispEdges'>" +
+      "<path d='M2 1 L2 18 L6 14 L9 21 L12 20 L9 13 L15 13 Z' fill='black' stroke='white' stroke-width='1'/></svg>";
+    fc.style.left = startX + "px";
+    fc.style.top = startY + "px";
+    screen.appendChild(fc);
+    document.body.classList.add("intro-active");
+
+    const timers = [];
+    let done = false;
+    function finish(openNow) {
+      if (done) return;
+      done = true;
+      timers.forEach(clearTimeout);
+      desktop.removeEventListener("mousedown", skip, true);
+      document.body.classList.remove("intro-active");
+      aboutNode.classList.remove("selected");
+      fc.classList.add("fade");
+      setTimeout(() => fc.remove(), 320);
+      if (openNow && !openWindows.has("about")) openIcon("about");
+    }
+    function skip() { finish(true); }
+    desktop.addEventListener("mousedown", skip, true);
+
+    // glide to the icon
+    requestAnimationFrame(() => {
+      fc.style.transition = "left 1s ease-in-out, top 1s ease-in-out";
+      fc.style.left = tx + "px";
+      fc.style.top = ty + "px";
+    });
+    // arrive → select → double-click pulse → open → clean up
+    timers.push(setTimeout(() => aboutNode.classList.add("selected"), 1050));
+    timers.push(setTimeout(() => fc.classList.add("click"), 1150));
+    timers.push(setTimeout(() => { if (!openWindows.has("about")) openIcon("about"); }, 1480));
+    timers.push(setTimeout(() => finish(false), 1750));
   }
 
   function debounce(fn, ms) {
@@ -808,13 +934,21 @@
     if (hm) hm.innerHTML = svgGlyph("happymac", 80);
     buildMenuBar();
 
-    // Gallery: click a framed thumbnail to open the picture enlarged in its own window.
+    // Gallery interactions (event-delegated):
+    //  • ‹ › buttons step the carousel
+    //  • clicking the picture opens it enlarged, with its own ‹ › navigation
     desktop.addEventListener("click", (e) => {
+      const nav = e.target.closest(".car-nav");
+      if (nav && desktop.contains(nav)) {
+        e.stopPropagation();
+        carNav(nav.closest(".gallery"), nav.classList.contains("next") ? 1 : -1);
+        return;
+      }
       const fig = e.target.closest(".shot");
       if (!fig || !desktop.contains(fig)) return;
-      const img = fig.querySelector("img");
-      const cap = fig.querySelector("figcaption");
-      if (img) openLightbox(img.getAttribute("src"), cap ? cap.textContent : img.alt);
+      const gallery = fig.closest(".gallery");
+      const shots = $$(".shot img", gallery).map((im) => ({ src: im.getAttribute("src"), cap: im.alt }));
+      openLightbox(shots, parseInt(fig.dataset.i || "0", 10));
     });
 
     runBoot(showLogin);

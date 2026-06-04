@@ -1,5 +1,5 @@
 /* ============================================================
-   Profile — Leon (leon.xyz)
+   Profile — Leon (leonmeng.xyz)
    Starter content. Leon: fill in `projects`, the document builders,
    and the icon list — same shape as profile-ivan.js.
    Document builders receive (P, O): P = this profile, O = the other person.
@@ -24,7 +24,7 @@
         <div class="photo-dither"><div class="cap">[ leon ]</div></div>
         <div style="flex:1 1 180px;min-width:170px;">
           <h2>${P.fullName}</h2>
-          <p style="font-family:'Monaco',monospace;font-size:13px;margin-top:-4px;">${P.tagline}</p>
+          <p class="meta">${P.tagline}</p>
           <p>Welcome to my corner of the network. This desktop is still booting up — more soon.</p>
         </div>
       </div>
@@ -32,9 +32,7 @@
       <h3>About this disk</h3>
       <p>This is ${P.name}'s side of a shared 1984-Macintosh site. The other person lives on a separate disk — open Contact to jump over.</p>
       <hr class="dotrule">
-      <p style="font-family:'Monaco',monospace;font-size:13px;">
-        Reach me at <a href="mailto:${P.email}">${P.email}</a>.
-      </p>`;
+      <p>Reach me at <a href="mailto:${P.email}">${P.email}</a>.</p>`;
   }
 
   function contact(P, O) {
@@ -44,7 +42,7 @@
       <p><strong>Email</strong><br><a href="mailto:${P.email}">${P.email}</a></p>
       <p><strong>GitHub</strong><br><a href="https://github.com/ggttlplp201" target="_blank" rel="noopener">github.com/ggttlplp201</a></p>
       <hr class="dotrule">
-      <p style="font-family:'Monaco',monospace;font-size:13px;text-align:center;">
+      <p class="meta" style="text-align:center;">
         Looking for ${O.name}?<br>
         <a href="#" onclick="Mac.gotoOther();return false;">→ ${O.domain}</a>
       </p>`;
@@ -69,8 +67,8 @@
     name: "Leon",
     fullName: "Leon Meng",
     tagline: "Building things",
-    domain: "leon.xyz",
-    email: "hello@leon.xyz",
+    domain: "leonmeng.xyz",
+    email: "hello@leonmeng.xyz",
     machineName: "Leon's Mac",
     avatarGlyph: "avatar",
     projects,

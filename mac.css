@@ -29,6 +29,8 @@
   --beige-shadow: #8c8270;
   --screen-glow: rgba(150, 185, 255, 0.16);
   --menubar-h: 22px;
+  /* classic 1-bit Macintosh arrow pointer (crisp, hotspot at the tip) */
+  --cursor-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='24' viewBox='0 0 20 24' shape-rendering='crispEdges'%3E%3Cpath d='M2 1 L2 18 L6 14 L9 21 L12 20 L9 13 L15 13 Z' fill='black' stroke='white' stroke-width='1' stroke-linejoin='miter'/%3E%3C/svg%3E") 2 1, default;
 }
 
 /* Green phosphor monitor mode */
@@ -55,8 +57,18 @@ html, body {
   background: #1b1b1f;
   font-family: 'Chicago', 'Geneva', 'Lucida Grande', system-ui, sans-serif;
   overflow: hidden;
-  /* classic black NW arrow cursor */
-  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='24' viewBox='0 0 20 24'%3E%3Cpath d='M2 1 L2 18 L6 14 L9 21 L12 20 L9 13 L15 13 Z' fill='black' stroke='white' stroke-width='1' stroke-linejoin='round'/%3E%3C/svg%3E") 2 1, auto;
+  cursor: var(--cursor-arrow);
+}
+
+/* Keep the Macintosh arrow everywhere — clickable chrome must not flip to the
+   OS hand pointer (which breaks the 1984 illusion). Intentional cursors below
+   (I-beam text, zoom-in pictures, resize grow-box, watch/busy) still win by
+   higher specificity. */
+a, button, summary, [role="button"], [onclick],
+.mac-btn, .menu-item, .dropdown .row, .user-card,
+.filelist .file, .icon, .icon *, .close-box,
+.scroll-v .arrow, .car-nav, .lb-nav, .titlebar {
+  cursor: var(--cursor-arrow);
 }
 
 img { image-rendering: pixelated; }
@@ -73,14 +85,14 @@ img { image-rendering: pixelated; }
   justify-content: center;
   background:
     radial-gradient(ellipse at 50% 0%, #34343c 0%, #161619 70%);
-  padding: 14px;
+  padding: 4px;
 }
 
 .chassis {
   position: relative;
-  width: min(97vw, 1380px);
-  height: min(96vh, 1000px);
-  border-radius: 26px 26px 30px 30px / 22px 22px 40px 40px;
+  width: min(99vw, 1600px);
+  height: min(99vh, 1120px);
+  border-radius: 22px 22px 26px 26px / 18px 18px 34px 34px;
   background:
     linear-gradient(160deg, var(--beige-hi) 0%, var(--beige) 38%, var(--beige-lo) 100%);
   box-shadow:
@@ -89,7 +101,7 @@ img { image-rendering: pixelated; }
     inset 0 0 0 2px rgba(255,255,255,0.18),
     0 28px 60px rgba(0,0,0,0.6),
     0 4px 0 rgba(0,0,0,0.3);
-  padding: 30px 34px 92px 34px;
+  padding: 16px 18px 70px 18px;
 }
 
 .chassis::before {
@@ -98,7 +110,7 @@ img { image-rendering: pixelated; }
   position: absolute;
   left: 8%;
   right: 8%;
-  bottom: 70px;
+  bottom: 54px;
   height: 1px;
   background: rgba(140,130,112,0.5);
   box-shadow: 0 1px 0 rgba(255,255,255,0.35);
@@ -161,9 +173,9 @@ img { image-rendering: pixelated; }
   position: relative;
   width: 100%;
   height: 100%;
-  border-radius: 16px;
+  border-radius: 14px;
   background: linear-gradient(160deg, #4a4640, #2c2925);
-  padding: 16px;
+  padding: 10px;
   box-shadow:
     inset 0 2px 6px rgba(0,0,0,0.8),
     inset 0 -1px 2px rgba(255,255,255,0.12);
@@ -281,7 +293,7 @@ img { image-rendering: pixelated; }
   align-items: center;
   padding: 0 10px;
   color: var(--ink);
-  cursor: pointer;
+  cursor: var(--cursor-arrow);
   position: relative;
   line-height: 1;
 }
@@ -327,7 +339,7 @@ img { image-rendering: pixelated; }
   font-size: 13px;
   white-space: nowrap;
   color: var(--ink);
-  cursor: default;
+  cursor: var(--cursor-arrow);
   position: relative;
 }
 .dropdown .row.has:hover {
@@ -371,7 +383,7 @@ img { image-rendering: pixelated; }
   align-items: center;
   gap: 3px;
   padding: 4px;
-  cursor: default;
+  cursor: var(--cursor-arrow);
   user-select: none;
   z-index: 5;
 }
@@ -552,7 +564,7 @@ img { image-rendering: pixelated; }
   display: flex;
   align-items: center;
   position: relative;
-  cursor: grab;
+  cursor: var(--cursor-arrow);
   user-select: none;
   background: var(--paper);
   flex: 0 0 auto;
@@ -561,7 +573,7 @@ img { image-rendering: pixelated; }
   background:
     repeating-linear-gradient(0deg, var(--ink) 0, var(--ink) 1px, var(--paper) 1px, var(--paper) 2px);
 }
-.win .titlebar:active { cursor: grabbing; }
+.win .titlebar:active { cursor: var(--cursor-arrow); }
 .win .title {
   position: absolute;
   left: 50%;
@@ -580,7 +592,7 @@ img { image-rendering: pixelated; }
   background: var(--paper);
   margin-left: 6px;
   flex: 0 0 auto;
-  cursor: default;
+  cursor: var(--cursor-arrow);
 }
 .win.active .close-box { background: var(--paper); }
 .win .close-box:hover {
@@ -593,8 +605,8 @@ img { image-rendering: pixelated; }
 .win .infoline {
   flex: 0 0 auto;
   border-bottom: 2px solid var(--ink);
-  padding: 2px 8px;
-  font-size: 12px;
+  padding: 3px 8px;
+  font-size: 14px;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -689,6 +701,21 @@ img { image-rendering: pixelated; }
   to { background-position: 6px 0, -6px 100%, 0 -6px, 100% 6px; }
 }
 
+/* intro: animated fake mouse that opens About Me on entering the desktop */
+.fake-cursor {
+  position: absolute;
+  z-index: 8600;
+  width: 20px; height: 24px;
+  pointer-events: none;
+  transform-origin: 2px 2px;
+  filter: drop-shadow(1px 1px 0 rgba(0,0,0,0.25));
+}
+.fake-cursor svg { display: block; }
+.fake-cursor.click { animation: fc-click 0.16s steps(2) 2; }
+@keyframes fc-click { 50% { transform: scale(0.78); } }
+.fake-cursor.fade { opacity: 0; transition: opacity 0.3s ease; }
+.intro-active, .intro-active * { cursor: none !important; }
+
 /* zoom rectangles open animation */
 .zoom-rect {
   position: absolute;
@@ -703,22 +730,30 @@ img { image-rendering: pixelated; }
    WINDOW CONTENT TYPOGRAPHY
    ============================================================ */
 .content {
-  font-family: 'Geneva', 'Monaco', 'Lucida Grande', system-ui, sans-serif;
-  font-size: 15px;
+  font-family: 'Geneva', 'Lucida Grande', system-ui, sans-serif;
+  font-size: 16px;
   line-height: 1.55;
   color: var(--ink);
 }
 .content h2 {
   font-family: 'Chicago', sans-serif;
-  font-size: 19px;
+  font-size: 20px;
   margin: 0 0 8px;
 }
 .content h3 {
   font-family: 'Chicago', sans-serif;
-  font-size: 15px;
+  font-size: 16px;
   margin: 14px 0 4px;
 }
 .content p { margin: 0 0 9px; }
+/* secondary "information" line (dates, role, location) — one consistent style,
+   same family as body so content pages don't mix typefaces */
+.content .meta {
+  font-family: 'Geneva', 'Lucida Grande', system-ui, sans-serif;
+  font-size: 14px;
+  color: var(--ink);
+  margin: -2px 0 8px;
+}
 .content a {
   color: var(--ink);
   text-decoration: underline;
@@ -734,7 +769,7 @@ img { image-rendering: pixelated; }
   background: var(--paper);
   color: var(--ink);
   padding: 3px 16px;
-  cursor: default;
+  cursor: var(--cursor-arrow);
   box-shadow: 1px 1px 0 0 var(--ink);
 }
 .content .mac-btn:hover { background: var(--ink); color: var(--paper); }
@@ -751,7 +786,7 @@ img { image-rendering: pixelated; }
   align-items: center;
   gap: 10px;
   padding: 4px 6px;
-  cursor: default;
+  cursor: var(--cursor-arrow);
   user-select: none;
 }
 .filelist .file .mini {
@@ -759,7 +794,7 @@ img { image-rendering: pixelated; }
   display: flex; align-items: flex-end; justify-content: center;
   flex: 0 0 26px;
 }
-.filelist .file .fname { font-size: 13px; font-family: 'Geneva','Monaco',sans-serif; }
+.filelist .file .fname { font-size: 15px; font-family: 'Geneva', 'Lucida Grande', sans-serif; }
 .filelist .file.selected { }
 .filelist .file.selected .fname { background: var(--ink); color: var(--paper); }
 .filelist .file.selected .mini { filter: invert(1); }
@@ -779,8 +814,8 @@ img { image-rendering: pixelated; }
   left: 0; right: 0; bottom: 0;
   background: var(--paper);
   border-top: 2px solid var(--ink);
-  font-family: 'Monaco', monospace;
-  font-size: 9px;
+  font-family: 'Geneva', 'Lucida Grande', sans-serif;
+  font-size: 12px;
   text-align: center;
   padding: 2px;
   color: var(--ink);
@@ -791,65 +826,75 @@ img { image-rendering: pixelated; }
   border: 2px solid var(--ink);
   border-radius: 9px;
   padding: 2px 10px;
-  font-family: 'Geneva','Monaco',sans-serif;
-  font-size: 12px;
+  font-family: 'Geneva', 'Lucida Grande', sans-serif;
+  font-size: 13px;
   margin: 0 4px 4px 0;
 }
 
-/* ---- inline framed gallery (Macintosh "picture" thumbnails) ---- */
-.content .shots { margin-top: 4px; }
+/* ---- framed picture carousel — one image at a time, ‹ › to navigate ---- */
+.content .shots { margin-top: 6px; }
 .content .shots-h {
   font-family: 'Chicago', sans-serif;
-  font-size: 13px;
+  font-size: 15px;
   margin: 14px 0 7px;
 }
-.content .filmstrip {
+.content .gallery {
   display: flex;
-  flex-wrap: wrap;
-  gap: 11px;
-  align-items: flex-start;
+  align-items: stretch;
+  gap: 6px;
 }
-.content .shot {
-  margin: 0;
-  width: 124px;
-  cursor: zoom-in;
-  flex: 0 0 auto;
-}
-/* white matte + black keyline = classic framed picture clipping */
-.content .shot .shot-frame {
-  display: block;
+/* the ‹ › navigation buttons flanking the stage */
+.content .car-nav {
+  flex: 0 0 30px;
   border: 2px solid var(--ink);
   background: var(--paper);
-  padding: 3px;
-  box-shadow: 1px 1px 0 0 var(--ink);
+  color: var(--ink);
+  font-family: 'Chicago', sans-serif;
+  font-size: 20px;
+  line-height: 1;
+  cursor: var(--cursor-arrow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
 }
+.content .car-nav:hover { background: var(--ink); color: var(--paper); }
+.content .car-nav:active { background: var(--ink); color: var(--paper); }
+/* white matte + black keyline = classic framed picture */
+.content .car-stage {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  box-shadow: 1px 1px 0 0 var(--ink);
+  padding: 4px;
+}
+.content .shot { margin: 0; cursor: var(--cursor-arrow); display: none; }
+.content .shot.active { display: block; }
+.content .shot .shot-frame { display: block; }
 .content .shot .shot-frame img {
   display: block;
   width: 100%;
-  height: 84px;
-  object-fit: cover;
-  object-position: top center;
+  height: 230px;
+  object-fit: contain;                 /* show the whole screenshot, no cropping */
   image-rendering: auto;               /* override global pixelated for photos */
-  /* monochrome at rest to live in the 1-bit world... */
-  filter: grayscale(1) contrast(1.06);
-  transition: filter 0.12s ease;
+  background: var(--paper);
 }
-/* ...but fully visible the moment you engage with it */
-.content .shot:hover .shot-frame img { filter: none; }
-.content .shot figcaption {
-  font-family: 'Monaco', monospace;
-  font-size: 11px;
-  line-height: 1.2;
-  text-align: center;
-  margin-top: 4px;
+/* caption + counter line under the carousel — consistent body font */
+.content .car-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 5px;
+  font-family: 'Geneva', 'Lucida Grande', sans-serif;
+  font-size: 13px;
   color: var(--ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
-/* green-phosphor mode: tint resting thumbnails to match the monitor */
-.mono-green .content .shot:not(:hover) .shot-frame img {
-  filter: grayscale(1) sepia(1) hue-rotate(58deg) saturate(2.2) brightness(0.92);
+.content .car-meta .car-count { flex: 0 0 auto; white-space: nowrap; }
+/* green-phosphor mode: tint the photo to match the monitor */
+.mono-green .content .shot .shot-frame img {
+  filter: sepia(1) hue-rotate(58deg) saturate(1.8) brightness(0.96);
 }
 
 /* ---- picture viewer (click a thumbnail → opens enlarged in its own window) ---- */
@@ -861,7 +906,7 @@ img { image-rendering: pixelated; }
   align-items: center;
   justify-content: center;
   padding: 30px;
-  cursor: zoom-out;
+  cursor: var(--cursor-arrow);
 }
 .lightbox .lb-backdrop {
   position: absolute;
@@ -879,7 +924,7 @@ img { image-rendering: pixelated; }
   box-shadow: 3px 3px 0 0 var(--ink), 0 0 0 4px var(--paper), 4px 4px 0 4px var(--ink);
   display: flex;
   flex-direction: column;
-  cursor: default;
+  cursor: var(--cursor-arrow);
   animation: picpop 0.14s steps(3) both;
 }
 @keyframes picpop { from { transform: scale(0.82); } to { transform: scale(1); } }
@@ -897,7 +942,7 @@ img { image-rendering: pixelated; }
   border: 2px solid var(--ink);
   background: var(--paper);
   margin-left: 6px;
-  cursor: default;
+  cursor: var(--cursor-arrow);
 }
 .picwin .titlebar .close-box:hover {
   background: repeating-linear-gradient(45deg, var(--ink) 0, var(--ink) 1px, var(--paper) 1px, var(--paper) 2px);
@@ -920,6 +965,7 @@ img { image-rendering: pixelated; }
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 10px;
   min-height: 0;
 }
 .picwin .pic-body img {
@@ -930,6 +976,33 @@ img { image-rendering: pixelated; }
   image-rendering: auto;     /* show the photo, not pixelated */
   border: 2px solid var(--ink);
   background: var(--paper);
+}
+/* ‹ › navigation inside the enlarged viewer */
+.picwin .lb-nav {
+  flex: 0 0 34px;
+  align-self: stretch;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Chicago', sans-serif;
+  font-size: 24px;
+  line-height: 1;
+  cursor: var(--cursor-arrow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+.picwin .lb-nav:hover { background: var(--ink); color: var(--paper); }
+.picwin .lb-cap {
+  flex: 0 0 auto;
+  border-top: 2px solid var(--ink);
+  background: var(--paper);
+  text-align: center;
+  padding: 4px 8px;
+  font-family: 'Geneva', 'Lucida Grande', sans-serif;
+  font-size: 13px;
+  color: var(--ink);
 }
 
 /* ============================================================
@@ -1012,11 +1085,11 @@ img { image-rendering: pixelated; }
 }
 .login-body h2 {
   font-family: 'Chicago', sans-serif;
-  font-size: 16px; margin: 0 0 4px;
+  font-size: 18px; margin: 0 0 4px;
 }
 .login-body .sub {
-  font-family: 'Geneva','Monaco',sans-serif;
-  font-size: 12px; margin: 0 0 18px;
+  font-family: 'Geneva', 'Lucida Grande', sans-serif;
+  font-size: 14px; margin: 0 0 18px;
 }
 .users {
   display: flex;
@@ -1028,7 +1101,7 @@ img { image-rendering: pixelated; }
   border: 2px solid var(--ink);
   background: var(--paper);
   padding: 14px 8px 10px;
-  cursor: default;
+  cursor: var(--cursor-arrow);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1046,25 +1119,25 @@ img { image-rendering: pixelated; }
 }
 .user-card .uname {
   font-family: 'Chicago', sans-serif;
-  font-size: 14px;
+  font-size: 15px;
 }
 .user-card .udom {
-  font-family: 'Monaco', monospace;
-  font-size: 10px;
+  font-family: 'Geneva', 'Lucida Grande', sans-serif;
+  font-size: 12px;
 }
 .user-card .ext {
-  font-family: 'Geneva','Monaco',sans-serif;
-  font-size: 9px;
+  font-family: 'Geneva', 'Lucida Grande', sans-serif;
+  font-size: 11px;
   border: 1px solid var(--ink);
   border-radius: 6px;
-  padding: 0 5px;
+  padding: 1px 6px;
 }
 .login-note {
   margin-top: 16px;
-  font-family: 'Monaco', monospace;
-  font-size: 10px;
+  font-family: 'Geneva', 'Lucida Grande', sans-serif;
+  font-size: 12px;
   color: var(--ink);
-  opacity: 0.8;
+  opacity: 0.85;
 }
 
 /* small modal dialog (alerts / leon handoff) */
@@ -1093,7 +1166,7 @@ img { image-rendering: pixelated; }
   font-size: 22px;
 }
 .alert .body { flex: 1 1 auto; }
-.alert .body p { font-family: 'Geneva','Monaco',sans-serif; font-size: 12px; margin: 0 0 14px; }
+.alert .body p { font-family: 'Geneva', 'Lucida Grande', sans-serif; font-size: 14px; margin: 0 0 14px; }
 .alert .body .btns { display: flex; gap: 10px; justify-content: flex-end; }
 
 /* utility: watch cursor while "loading" */
@@ -1101,5 +1174,5 @@ img { image-rendering: pixelated; }
   cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Ccircle cx='11' cy='11' r='8' fill='white' stroke='black' stroke-width='2'/%3E%3Cline x1='11' y1='11' x2='11' y2='6' stroke='black' stroke-width='2'/%3E%3Cline x1='11' y1='11' x2='15' y2='11' stroke='black' stroke-width='2'/%3E%3C/svg%3E") 11 11, wait !important;
 }
 .txt, .txt * {
-  cursor: text;
+  cursor: var(--cursor-arrow);
 }

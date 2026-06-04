@@ -62,11 +62,11 @@ fonts, and screenshot galleries. Wired:
 
 Leon's side (`profile-leon.js`) is a working starter — its own desktop (About,
 Projects, Contact), title, and login card. Leon fills in `projects` and the
-document builders; the engine already renders leon.xyz from his hostname.
+document builders; the engine already renders leonmeng.xyz from his hostname.
 
 ## Deploy (Vercel, single shared app)
 1. Push this folder to a repo, import to Vercel (framework preset: Other / static).
-2. Add both `ivan.xyz` and `leon.xyz` as custom domains on the one project.
+2. Add both `ivanluo.xyz` and `leonmeng.xyz` as custom domains on the one project.
 3. Point each registrar's DNS at Vercel; HTTPS is issued automatically.
 4. Note: repointing ivan.xyz takes the old site offline after DNS propagates — keep a backup.
 
