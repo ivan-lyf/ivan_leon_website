@@ -534,7 +534,10 @@
     const host = document.getElementById('screen-host');
     glRenderer.domElement.style.display = 'block';
     requestAnimationFrame(function () { glRenderer.domElement.style.opacity = '1'; });
-    host.style.transform = ''; host.style.opacity = '0'; host.style.pointerEvents = 'none'; host.style.zIndex = '0';
+    // keep pointer-events 'auto' (its initial CSS value): forwardClick's
+    // elementsFromPoint hit-test needs the host hittable. The #gl canvas sits above
+    // it (z-index 1 > 0), so real events still reach OrbitControls.
+    host.style.transform = ''; host.style.opacity = '0'; host.style.pointerEvents = 'auto'; host.style.zIndex = '0';
     const bd = document.getElementById('sv-backdrop'); if (bd) { bd.style.opacity = '0'; clearTimeout(window.__svBd); window.__svBd = setTimeout(function () { if (!inScreenView) bd.style.display = 'none'; }, 460); }
     document.querySelectorAll('#hud,#title').forEach(function (e) { e.style.opacity = ''; });
     exitHint(false);
