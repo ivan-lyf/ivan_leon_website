@@ -1150,7 +1150,7 @@
           `<span class="wp-text">Think</span>` +
           `<span class="wp-text wp-be">Be</span>` +
         `</div>` +
-        `<span class="wp-text wp-diff">Different</span>` +
+        `<span class="wp-text wp-diff">Different.</span>` +
       `</div>`;
   }
 

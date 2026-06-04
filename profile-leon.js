@@ -109,6 +109,23 @@
     { title: "D.A.N.C.E.", artist: "Justice", art: "https://image-cdn-fa.spotifycdn.com/image/ab67616d00001e021c0bcf8b536295438d26c70d", url: "https://open.spotify.com/track/33yAEqzKXexYM3WlOYtTfQ" },
     { title: "If I Got It (Your Love Brought It)", artist: "Aaron Frazer", art: "https://image-cdn-fa.spotifycdn.com/image/ab67616d00001e02f1111b4b0a9f611b0838053b", url: "https://open.spotify.com/track/1jSAARNT7fzLTcPc4IUQQz" },
     { title: "Better", artist: "nimino, Manta", art: "https://image-cdn-fa.spotifycdn.com/image/ab67616d00001e023a6fd09dc4dfdd42134b5046", url: "https://open.spotify.com/track/6oUgmZK0McW4706SLJlfDh" },
+    { title: "Can't Help Falling in Love", artist: "Elvis Presley", art: "https://image-cdn-fa.spotifycdn.com/image/ab67616d00001e02b184226408f981e3dd17c606", url: "https://open.spotify.com/track/44AyOl4qVkzS48vBsbNXaC" },
+    { title: "Et si tu n'existais pas", artist: "Joe Dassin", art: "https://image-cdn-ak.spotifycdn.com/image/ab67616d00001e029520be730c64292246fc1d78", url: "https://open.spotify.com/track/1GeszH3DWCOKwK0d8D5gEZ" },
+    { title: "Selenge", artist: "Céline Dessberg", art: "https://image-cdn-fa.spotifycdn.com/image/ab67616d00001e028ee9aa7456028b2d4485c253", url: "https://open.spotify.com/track/47yngLaqEr3z1lnk7ok0OV" },
+    { title: "Any Way (feat. Maggie Rogers)", artist: "L'Impératrice, Maggie Rogers", art: "https://image-cdn-ak.spotifycdn.com/image/ab67616d00001e027e3398f4a50f6e9534f2fbd6", url: "https://open.spotify.com/track/6pLpm17TjgukQbWU5F6fwo" },
+    { title: "Parlami d'amore Mariù", artist: "Achille Togliani", art: "https://image-cdn-fa.spotifycdn.com/image/ab67616d00001e0205045a074718b94aec202756", url: "https://open.spotify.com/track/4DHuxeU2epE6OpXwSMWr9g" },
+    { title: "Hang on Little Tomato", artist: "Pink Martini, China Forbes, Thomas M. Lauderdale, Patrick Abbey", art: "https://image-cdn-ak.spotifycdn.com/image/ab67616d00001e020c9386d0f4e695570cd41935", url: "https://open.spotify.com/track/3Np6QCfJumv3C09gt3Iuxd" },
+    { title: "Te Maldigo (From \"Queer\")", artist: "Trent Reznor, Omar Apollo, Atticus Ross", art: "https://image-cdn-fa.spotifycdn.com/image/ab67616d00001e0281f1332e0f4273b5db69d5a4", url: "https://open.spotify.com/track/2QxCXBMAeDxQ5Cehea4cEv" },
+    { title: "The Look", artist: "Metronomy", art: "https://image-cdn-fa.spotifycdn.com/image/ab67616d00001e028ca7d89456553e4bbbf3c981", url: "https://open.spotify.com/track/6zfczP87XO2SxWlQtnjFNa" },
+    { title: "Tu si' 'na cosa grande", artist: "Ornella Vanoni", art: "https://image-cdn-fa.spotifycdn.com/image/ab67616d00001e02316389bfa04e7a1012b5d9ea", url: "https://open.spotify.com/track/1QxDOGB1GEY62knGknRfSS" },
+    { title: "Ava Maria", artist: "Maria Ferrante", art: "https://image-cdn-fa.spotifycdn.com/image/ab67616d00001e02a480d3bf24be627a6ea5ba73", url: "https://open.spotify.com/track/6drMEKriM3sscgdmDqc1OW" },
+    { title: "embers", artist: "Kenichiro Nishihara, Lou Mi Na", art: "https://image-cdn-ak.spotifycdn.com/image/ab67616d00001e02443ce6145b4696073d34f668", url: "https://open.spotify.com/track/3ZsDA5mkT7awi0OHVMcT7Z" },
+    { title: "Something About Us", artist: "Daft Punk", art: "https://image-cdn-ak.spotifycdn.com/image/ab67616d00001e021e81bff9807a9e629fce5ade", url: "https://open.spotify.com/track/1NeLwFETswx8Fzxl2AFl91" },
+    { title: "No Surprises", artist: "Radiohead", art: "https://image-cdn-fa.spotifycdn.com/image/ab67616d00001e02c8b444df094279e70d0ed856", url: "https://open.spotify.com/track/10nyNJ6zNy2YVYLrcwLccB" },
+    { title: "I Love You", artist: "Spacemen 3", art: "https://image-cdn-ak.spotifycdn.com/image/ab67616d00001e02c3824888ed659a123db27452", url: "https://open.spotify.com/track/3KfXor1xGOBNE2wwFiP6rV" },
+    { title: "Something In The Way", artist: "Nirvana", art: "https://image-cdn-ak.spotifycdn.com/image/ab67616d00001e02444f118a9126af9e1483dcc0", url: "https://open.spotify.com/track/1nFtiJxYdhtFfFtfXBv06s" },
+    { title: "灰色と青 ( + 菅田将暉 )", artist: "Kenshi Yonezu, SUDA MASAKI", art: "https://image-cdn-fa.spotifycdn.com/image/ab67616d00001e025ee78302fe48134795016cbf", url: "https://open.spotify.com/track/3KnURrjsXA0TDce8N7iOwz" },
+    { title: "Distant Dreamer", artist: "Duffy", art: "https://image-cdn-ak.spotifycdn.com/image/ab67616d00001e02618eb90c1c10d299e51f3822", url: "https://open.spotify.com/track/1uqXrzulcVflfeZDHbyjIs" },
   ];
 
   window.PROFILES = window.PROFILES || {};
