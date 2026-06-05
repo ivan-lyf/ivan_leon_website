@@ -162,7 +162,7 @@
   const sideHustle = [
     {
       id: "sh-gaming", name: "Gaming", icon: "g-doc", title: "Gaming",
-      info: "Side Hustle · CS2 & League", size: { w: 440, h: 320 },
+      info: "Side Hustle · CS2 & League", size: { w: 360, h: 250 },
       build: () => shDoc("Gaming", `
         <p>I play CS2 and League — hit me up if you want me to carry you. (Carry success rate: not legally guaranteed.)</p>
         <p><strong>Riot ID</strong> &nbsp;Floral Sea #000<br>
@@ -170,28 +170,28 @@
     },
     {
       id: "sh-cat", name: "Cat", icon: "g-doc", title: "Cat",
-      info: "Side Hustle · lead QA", size: { w: 470, h: 540 },
+      info: "Side Hustle · lead QA", size: { w: 380, h: 420 },
       build: () => shDoc("Cat", `
         <p>This is <strong>Jupiter</strong> — my cat and lead QA engineer. He tests every build by sitting on the keyboard and knocking unfinished features off the desk.</p>
         ${galleryHTML([{ src: SH + "cat-01.jpeg", cap: "Jupiter, reviewing my commits" }], "Exhibit A")}`),
     },
     {
       id: "sh-gym", name: "Gym", icon: "g-doc", title: "Gym",
-      info: "Side Hustle · loading…", size: { w: 440, h: 280 },
+      info: "Side Hustle · loading…", size: { w: 360, h: 220 },
       build: () => shDoc("Gym", `
         <p>No picture until I bench two plates. :))</p>
         <p class="meta">Check back in a few months. Maybe a few more.</p>`),
     },
     {
       id: "sh-photo", name: "Photography", icon: "g-doc", title: "Photography",
-      info: "Side Hustle · digital + film", size: { w: 460, h: 340 },
+      info: "Side Hustle · digital + film", size: { w: 370, h: 270 },
       build: () => shDoc("Photography", `
         <p>Digital and film — I like chasing light on both, and occasionally a shot even comes out in focus.</p>
         <p><strong>Instagram</strong> &nbsp;<a href="https://www.instagram.com/ivan_photo_studio/" target="_blank" rel="noopener">@ivan_photo_studio</a></p>`),
     },
     {
       id: "sh-snowboard", name: "Snowboarding", icon: "g-doc", title: "Snowboarding",
-      info: "Side Hustle · CASI L2", size: { w: 490, h: 560 },
+      info: "Side Hustle · CASI L2", size: { w: 390, h: 430 },
       build: () => shDoc("Snowboarding", `
         <p>CASI Level 2 and Park Level 1 instructor. Catch me at Whistler all winter — come say hi, or book a lesson and let me talk your ear off about edge control.</p>
         ${galleryHTML([
@@ -201,25 +201,43 @@
     },
   ];
 
+  /* ---------- Now Playing — Jay Chou (周杰倫) on heavy rotation ----------
+     Same widget as Leon's: a random track per session, spinning disc + EQ bars.
+     art = Spotify album thumbnail; url = the track on Spotify. */
+  const nowPlaying = [
+    { title: "晴天", artist: "周杰倫 (Jay Chou)", art: "https://image-cdn-ak.spotifycdn.com/image/ab67616d00001e026850b3307853e0753ed53cc5", url: "https://open.spotify.com/track/5pIcwtJYNJx93l420oR2Vm" },
+    { title: "告白氣球", artist: "周杰倫 (Jay Chou)", art: "https://image-cdn-ak.spotifycdn.com/image/ab67616d00001e02db1172ca038c6818b6ae8bf2", url: "https://open.spotify.com/track/2tqF9MPNdYdJU70U0ULO23" },
+    { title: "說好不哭 (with aMEI)", artist: "周杰倫 (Jay Chou)", art: "https://image-cdn-ak.spotifycdn.com/image/ab67616d00001e0220eb9661dbcd873731280b48", url: "https://open.spotify.com/track/52yAKumXlqPjUsIBlmiMvo" },
+    { title: "擱淺", artist: "周杰倫 (Jay Chou)", art: "https://image-cdn-ak.spotifycdn.com/image/ab67616d00001e0200b976d1df4243e5318a7712", url: "https://open.spotify.com/track/0cOMncRq4cmDLO4tPQnkBF" },
+    { title: "珊瑚海", artist: "周杰倫 (Jay Chou)", art: "https://image-cdn-fa.spotifycdn.com/image/ab67616d00001e022625625847482492f9e2e665", url: "https://open.spotify.com/track/3Qj9Fy8BPbWmICTiNkuqB7" },
+    { title: "七里香", artist: "周杰倫 (Jay Chou)", art: "https://image-cdn-ak.spotifycdn.com/image/ab67616d00001e0200b976d1df4243e5318a7712", url: "https://open.spotify.com/track/57w29bSwdIZ6gr6xXOqwc1" },
+    { title: "等你下課 (with 楊瑞代)", artist: "周杰倫 (Jay Chou)", art: "https://image-cdn-ak.spotifycdn.com/image/ab67616d00001e0220eb9661dbcd873731280b48", url: "https://open.spotify.com/track/0TMGJMQJWHhuNY60MEr5jR" },
+    { title: "說好的幸福呢", artist: "周杰倫 (Jay Chou)", art: "https://image-cdn-ak.spotifycdn.com/image/ab67616d00001e02c2321adb9887902f0c5bd8f1", url: "https://open.spotify.com/track/4OoExItZJ0jePoCZDbHx4t" },
+    { title: "安靜", artist: "周杰倫 (Jay Chou)", art: "https://image-cdn-ak.spotifycdn.com/image/ab67616d00001e0266d1a374224122c5c5ed5cd9", url: "https://open.spotify.com/track/4oSqIlKulWts1oRUIem44V" },
+    { title: "一路向北", artist: "周杰倫 (Jay Chou)", art: "https://image-cdn-fa.spotifycdn.com/image/ab67616d00001e022625625847482492f9e2e665", url: "https://open.spotify.com/track/7KoqEF76fGnDYdxTSHLxcm" },
+    { title: "楓", artist: "周杰倫 (Jay Chou)", art: "https://image-cdn-fa.spotifycdn.com/image/ab67616d00001e022625625847482492f9e2e665", url: "https://open.spotify.com/track/1pALOIA4ytESmhl7Fxjdic" },
+    { title: "不該 (with 張惠妹)", artist: "周杰倫 (Jay Chou)", art: "https://image-cdn-ak.spotifycdn.com/image/ab67616d00001e02db1172ca038c6818b6ae8bf2", url: "https://open.spotify.com/track/5miH0BWhRVTvHAwmnoeyXH" },
+  ];
+
   /* ---------- desktop layout ----------
      kind: "harddrive" | "folder" | "trash" | undefined (document via `doc`) */
   const icons = [
     { id: "harddrive", kind: "harddrive", label: "Ivan's Mac", glyph: "g-hd", corner: "tr",
-      title: "Ivan's Mac", info: "5 items · 512K in disk · 256K available", size: { w: 360, h: 270 } },
+      title: "Ivan's Mac", info: "5 items · 512K in disk · 256K available", size: { w: 320, h: 230 } },
     { id: "about", doc: "about", label: "About Me", glyph: "g-doc", x: 24, y: 14,
-      title: "About Me", info: "About · 24K", size: { w: 460, h: 380 } },
+      title: "About Me", info: "About · 24K", size: { w: 360, h: 300 } },
     { id: "projects", kind: "folder", label: "Projects", glyph: "g-folder", x: 24, y: 120,
-      title: "Projects", info: "5 items · 128K in folder", size: { w: 380, h: 300 } },
+      title: "Projects", info: "5 items · 128K in folder", size: { w: 330, h: 250 } },
     { id: "experience", doc: "experience", label: "Experience", glyph: "g-doc", x: 24, y: 226,
-      title: "Experience", info: "Experience · 18K", size: { w: 460, h: 380 } },
+      title: "Experience", info: "Experience · 18K", size: { w: 370, h: 300 } },
     { id: "sidehustle", kind: "folder", items: sideHustle, label: "Side Hustle", glyph: "g-folder", x: 24, y: 332,
-      title: "Side Hustle", info: "5 items · 64K in folder", size: { w: 420, h: 300 } },
+      title: "Side Hustle", info: "5 items · 64K in folder", size: { w: 340, h: 250 } },
     { id: "resume", doc: "resume", label: "Résumé", glyph: "g-resume", corner: "tr2",
-      title: "Résumé", info: "Résumé · 32K", size: { w: 420, h: 400 } },
+      title: "Résumé", info: "Résumé · 32K", size: { w: 340, h: 320 } },
     { id: "contact", doc: "contact", label: "Contact", glyph: "g-mail", corner: "tr3",
-      title: "Contact", info: "Contact · 8K", size: { w: 360, h: 340 } },
+      title: "Contact", info: "Contact · 8K", size: { w: 300, h: 270 } },
     { id: "trash", kind: "trash", label: "Trash", glyph: "g-trash", corner: "br",
-      title: "Trash", info: "Empty", size: { w: 320, h: 260 } },
+      title: "Trash", info: "Empty", size: { w: 290, h: 220 } },
   ];
 
   window.PROFILES = window.PROFILES || {};
@@ -234,6 +252,7 @@
     resumePdf: "assets/resume/Ivan_Luo_Resume.pdf",
     projects,
     rocketShots,
+    nowPlaying,
     about,
     experience,
     resume,

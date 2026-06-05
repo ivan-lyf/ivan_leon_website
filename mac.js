@@ -347,7 +347,7 @@
     sorted.forEach((ic, idx) => {
       const node = el("div", "icon");
       node.dataset.id = ic.id;
-      node.innerHTML = `<div class="glyph">${svgGlyph(ic.glyph, 36)}</div><div class="label">${ic.label}</div>`;
+      node.innerHTML = `<div class="glyph">${svgGlyph(ic.glyph, 30)}</div><div class="label">${ic.label}</div>`;
       let x = ic.x, y = ic.y;
       if (viewMode === "icon") {
         if (ic.corner === "tr") { x = W - 108; y = 14; }
@@ -385,6 +385,14 @@
       const onUp = () => {
         document.removeEventListener("mousemove", onMove);
         document.removeEventListener("mouseup", onUp);
+        // Easter egg: dropping any icon onto the Trash doesn't delete it —
+        // it protests and hands you a résumé instead.
+        if (down && down.moved && ic.kind !== "trash") {
+          const trashNode = desktop.querySelector('.icon[data-id="trash"]');
+          if (trashNode && rectsOverlap(node.getBoundingClientRect(), trashNode.getBoundingClientRect())) {
+            dropOnTrash(node, down, ic, trashNode);
+          }
+        }
         down = null;
       };
       document.addEventListener("mousemove", onMove);
@@ -396,6 +404,37 @@
       last = now;
     });
     node.addEventListener("dblclick", () => openIcon(ic.id));
+  }
+
+  function rectsOverlap(a, b) {
+    return !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom);
+  }
+  function downloadResume() {
+    const url = (ACTIVE && ACTIVE.resumePdf) || "";
+    if (!url) return;
+    const a = document.createElement("a");
+    a.href = url; a.download = url.split("/").pop(); a.rel = "noopener";
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  // Trash easter egg: the icon springs back (nothing is really deleted), the bin
+  // bumps, and a playful alert offers the résumé as a parting gift.
+  function dropOnTrash(node, down, ic, trashNode) {
+    node.style.left = down.ox + "px";
+    node.style.top = down.oy + "px";
+    node.classList.remove("selected");
+    Sound.play("trash");
+    trashNode.style.transition = "transform .12s";
+    trashNode.style.transform = "scale(1.22)";
+    setTimeout(() => { trashNode.style.transform = ""; }, 180);
+    const hasResume = !!(ACTIVE && ACTIVE.resumePdf);
+    alertBox(
+      "Really deleting me? :(",
+      hasResume
+        ? "Wow, straight to the Trash. Fine — take my résumé on your way out. No hard feelings. 🥲"
+        : "Wow, straight to the Trash. That stings a little. 🥲",
+      hasResume ? "Download résumé" : "OK",
+      hasResume ? downloadResume : null
+    );
   }
 
   /* ============================================================
@@ -1146,9 +1185,149 @@
     renderWallpaper();
     placeIcons();
     setupNowPlaying();
+    setupCritters();
+    setupDeskNotes();
     window.addEventListener("resize", debounce(placeIcons, 200));
     // intro: glide a fake mouse to "About Me" and double-click it open
     requestAnimationFrame(() => introOpenAbout());
+  }
+
+  /* ============================================================
+     DESKTOP CRITTERS — a pixel cat, a dino, and a Claude spark wander the
+     desktop floor, occasionally pausing by an icon/widget to react. Travel is
+     a CSS `left` transition (mutation-free) so it doesn't thrash the 3D texture.
+     ============================================================ */
+  function critterSVG(type) {
+    if (type === "cat") {
+      return `<svg viewBox="0 0 22 18" shape-rendering="crispEdges" style="display:block;width:100%;height:100%">
+        <g fill="#e8923a">
+          <rect x="4" y="8" width="12" height="6"/>
+          <rect x="14" y="4" width="5" height="6"/>
+          <rect x="2" y="3" width="2" height="7"/><rect x="2" y="3" width="3" height="2"/>
+          <rect x="14" y="2" width="2" height="2"/><rect x="17" y="2" width="2" height="2"/>
+        </g>
+        <g fill="#c5701f">
+          <rect x="6" y="8" width="1" height="6"/><rect x="9" y="8" width="1" height="6"/><rect x="12" y="8" width="1" height="6"/>
+        </g>
+        <g fill="#e8923a"><rect x="4" y="14" width="2" height="3"/><rect x="8" y="14" width="2" height="3"/><rect x="11" y="14" width="2" height="3"/><rect x="14" y="14" width="2" height="3"/></g>
+        <rect x="17" y="6" width="2" height="2" fill="#2a1a0d"/>
+      </svg>`;
+    }
+    if (type === "dino") {
+      return `<svg viewBox="0 0 24 18" shape-rendering="crispEdges" style="display:block;width:100%;height:100%">
+        <g fill="#5aa84f">
+          <rect x="3" y="7" width="11" height="6"/>
+          <rect x="13" y="3" width="7" height="6"/>
+          <rect x="0" y="8" width="4" height="3"/>
+          <rect x="6" y="2" width="2" height="2"/><rect x="9" y="1" width="2" height="2"/>
+        </g>
+        <g fill="#3f8a39"><rect x="5" y="13" width="3" height="4"/><rect x="10" y="13" width="3" height="4"/></g>
+        <rect x="13" y="9" width="3" height="1" fill="#3f8a39"/>
+        <rect x="18" y="5" width="2" height="2" fill="#0f2e10"/>
+        <rect x="20" y="7" width="1" height="1" fill="#0f2e10"/>
+      </svg>`;
+    }
+    // Claude spark — coral body with a cream sunburst, two eyes, two legs
+    return `<svg viewBox="0 0 20 20" shape-rendering="crispEdges" style="display:block;width:100%;height:100%">
+      <g fill="#cc785c">
+        <rect x="5" y="5" width="10" height="9"/><rect x="4" y="7" width="12" height="5"/><rect x="6" y="4" width="8" height="11"/>
+      </g>
+      <g fill="#f4ead8">
+        <rect x="9" y="6" width="2" height="7"/><rect x="6" y="9" width="8" height="2"/>
+        <rect x="7" y="7" width="1" height="1"/><rect x="12" y="7" width="1" height="1"/><rect x="7" y="11" width="1" height="1"/><rect x="12" y="11" width="1" height="1"/>
+      </g>
+      <rect x="7" y="8" width="1" height="2" fill="#2a1a0d"/><rect x="12" y="8" width="1" height="2" fill="#2a1a0d"/>
+      <g fill="#a85c40"><rect x="7" y="14" width="2" height="3"/><rect x="11" y="14" width="2" height="3"/></g>
+    </svg>`;
+  }
+
+  let critterTimers = [];
+  function setupCritters() {
+    critterTimers.forEach(clearTimeout); critterTimers = [];
+    desktop.querySelectorAll(".critter").forEach((n) => n.remove());
+    const specs = [
+      { type: "cat",   emotes: ["meow", "♥", "~"], speed: 26 },
+      { type: "dino",  emotes: ["rawr", "!", "♪"], speed: 22 },
+      { type: "claude", emotes: ["hi!", "✦", "◡"], speed: 30 },
+    ];
+    specs.forEach((spec, i) => {
+      const c = el("div", "critter");
+      c.innerHTML = `<div class="body">${critterSVG(spec.type)}</div>`;
+      const w = desktop.clientWidth || 600;
+      c.style.left = Math.round(20 + Math.random() * (w - 80)) + "px";
+      desktop.appendChild(c);
+      critterTimers.push(setTimeout(() => stepCritter(c, spec), 900 + i * 1400));
+    });
+  }
+  function stepCritter(c, spec) {
+    if (!c.isConnected) return;
+    const w = desktop.clientWidth || 600;
+    const cur = parseInt(c.style.left) || 0;
+    const target = Math.round(10 + Math.random() * (w - 50));
+    const dur = Math.max(0.8, Math.abs(target - cur) / spec.speed);
+    c.classList.toggle("flip", target < cur);   // face travel direction
+    c.classList.remove("idle");
+    c.style.transitionDuration = dur + "s";
+    c.style.left = target + "px";
+    // on arrival: small chance to react, then idle a beat before the next stroll
+    critterTimers.push(setTimeout(() => {
+      if (!c.isConnected) return;
+      c.classList.add("idle");
+      if (Math.random() < 0.5) critterEmote(c, spec, target);
+      critterTimers.push(setTimeout(() => stepCritter(c, spec), 1200 + Math.random() * 3500));
+    }, dur * 1000));
+  }
+  function critterEmote(c, spec, x) {
+    // react to whatever desktop component the critter wandered next to
+    let txt = spec.emotes[Math.floor(Math.random() * spec.emotes.length)];
+    const np = desktop.querySelector(".nowplaying:not(.hidden)");
+    const trash = desktop.querySelector('.icon[data-id="trash"]');
+    const near = (el) => { if (!el) return false; const r = el.offsetLeft; return Math.abs((r + el.offsetWidth / 2) - x) < 60; };
+    if (near(np)) txt = "♪";
+    else if (near(trash)) txt = "?!";
+    const b = el("div", "emote"); b.textContent = txt; c.appendChild(b);
+    critterTimers.push(setTimeout(() => b.remove(), 1900));
+  }
+
+  /* ============================================================
+     DESKTOP NOTES — friendly little dialogs that pop in now and then.
+     ============================================================ */
+  const DESK_NOTES = [
+    "Welcome to my space 👋",
+    "Thanks for visiting!",
+    "Always looking for new opportunities — let's chat!",
+    "Try dragging something to the Trash… I dare you.",
+    "Double-click around — everything's clickable.",
+  ];
+  let deskNoteTimers = [];
+  function setupDeskNotes() {
+    deskNoteTimers.forEach(clearTimeout); deskNoteTimers = [];
+    desktop.querySelectorAll(".desknote").forEach((n) => n.remove());
+    let order = DESK_NOTES.map((m, i) => i);
+    let k = 0;
+    const next = (first) => {
+      if (k === 0 || k >= order.length) { order = shuffle(order.slice()); k = 0; }
+      const msg = DESK_NOTES[first ? 0 : order[k++]];
+      showDeskNote(msg);
+      deskNoteTimers.push(setTimeout(() => next(false), 16000 + Math.random() * 12000));
+    };
+    deskNoteTimers.push(setTimeout(() => next(true), 5200));
+  }
+  function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+  function showDeskNote(msg) {
+    desktop.querySelectorAll(".desknote").forEach((n) => n.remove());
+    const W = desktop.clientWidth || 600, H = desktop.clientHeight || 440;
+    const note = el("div", "desknote");
+    note.innerHTML =
+      `<div class="dn-bar"><span class="dn-close"></span><span class="dn-title">${ACTIVE ? ACTIVE.name : "Note"}</span></div>` +
+      `<div class="dn-body">${msg}</div>`;
+    // upper area, biased right, away from the open About window
+    note.style.left = Math.round(W * 0.42 + Math.random() * (W * 0.34)) + "px";
+    note.style.top = Math.round(28 + Math.random() * (H * 0.28)) + "px";
+    desktop.appendChild(note);
+    const close = () => { note.classList.add("closing"); setTimeout(() => note.remove(), 250); };
+    $(".dn-close", note).addEventListener("click", (e) => { e.stopPropagation(); Sound.play("click"); close(); });
+    deskNoteTimers.push(setTimeout(close, 7000));
   }
 
   // apple.png inlined so the 3D texture (html-to-image) always renders it
