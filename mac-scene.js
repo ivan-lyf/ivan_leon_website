@@ -25,6 +25,7 @@
   let mood = 'peach', autoRotate = false, ready = false, loadMgr = null;
   let refreshQueued = false, refreshing = false;
   let inScreenView = false;
+  let zoomTarget = 0;   // desired camera→target distance; we glide toward it each frame
 
   /* ---------- geometry helpers ---------- */
   function roundedRect(w, h, r) {
@@ -667,6 +668,19 @@
     controls.maxPolarAngle = Math.PI * 0.52;   // can't drop below ~eye level (no underground)
     controls.update();
 
+    // Smooth "scroll to enter": OrbitControls' built-in wheel zoom is stepped and
+    // jumpy. Disable it and drive a single damped distance ourselves, so the wheel
+    // sets a target distance and the camera glides toward it (see animate()).
+    controls.enableZoom = false;
+    zoomTarget = camera.position.distanceTo(controls.target);
+    glRenderer.domElement.addEventListener('wheel', function (e) {
+      if (inScreenView) return;
+      e.preventDefault();
+      // multiplicative so each notch feels even at any distance; gentle factor
+      zoomTarget *= Math.exp(e.deltaY * 0.0012);
+      zoomTarget = Math.max(controls.minDistance, Math.min(controls.maxDistance, zoomTarget));
+    }, { passive: false });
+
     applyMood('room');
     window.addEventListener('resize', onResize);
 
@@ -715,6 +729,15 @@
       requestAnimationFrame(animate);
       window.__frames++;
       if (autoRotate && !controls._userActive) machine.rotation.y += 0.0022;
+      if (!inScreenView && ready) {
+        // glide the camera toward the wheel-set target distance for a smooth approach
+        const offset = camera.position.clone().sub(controls.target);
+        const curDist = offset.length();
+        if (Math.abs(zoomTarget - curDist) > 0.0008) {
+          const nd = curDist + (zoomTarget - curDist) * 0.12;
+          camera.position.copy(controls.target).add(offset.multiplyScalar(nd / curDist));
+        }
+      }
       controls.update();
       if (!inScreenView && ready) {
         const dist = camera.position.distanceTo(controls.target);
@@ -786,6 +809,7 @@
     // pull the camera back so we don't immediately re-trigger
     const dir = camera.position.clone().sub(controls.target).normalize();
     camera.position.copy(controls.target).add(dir.multiplyScalar(15));
+    zoomTarget = 15;   // keep the smooth-dolly target in sync with the pull-back
     controls.enabled = true; controls.update(); renderNow();
     refreshTexture();
   }
