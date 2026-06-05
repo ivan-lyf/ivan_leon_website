@@ -14,7 +14,7 @@
   const TEX_W = 1024, TEX_H = 768;
 
   const MOODS = {
-    room:     { bg: 'radial-gradient(120% 95% at 50% 20%, #c9c8c4 0%, #a7a6a2 60%, #8e8d89 100%)', hemi: 0.55, key: 1.05, fill: 0.4, rim: 0.4, shadow: 0.32 },
+    room:     { bg: 'radial-gradient(120% 95% at 50% 20%, #f1e6d3 0%, #dcc8a8 60%, #c6af8b 100%)', hemi: 0.6, key: 1.05, fill: 0.42, rim: 0.4, shadow: 0.3 },
     peach:    { bg: 'radial-gradient(120% 95% at 50% 18%, #ffe9cf 0%, #f6cda0 58%, #e9b988 100%)', hemi: 0.6, key: 1.15, fill: 0.42, rim: 0.55, shadow: 0.26 },
     spotlight:{ bg: 'radial-gradient(95% 80% at 50% 30%, #2a2622 0%, #141210 70%, #0a0908 100%)', hemi: 0.18, key: 1.7, fill: 0.16, rim: 0.85, shadow: 0.42 },
     white:    { bg: 'radial-gradient(120% 95% at 50% 16%, #ffffff 0%, #eef0f2 60%, #dfe3e7 100%)', hemi: 0.78, key: 1.0, fill: 0.55, rim: 0.4, shadow: 0.2 }
@@ -203,33 +203,34 @@
   function buildRoom(floorY) {
     const RX = 58, RZ = 52, RH = 50;          // half-width, half-depth, height
     const ceilY = floorY + RH;
-    // one concrete texture stretched per surface (no tiling, per request)
+    // smooth, warm, matte surfaces — a flat natural color per face (no texture,
+    // no normal map) so the walls read as soft warm plaster rather than concrete
     function cMat(tint) {
-      return pbrMat('textures/concrete', 1, 1, { color: tint || 0xffffff, side: T.DoubleSide });
+      return new T.MeshStandardMaterial({ color: tint, roughness: 0.85, metalness: 0.0, side: T.DoubleSide });
     }
     const room = new T.Group();
 
-    // floor (also catches the desk/computer shadow)
-    const floor = new T.Mesh(new T.PlaneGeometry(RX * 2, RZ * 2), cMat(0x9f9e9a));
+    // floor (also catches the desk/computer shadow) — warm sand
+    const floor = new T.Mesh(new T.PlaneGeometry(RX * 2, RZ * 2), cMat(0xcdb491));
     floor.rotation.x = -Math.PI / 2; floor.position.set(0, floorY, 0);
     floor.receiveShadow = true; room.add(floor);
     groundMesh = floor;
 
-    // ceiling
-    const ceil = new T.Mesh(new T.PlaneGeometry(RX * 2, RZ * 2), cMat(0xbab9b4));
+    // ceiling — warm cream, a touch lighter
+    const ceil = new T.Mesh(new T.PlaneGeometry(RX * 2, RZ * 2), cMat(0xeaddc9));
     ceil.rotation.x = Math.PI / 2; ceil.position.set(0, ceilY, 0); room.add(ceil);
 
-    // four walls (one texture each)
-    const back = new T.Mesh(new T.PlaneGeometry(RX * 2, RH), cMat(0xb2b1ac));
+    // four walls — warm beige, subtle per-face variation for depth
+    const back = new T.Mesh(new T.PlaneGeometry(RX * 2, RH), cMat(0xe0cba9));
     back.position.set(0, floorY + RH / 2, -RZ); room.add(back);
 
-    const front = new T.Mesh(new T.PlaneGeometry(RX * 2, RH), cMat(0xaaa9a4));
+    const front = new T.Mesh(new T.PlaneGeometry(RX * 2, RH), cMat(0xd8c3a1));
     front.position.set(0, floorY + RH / 2, RZ); front.rotation.y = Math.PI; room.add(front);
 
-    const left = new T.Mesh(new T.PlaneGeometry(RZ * 2, RH), cMat(0xafaea9));
+    const left = new T.Mesh(new T.PlaneGeometry(RZ * 2, RH), cMat(0xdcc7a5));
     left.position.set(-RX, floorY + RH / 2, 0); left.rotation.y = Math.PI / 2; room.add(left);
 
-    const right = new T.Mesh(new T.PlaneGeometry(RZ * 2, RH), cMat(0xafaea9));
+    const right = new T.Mesh(new T.PlaneGeometry(RZ * 2, RH), cMat(0xdcc7a5));
     right.position.set(RX, floorY + RH / 2, 0); right.rotation.y = -Math.PI / 2; room.add(right);
 
     scene.add(room);
@@ -275,6 +276,57 @@
       window.__skis = lean;
       renderNow();
     }, undefined, function (err) { console.warn('skis load failed', err); });
+  }
+
+  /* ---------- snowboard leaning on the back wall (procedural) ----------
+     Built from primitives (like the Mac) so there's no model/CORS dependency.
+     Length runs along local +Y; thickness along +Z; the front face (with the
+     bindings) points +Z so it reads to the camera when leaned against the wall. */
+  let snowboardGroup = null;
+  function buildSnowboard(room) {
+    const L = 24, Wd = 4.2, Th = 0.42;
+    const board = new T.Group();
+
+    // deck: rounded-ended board, extruded for real thickness
+    const shape = roundedRect(Wd, L, Wd * 0.46);
+    const deckGeo = new T.ExtrudeGeometry(shape, {
+      depth: Th, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.08, bevelSegments: 2, steps: 1
+    });
+    deckGeo.center();
+    const deckMat = new T.MeshStandardMaterial({ color: 0xcf5a2c, roughness: 0.4, metalness: 0.08 });
+    const deck = new T.Mesh(deckGeo, deckMat);
+    deck.castShadow = true; deck.receiveShadow = true;
+    board.add(deck);
+
+    // top-sheet graphic: a lighter centre stripe down the front face
+    const stripe = new T.Mesh(
+      new T.PlaneGeometry(Wd * 0.42, L * 0.84),
+      new T.MeshStandardMaterial({ color: 0xf2c14e, roughness: 0.5 })
+    );
+    stripe.position.z = Th / 2 + 0.18; board.add(stripe);
+
+    // two bindings (baseplate + highback) on the front face
+    const bindMat = new T.MeshStandardMaterial({ color: 0x2c2c30, roughness: 0.6 });
+    [-L * 0.18, L * 0.2].forEach(function (yy) {
+      const base = new T.Mesh(new T.BoxGeometry(Wd * 0.74, Wd * 0.74, 0.5), bindMat);
+      base.position.set(0, yy, Th / 2 + 0.25); base.castShadow = true; board.add(base);
+      const hb = new T.Mesh(new T.BoxGeometry(Wd * 0.74, 0.95, 1.5), bindMat);
+      hb.position.set(0, yy + Wd * 0.34, Th / 2 + 0.7); hb.castShadow = true; board.add(hb);
+    });
+
+    // raise so the base tip rests on the floor inside the lean pivot
+    const pivot = new T.Group();
+    board.position.y = L / 2; pivot.add(board);
+
+    const lean = new T.Group();
+    lean.add(pivot);
+    lean.rotation.x = -0.18;        // tip leans back toward the wall
+    lean.rotation.y = -0.1;         // slight skew
+    lean.position.set(30, room.floorY, -(room.RZ) + 6.5);  // right side, mirrors the skis
+    scene.add(lean);
+    snowboardGroup = lean;
+    window.__snowboard = lean;
+    renderNow();
   }
 
   /* ---------- procedural Macintosh (carved-recess construction) ---------- */
@@ -709,6 +761,7 @@
     const floorY = buildDesk();
     const room = buildRoom(floorY);
     buildSkis(room);
+    buildSnowboard(room);
     ready = true;
     window.__dbg = function () { return { ready: ready, f: window.__frames }; };
     burstRefresh();
@@ -772,6 +825,22 @@
     const tx = (vw - 640 * s) / 2, ty = (vh - 469 * s) / 2;
     host.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + s + ')';
   }
+  // Where the 3D Macintosh screen currently sits on screen, in CSS pixels.
+  // Used to start the fullscreen handoff exactly on the 3D screen so it reads
+  // as one continuous zoom rather than a cut to a flat panel.
+  function screenRectPx() {
+    if (!screenMesh || !camera || !glRenderer) return null;
+    const box = new T.Box3().setFromObject(screenMesh);
+    const w = glRenderer.domElement.clientWidth, h = glRenderer.domElement.clientHeight;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (let xi = 0; xi < 2; xi++) for (let yi = 0; yi < 2; yi++) for (let zi = 0; zi < 2; zi++) {
+      const v = new T.Vector3(xi ? box.max.x : box.min.x, yi ? box.max.y : box.min.y, zi ? box.max.z : box.min.z).project(camera);
+      const sx = (v.x * 0.5 + 0.5) * w, sy = (-v.y * 0.5 + 0.5) * h;
+      if (sx < minX) minX = sx; if (sx > maxX) maxX = sx;
+      if (sy < minY) minY = sy; if (sy > maxY) maxY = sy;
+    }
+    return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+  }
   function exitHint(show) {
     // hint chip intentionally disabled — scroll out / Esc / click still exit
     const h = document.getElementById('sv-hint');
@@ -785,15 +854,33 @@
     if (!bd) { bd = document.createElement('div'); bd.id = 'sv-backdrop'; bd.style.cssText = 'position:fixed;inset:0;background:#000;z-index:40;opacity:0;pointer-events:none;transition:opacity .45s'; document.body.appendChild(bd); }
     bd.style.display = 'block';
     requestAnimationFrame(function () { bd.style.opacity = '1'; });
-    glRenderer.domElement.style.transition = 'opacity .4s'; glRenderer.domElement.style.opacity = '0';
-    host.style.transition = 'transform .5s cubic-bezier(.4,0,.2,1), opacity .35s';
+
     host.style.transformOrigin = 'top left';
-    host.style.zIndex = '45'; host.style.opacity = '1'; host.style.pointerEvents = 'auto'; host.style.background = '#000';
-    layoutHost();
+    host.style.zIndex = '45'; host.style.pointerEvents = 'auto'; host.style.background = '#000';
+
+    // Start the live screen pinned to the 3D screen's current on-screen rect,
+    // then animate it out to fill the viewport — continuous zoom, no jump-cut.
+    const r = screenRectPx();
+    if (r && r.w > 0) {
+      host.style.transition = 'none';
+      host.style.opacity = '1';
+      host.style.transform = 'translate(' + r.x + 'px,' + r.y + 'px) scale(' + (r.w / 640) + ')';
+      host.getBoundingClientRect();   // flush the start state before transitioning
+    } else {
+      host.style.opacity = '1';
+    }
+    requestAnimationFrame(function () {
+      host.style.transition = 'transform .6s cubic-bezier(.33,0,.25,1), opacity .3s';
+      layoutHost();   // final: centered, fills the viewport
+    });
+
+    // fade the room out behind the growing screen (slightly slower so it stays
+    // visible underneath until the screen has nearly filled the view)
+    glRenderer.domElement.style.transition = 'opacity .5s'; glRenderer.domElement.style.opacity = '0';
     document.querySelectorAll('#hud,#title').forEach(function (e) { e.style.transition = 'opacity .3s'; e.style.opacity = '0'; });
     exitHint(true);
     clearTimeout(window.__svT);
-    window.__svT = setTimeout(function () { if (inScreenView) glRenderer.domElement.style.display = 'none'; }, 450);
+    window.__svT = setTimeout(function () { if (inScreenView) glRenderer.domElement.style.display = 'none'; }, 640);
   }
   function exitScreenView() {
     if (!inScreenView) return; inScreenView = false;
@@ -820,6 +907,7 @@
     init, applyTweaks, applyMood, renderNow, refresh: refreshTexture,
     enterScreenView, exitScreenView,
     setSkis: function (p) { if (!skisGroup) return; if (p.x != null) skisGroup.position.x = p.x; if (p.z != null) skisGroup.position.z = p.z; if (p.lean != null) skisGroup.rotation.x = p.lean; if (p.skew != null) skisGroup.rotation.y = p.skew; renderNow(); return skisGroup.position; },
+    setSnowboard: function (p) { if (!snowboardGroup) return; if (p.x != null) snowboardGroup.position.x = p.x; if (p.z != null) snowboardGroup.position.z = p.z; if (p.lean != null) snowboardGroup.rotation.x = p.lean; if (p.skew != null) snowboardGroup.rotation.y = p.skew; renderNow(); return snowboardGroup.position; },
     setBulge: function (b) { BULGE = b; rebuildScreen(); return BULGE; },
     setScreen: function (p) { Object.assign(SCREEN, p); rebuildScreen(); return SCREEN; },
     debugAzimuth: function (deg, elevDeg, dist) {
