@@ -397,7 +397,7 @@ img { image-rendering: pixelated; }
 
 .icon {
   position: absolute;
-  width: 84px;
+  width: 74px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -408,21 +408,21 @@ img { image-rendering: pixelated; }
   z-index: 5;
 }
 .icon .glyph {
-  width: 48px;
-  height: 44px;
+  width: 40px;
+  height: 36px;
   position: relative;
   display: flex;
   align-items: flex-end;
   justify-content: center;
 }
 .icon .label {
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.05;
   text-align: center;
   color: var(--ink);
   background: var(--paper);
   padding: 0 3px;
-  max-width: 82px;
+  max-width: 72px;
   word-break: break-word;
 }
 .icon.selected .glyph { filter: none; }

@@ -347,7 +347,7 @@
     sorted.forEach((ic, idx) => {
       const node = el("div", "icon");
       node.dataset.id = ic.id;
-      node.innerHTML = `<div class="glyph">${svgGlyph(ic.glyph, 44)}</div><div class="label">${ic.label}</div>`;
+      node.innerHTML = `<div class="glyph">${svgGlyph(ic.glyph, 36)}</div><div class="label">${ic.label}</div>`;
       let x = ic.x, y = ic.y;
       if (viewMode === "icon") {
         if (ic.corner === "tr") { x = W - 108; y = 14; }
