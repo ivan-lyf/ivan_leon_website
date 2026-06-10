@@ -737,7 +737,7 @@
     Sound.play("click");
   }
   function emptyTrash() { Sound.play("trash"); alertBox("Empty Trash", "The Trash is already empty. There is nothing to throw away.", "OK"); }
-  function aboutThisMac() { openWindow("about-mac", "About This Macintosh", htmlBody(aboutMacBody()), null, { w: 400, h: 320 }); }
+  function aboutThisMac() { openWindow("about-mac", "About This Device", htmlBody(aboutMacBody()), null, { w: 400, h: 320 }); }
 
   function infoMeta(ic) {
     const kind = iconKind(ic);
@@ -834,7 +834,7 @@
     apple: {
       glyph: true,
       items: [
-        { label: "About This Macintosh…", action: aboutThisMac },
+        { label: "About This Device…", action: aboutThisMac },
         { divider: true },
         { label: "Control Panel", action: openControlPanel },
         { divider: true },
@@ -965,7 +965,7 @@
     return `
       <div style="text-align:center;">
         <div style="margin:6px auto 8px;display:flex;justify-content:center;">${svgGlyph('machead',44)}</div>
-        <h2 style="font-family:'Chicago';">Macintosh Portfolio</h2>
+        <h2 style="font-family:'Chicago';">Device Portfolio</h2>
         <p class="meta">System Software 1.0</p>
         <hr class="dotrule">
         <div style="text-align:left;max-width:260px;margin:0 auto;">
@@ -976,7 +976,7 @@
           <p class="meta" style="margin:4px 0 0;">${openWindows.size} window(s) open · Largest Unused Block: ${128 - Math.round(used * 1.28)}K</p>
         </div>
         <hr class="dotrule">
-        <p style="font-size:14px;">Built with HTML · CSS · JavaScript<br>A faithful 1984 Macintosh, for ${ACTIVE.name}.</p>
+        <p style="font-size:14px;">Built with HTML · CSS · JavaScript<br>A retro desktop, built for ${ACTIVE.name}.</p>
         <p class="meta" style="margin-top:8px;">© 2026 ${ACTIVE.domain}</p>
       </div>`;
   }
@@ -1015,7 +1015,7 @@
       </div>
       <h3>Window Dragging</h3>
       <div class="cp-row"><button class="mac-btn" id="cp-drag"></button></div>
-      <p class="meta" style="margin-top:10px;">Preferences are saved on this Macintosh.</p>`;
+      <p class="meta" style="margin-top:10px;">Preferences are saved on this device.</p>`;
     openWindow("control", "Control Panel", body, "System · 4K", { w: 400, h: 560 });
 
     const win = openWindows.get("control");
@@ -1082,7 +1082,7 @@
       <div class="alert">
         <div class="ico">?</div>
         <div class="body">
-          <p><strong>Switch to ${OTHER.name}'s Macintosh?</strong><br>
+          <p><strong>Switch to ${OTHER.name}'s device?</strong><br>
           ${OTHER.name}'s profile lives on its own disk at <strong>${OTHER.domain}</strong>. You'll leave ${ACTIVE.name}'s machine to visit it.</p>
           <div class="btns">
             <button class="mac-btn cancel">Cancel</button>
@@ -1107,7 +1107,7 @@
   function shutDown() {
     const layer = el("div", "boot");
     layer.style.zIndex = 9800;
-    layer.innerHTML = `<div class="welcome-txt" style="font-size:18px;text-align:center;">It is now safe to turn off<br>your Macintosh.</div>`;
+    layer.innerHTML = `<div class="welcome-txt" style="font-size:18px;text-align:center;">It is now safe to turn off<br>your device.</div>`;
     screen.appendChild(layer);
   }
 
@@ -1149,14 +1149,14 @@
     const body = $("#login-body");
     body.innerHTML = `
       <div class="machead" id="login-machead"></div>
-      <h2>Welcome to Macintosh</h2>
+      <h2>Welcome</h2>
       <p class="sub">Two people share this network. Who's signing in?</p>
       <div class="users">
         <div class="user-card" id="card-owner">
           <div class="avatar"></div>
           <div class="uname">${ACTIVE.name}</div>
           <div class="udom">${ACTIVE.domain}</div>
-          <div class="ext">THIS MAC</div>
+          <div class="ext">THIS DEVICE</div>
         </div>
         <div class="user-card" id="card-other">
           <div class="avatar"></div>
@@ -1531,7 +1531,7 @@
     ACTIVE = PROFILES[ownerId];
     OTHER = PROFILES[otherId(ownerId)] || ACTIVE;
     if (!ACTIVE) { console.error("No profile loaded — include profile-*.js before mac.js"); return; }
-    document.title = `${ACTIVE.fullName || ACTIVE.name}'s Macintosh — ${ACTIVE.domain}`;
+    document.title = `${ACTIVE.fullName || ACTIVE.name}'s Device — ${ACTIVE.domain}`;
 
     restorePrefs();
     wireShortcuts();

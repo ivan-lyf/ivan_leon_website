@@ -52,12 +52,15 @@
         <div style="flex:1 1 180px;min-width:170px;">
           <h2>${P.fullName}</h2>
           <p class="meta">${P.tagline}</p>
-          <p>Welcome to my corner of the network. This desktop is still booting up — more soon.</p>
+          <p>I'm a first-year Computer Engineering student at UC Irvine. I've been building robots for the past four years, and I'm genuinely passionate about it.</p>
         </div>
       </div>
       <hr class="dotrule">
-      <h3>About this disk</h3>
-      <p>This is ${P.name}'s side of a shared 1984-Macintosh site. The other person lives on a separate disk — open Contact to jump over.</p>
+      <h3>Robotics</h3>
+      <p>Four years competing in FIRST Tech Challenge (teams 16031 &amp; 16205) — chassis and mechanism design, custom 3D-printed parts, and the control code that ties it all together. These days I'm prototyping an autonomous wall-plastering robot.</p>
+      <hr class="dotrule">
+      <h3>Off the clock</h3>
+      <p>Outside the classroom I'm a ski instructor, and I spend most of my weekends in the mountains.</p>
       <hr class="dotrule">
       <p>Reach me at <a href="mailto:${P.email}">${P.email}</a>.</p>`;
   }
@@ -153,8 +156,8 @@
   }
 
   const icons = [
-    { id: "harddrive", kind: "harddrive", label: "Leon's Mac", glyph: "g-hd", corner: "tr",
-      title: "Leon's Mac", info: "5 items · 512K in disk · 480K available", size: { w: 360, h: 270 } },
+    { id: "harddrive", kind: "harddrive", label: "Leon's Device", glyph: "g-hd", corner: "tr",
+      title: "Leon's Device", info: "5 items · 512K in disk · 480K available", size: { w: 360, h: 270 } },
     { id: "about", doc: "about", label: "About Me", glyph: "g-doc", x: 24, y: 14,
       title: "About Me", info: "About · 8K", size: { w: 440, h: 340 } },
     { id: "projects", kind: "folder", label: "Projects", glyph: "g-folder", x: 24, y: 120,
@@ -217,7 +220,7 @@
     tagline: "Building things",
     domain: "leonmeng.xyz",
     email: "leonm6@uci.edu",
-    machineName: "Leon's Mac",
+    machineName: "Leon's Device",
     avatarGlyph: "smiley",
     wallpaper: true,   // show the Apple "Think / Be Different" wallpaper (Leon's page only)
     projects,
