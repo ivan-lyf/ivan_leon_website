@@ -68,6 +68,8 @@
       <hr class="rule">
       <p><strong>Email</strong><br><a href="mailto:${P.email}">${P.email}</a></p>
       <p><strong>GitHub</strong><br><a href="https://github.com/ggttlplp201" target="_blank" rel="noopener">github.com/ggttlplp201</a></p>
+      <p><strong>LinkedIn</strong><br><a href="https://www.linkedin.com/in/leonylmeng/" target="_blank" rel="noopener">linkedin.com/in/leonylmeng</a></p>
+      <p><strong>LeetCode</strong><br><a href="https://leetcode.com/u/brownguest3123/" target="_blank" rel="noopener">leetcode.com/u/brownguest3123</a></p>
       <hr class="dotrule">
       <p class="meta" style="text-align:center;">
         Looking for ${O.name}?<br>
@@ -75,17 +77,96 @@
       </p>`;
   }
 
+  function resume(P, O) {
+    return `
+      <h2 style="text-align:center;">${P.fullName}</h2>
+      <p class="meta" style="text-align:center;">${P.email} · 949-738-8015</p>
+      <p style="text-align:center;"><a href="assets/resume/leon-resume.html" target="_blank" rel="noopener">Open full résumé →</a></p>
+      <hr class="rule">
+
+      <h3>Technical Skills</h3>
+      <p><strong>Languages</strong><br>Java, Python, JavaScript, HTML, CSS, SQL</p>
+      <p><strong>Tools</strong><br>Git, GitHub Actions, Docker, IntelliJ IDEA, Supabase, PostgreSQL, REST APIs, Fusion 360, 3D printing</p>
+      <p><strong>Cloud &amp; DevOps</strong><br>CI/CD pipelines, containerized deploys (Docker), cloud hosting (Railway, Netlify)</p>
+      <hr class="dotrule">
+
+      <h3>Experience</h3>
+      <p><strong>Mechanical Engineer &amp; Robot Operator</strong> — FTC Teams 16031 &amp; 16205</p>
+      <p class="meta">Oct 2021 – Jun 2025 · Vancouver, BC</p>
+      <p>• Led design &amp; fabrication of the robot chassis, drivetrain, arm pivot, and scoring mechanism<br>
+         • Designed custom 3D-printed parts in Fusion 360 and integrated them onto the robot<br>
+         • Contributed robot-control code and the Engineering Portfolio on GitHub<br>
+         • Top-scoring team — multiple awards at BC &amp; Alberta championships</p>
+      <hr class="dotrule">
+
+      <h3>Projects</h3>
+      <p><strong>Plastering Robot</strong> — Autonomous Construction Robotics</p>
+      <p class="meta">Jan 2026 – ongoing · Irvine, CA</p>
+      <p>• Prototyped an autonomous wall-plastering system for consistent material deposition &amp; finishing<br>
+         • Modeled mechanical &amp; motion systems in CAD — linear actuation, guided multi-axis movement<br>
+         • Defined system architecture &amp; constraints with a multidisciplinary team</p>
+      <p><strong>GARDEROBE</strong> — Full-Stack Wardrobe Web App</p>
+      <p class="meta">Jan 2026 – ongoing · Irvine, CA</p>
+      <p>• React SPA + Python/FastAPI backend exposing RESTful AI-tagging &amp; background-removal endpoints<br>
+         • Dockerized backend, cloud-deployed; CI/CD via GitHub Actions (ESLint, Ruff, Vite build)<br>
+         • Supabase (PostgreSQL) auth, queries &amp; storage with row-level security policies</p>
+      <hr class="dotrule">
+
+      <h3>Awards</h3>
+      <p>• USACO Gold Division (2023)</p>
+      <hr class="dotrule">
+
+      <h3>Education</h3>
+      <p><strong>University of California, Irvine</strong></p>
+      <p class="meta">B.S. Computer Engineering · 2025–2029 · Irvine, CA</p>`;
+  }
+
+  /* ---------- live LeetCode stats (via /api/leetcode serverless proxy) ---------- */
+  let lcData = null, lcFetching = false;
+  function lcRender(d) {
+    if (!d || d.error) return `<p class="meta" style="text-align:center;">Couldn't reach LeetCode right now — try again shortly.</p>`;
+    return `
+      <p style="text-align:center;font-size:40px;line-height:1;margin:8px 0 0;"><strong>${d.total}</strong></p>
+      <p class="meta" style="text-align:center;margin-top:2px;">problems solved</p>
+      <hr class="dotrule">
+      <p><strong>Easy</strong><br>${d.easy}</p>
+      <p><strong>Medium</strong><br>${d.medium}</p>
+      <p><strong>Hard</strong><br>${d.hard}</p>
+      <hr class="dotrule">
+      <p class="meta">Global ranking · #${d.ranking ? Number(d.ranking).toLocaleString() : "—"}</p>`;
+  }
+  function lcFetch() {
+    if (lcFetching) return;
+    lcFetching = true;
+    fetch("/api/leetcode")
+      .then((r) => r.json())
+      .then((d) => { lcData = d; const e = document.getElementById("lc-stats"); if (e) e.innerHTML = lcRender(d); })
+      .catch(() => { lcData = { error: true }; const e = document.getElementById("lc-stats"); if (e) e.innerHTML = lcRender(lcData); });
+  }
+  function leetcode(P, O) {
+    if (!lcData) lcFetch();   // fetch lazily the first time the window opens
+    return `
+      <h2 style="text-align:center;">LeetCode</h2>
+      <p class="meta" style="text-align:center;"><a href="https://leetcode.com/u/brownguest3123/" target="_blank" rel="noopener">@brownguest3123 →</a></p>
+      <hr class="rule">
+      <div id="lc-stats">${lcData ? lcRender(lcData) : `<p class="meta" style="text-align:center;">Fetching live stats…</p>`}</div>`;
+  }
+
   const icons = [
     { id: "harddrive", kind: "harddrive", label: "Leon's Mac", glyph: "g-hd", corner: "tr",
-      title: "Leon's Mac", info: "3 items · 512K in disk · 480K available", size: { w: 360, h: 270 } },
+      title: "Leon's Mac", info: "5 items · 512K in disk · 480K available", size: { w: 360, h: 270 } },
     { id: "about", doc: "about", label: "About Me", glyph: "g-doc", x: 24, y: 14,
       title: "About Me", info: "About · 8K", size: { w: 440, h: 340 } },
     { id: "projects", kind: "folder", label: "Projects", glyph: "g-folder", x: 24, y: 120,
       title: "Projects", info: "4 items · 96K in folder", size: { w: 380, h: 300 } },
     { id: "garderobe-site", kind: "link", href: "https://the-garderobe.com/", label: "GARDEROBE",
       glyph: "g-globe", x: 24, y: 226, title: "GARDEROBE" },
+    { id: "leetcode", doc: "leetcode", label: "LeetCode", glyph: "g-doc", x: 24, y: 332,
+      title: "LeetCode", info: "Stats · live", size: { w: 360, h: 320 } },
+    { id: "resume", doc: "resume", label: "Résumé", glyph: "g-resume", corner: "tr2",
+      title: "Résumé", info: "Résumé · 12K", size: { w: 480, h: 460 } },
     { id: "contact", doc: "contact", label: "Contact", glyph: "g-mail", corner: "tr3",
-      title: "Contact", info: "Contact · 8K", size: { w: 360, h: 320 } },
+      title: "Contact", info: "Contact · 8K", size: { w: 360, h: 360 } },
     { id: "trash", kind: "trash", label: "Trash", glyph: "g-trash", corner: "br",
       title: "Trash", info: "Empty", size: { w: 320, h: 260 } },
   ];
@@ -143,6 +224,8 @@
     nowPlaying,
     about,
     contact,
+    resume,
+    leetcode,
     icons,
   };
 })();

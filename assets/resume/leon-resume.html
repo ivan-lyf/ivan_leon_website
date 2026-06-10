@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Leon Meng — Resume</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Calibri', 'Arial', sans-serif;
+    font-size: 11pt;
+    color: #000;
+    max-width: 750px;
+    margin: 40px auto;
+    padding: 0 40px;
+    line-height: 1.4;
+  }
+  h1 { text-align: center; font-size: 20pt; font-weight: bold; margin-bottom: 4px; }
+  .contact { text-align: center; font-size: 11pt; margin-bottom: 16px; }
+  .section-title {
+    font-size: 11pt; font-weight: normal;
+    border-bottom: 1px solid #000;
+    padding-bottom: 2px;
+    margin: 14px 0 6px;
+  }
+  .entry-header { display: flex; justify-content: space-between; align-items: baseline; }
+  .entry-title { font-weight: bold; font-size: 11pt; }
+  .entry-location { font-size: 11pt; }
+  .entry-sub { display: flex; justify-content: space-between; font-style: italic; margin-bottom: 4px; }
+  ul { padding-left: 20px; margin-top: 4px; }
+  li { margin-bottom: 2px; }
+  .skills-row { margin-bottom: 3px; }
+  a { color: #1155CC; }
+  @media print {
+    body { margin: 20px auto; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Leon Meng</h1>
+<div class="contact">leonm6@uci.edu | 949-738-8015</div>
+
+<div class="section-title">Technical Skills</div>
+<div class="skills-row"><strong>Programming Languages</strong>: Java, Python, JavaScript, HTML, CSS, SQL</div>
+<div class="skills-row"><strong>Developer Tools</strong>: Git, GitHub, GitHub Actions, Docker, IntelliJ IDEA, Supabase, PostgreSQL, REST APIs, Fusion 360, 3D Printing</div>
+<div class="skills-row"><strong>Cloud &amp; DevOps</strong>: CI/CD pipelines, containerized deployments (Docker), cloud hosting (Railway, Netlify), GitHub Actions automation</div>
+
+<div class="section-title">Experience</div>
+
+<div class="entry-header">
+  <span class="entry-title">(Student) Mechanical Engineer &amp; Robot Operator</span>
+  <span class="entry-location">Vancouver, BC</span>
+</div>
+<div class="entry-sub">
+  <span>First Tech Challenge team 16031 &amp; 16205</span>
+  <span>Oct 2021 – Jun 2025</span>
+</div>
+<ul>
+  <li>Led the design and fabrication of the robot chassis, drivetrain, arm pivot, and scoring mechanism</li>
+  <li>Created several custom designed 3D-printed components in Fusion and integrated them onto the robot</li>
+  <li>Held team meetings to review and reflect on design iterations and test cycles</li>
+  <li>Contributed to the team code for robot control on GitHub and the Engineering Portfolio</li>
+  <li>Participated in team outreach events with industry professionals</li>
+  <li>Earned multiple awards at British Columbia and Alberta championships as the top scoring team</li>
+</ul>
+
+<div class="section-title">Projects</div>
+
+<div class="entry-header">
+  <span class="entry-title">Plastering Robot</span>
+  <span class="entry-location">Irvine, CA</span>
+</div>
+<div class="entry-sub">
+  <span>Autonomous Construction Robotics</span>
+  <span>Jan 2026 – Ongoing</span>
+</div>
+<ul>
+  <li>Designed and prototyped an autonomous wall-plastering system focused on consistent material deposition and surface finishing for interior construction</li>
+  <li>Modeled mechanical components and motion systems using CAD software, including linear actuation and guided multi-axis movement</li>
+  <li>Collaborated with industry professionals and a multidisciplinary team to define system architecture, constraints, and deployment requirements</li>
+</ul>
+
+<div class="entry-header" style="margin-top:10px">
+  <span class="entry-title">GARDEROBE</span>
+  <span class="entry-location">Irvine, CA</span>
+</div>
+<div class="entry-sub">
+  <span>Personal Project — Full-Stack Wardrobe Catalogue Web App</span>
+  <span>Jan 2026 – Ongoing</span>
+</div>
+<ul>
+  <li>Architected and built a full-stack SPA with a React frontend and a Python/FastAPI backend, exposing RESTful endpoints for AI image tagging and background removal</li>
+  <li>Containerized the FastAPI backend using Docker and deployed to a cloud service, applying the same separation-of-concerns and deployment model used in production microservice environments</li>
+  <li>Implemented a CI/CD pipeline with GitHub Actions — automated ESLint, Ruff (Python), and Vite build validation across both frontend and backend on every push to main</li>
+  <li>Integrated Supabase (PostgreSQL) for authentication, database queries, and cloud file storage — wrote SQL with row-level security policies to enforce user-scoped data access</li>
+  <li>Rewrote the original vanilla JS app as a React SPA — component-based architecture, custom hooks for auth/data/audio, and Netlify auto-deploy on every merge</li>
+</ul>
+
+<div class="section-title">Awards &amp; Achievements</div>
+<ul>
+  <li>USACO Gold Division (2023)</li>
+</ul>
+
+<div class="section-title">Education</div>
+<div class="entry-header">
+  <span class="entry-title">University of California—Irvine</span>
+  <span class="entry-location">Irvine, CA</span>
+</div>
+<div class="entry-sub">
+  <span>Bachelor of Computer Engineering</span>
+  <span>2025 – 2029</span>
+</div>
+
+</body>
+</html>
