@@ -25,6 +25,8 @@
 
   // Now Playing widget state (one curated track per session + minimized disc tab)
   let npBox = null, npDisc = null, npTracks = null, npIndex = 0;
+  // GitHub contributions widget state (menubar tab toggles it; fetched lazily)
+  let ghBox = null, ghFetched = false;
   let liveDrag = localStorage.getItem("mac.liveDrag");
   liveDrag = liveDrag === null ? true : liveDrag === "true";
 
@@ -140,6 +142,13 @@
       case "disc":
         // Vinyl record — spins via CSS when used as the minimized Now-Playing tab
         return `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none" stroke="#000" stroke-width="2" shape-rendering="geometricPrecision" style="display:block"><circle cx="16" cy="16" r="13" fill="#fff"/><circle cx="16" cy="16" r="4.5"/><circle cx="16" cy="16" r="1.3" fill="#000" stroke="none"/><path d="M16 3 A13 13 0 0 1 29 16" stroke-width="1.5"/></svg>`;
+      case "gh-grid":
+        // tiny contribution heat-grid — the menubar tab for the GitHub widget
+        return `<svg width="${size}" height="${size}" viewBox="0 0 32 32" shape-rendering="crispEdges" style="display:block">${
+          [0,1,2,3].map((r) => [0,1,2,3].map((c) =>
+            `<rect x="${3 + c * 7}" y="${3 + r * 7}" width="5" height="5" fill="#000" opacity="${[0.15,0.45,0.75,1][(r + c * 3) % 4]}"/>`
+          ).join("")).join("")
+        }</svg>`;
       case "g-globe":
         // Low-poly wireframe globe (GARDEROBE desktop link)
         return `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none" stroke="#000" stroke-width="1.5" shape-rendering="geometricPrecision" style="display:block"><circle cx="16" cy="16" r="13" fill="#fff"/><ellipse cx="16" cy="16" rx="6.5" ry="13"/><line x1="16" y1="3" x2="16" y2="29"/><line x1="4.5" y1="10.5" x2="27.5" y2="10.5"/><line x1="3" y1="16" x2="29" y2="16"/><line x1="4.5" y1="21.5" x2="27.5" y2="21.5"/></svg>`;
@@ -887,6 +896,16 @@
     const right = el("div", "menubar-right");
     bar.appendChild(right);
 
+    // GitHub stats tab — same idea as the Now Playing disc: tap it to open the widget
+    if (ACTIVE && ACTIVE.github) {
+      const ghTab = el("div", "gh-tab");
+      ghTab.innerHTML = svgGlyph("gh-grid", 15);
+      ghTab.title = "GitHub contributions";
+      ghTab.addEventListener("mousedown", (e) => e.stopPropagation());
+      ghTab.addEventListener("click", (e) => { e.stopPropagation(); toggleGitHub(); });
+      right.appendChild(ghTab);
+    }
+
     if (ACTIVE && ACTIVE.nowPlaying && ACTIVE.nowPlaying.length) {
       npDisc = el("div", "np-disc hidden");
       npDisc.innerHTML = svgGlyph("disc", 18);
@@ -1185,6 +1204,7 @@
     renderWallpaper();
     placeIcons();
     setupNowPlaying();
+    setupGitHub();
     setupCritters();
     setupDeskNotes();
     window.addEventListener("resize", debounce(placeIcons, 200));
@@ -1245,6 +1265,7 @@
   function setupCritters() {
     critterTimers.forEach(clearTimeout); critterTimers = [];
     desktop.querySelectorAll(".critter").forEach((n) => n.remove());
+    if (ACTIVE.critters === false) return;   // profile opted out (e.g. Leon)
     const specs = [
       { type: "cat",   emotes: ["meow", "♥", "~"], speed: 26 },
       { type: "dino",  emotes: ["rawr", "!", "♪"], speed: 22 },
@@ -1303,6 +1324,7 @@
   function setupDeskNotes() {
     deskNoteTimers.forEach(clearTimeout); deskNoteTimers = [];
     desktop.querySelectorAll(".desknote").forEach((n) => n.remove());
+    if (ACTIVE.deskNotes === false) return;   // profile opted out (e.g. Leon)
     let order = DESK_NOTES.map((m, i) => i);
     let k = 0;
     const next = (first) => {
@@ -1379,6 +1401,10 @@
     desktop.appendChild(box);
     npBox = box;
 
+    // default position: bottom-CENTRE — clear of the left icon column (Side
+    // Hustle / LeetCode sit at the bottom of it) and the corner icons.
+    box.style.left = Math.max(8, Math.round((desktop.clientWidth - box.offsetWidth) / 2)) + "px";
+
     $(".np-min", box).addEventListener("click", (e) => { e.stopPropagation(); minimizeNowPlaying(); });
     box.addEventListener("click", (e) => {
       // title bar is the drag handle; the artwork/text opens the track
@@ -1416,6 +1442,95 @@
 
     renderNowPlaying();
     openNowPlaying(); // shown on entry; ensure the minimized disc tab is hidden
+  }
+
+  /* ---------- GitHub contributions widget (toggled from the menubar tab) ----------
+     Live data from the public github-contributions API (no auth, CORS-friendly).
+     Hidden by default; the gh-tab in the menubar shows/hides it. */
+  function setupGitHub() {
+    const old = desktop.querySelector(".ghstats");
+    if (old) old.remove();
+    ghBox = null; ghFetched = false;
+    if (!ACTIVE.github) return;
+
+    const box = el("div", "ghstats hidden");
+    box.innerHTML =
+      `<div class="gh-bar">` +
+        `<div class="gh-min" title="Close"></div>` +
+        `<span class="gh-title-txt">GitHub</span>` +
+      `</div>` +
+      `<div class="gh-body"><p class="gh-note">Fetching contributions…</p></div>`;
+    desktop.appendChild(box);
+    ghBox = box;
+
+    $(".gh-min", box).addEventListener("click", (e) => { e.stopPropagation(); box.classList.add("hidden"); });
+    box.addEventListener("click", (e) => {
+      if (e.target.closest(".gh-bar")) return;   // title bar = drag handle
+      window.open("https://github.com/" + ACTIVE.github, "_blank", "noopener");
+    });
+
+    // drag the widget by its title bar (same pattern as Now Playing)
+    const bar = $(".gh-bar", box);
+    bar.addEventListener("mousedown", (e) => {
+      if (e.target.closest(".gh-min")) return;
+      e.preventDefault();
+      const scale = dragScale();
+      const startX = e.clientX, startY = e.clientY;
+      const ox = box.offsetLeft, oy = box.offsetTop;
+      box.style.bottom = "auto";
+      box.style.left = ox + "px";
+      box.style.top = oy + "px";
+      const onMove = (ev) => {
+        let nx = ox + (ev.clientX - startX) / scale;
+        let ny = oy + (ev.clientY - startY) / scale;
+        nx = Math.max(0, Math.min(nx, desktop.clientWidth - box.offsetWidth));
+        ny = Math.max(0, Math.min(ny, desktop.clientHeight - box.offsetHeight));
+        box.style.left = nx + "px";
+        box.style.top = ny + "px";
+      };
+      const onUp = () => {
+        document.removeEventListener("mousemove", onMove);
+        document.removeEventListener("mouseup", onUp);
+      };
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", onUp);
+    });
+  }
+
+  function toggleGitHub() {
+    if (!ghBox) return;
+    const show = ghBox.classList.contains("hidden");
+    ghBox.classList.toggle("hidden", !show);
+    if (show && !ghFetched) fetchGitHub();
+  }
+
+  function fetchGitHub() {
+    ghFetched = true;
+    fetch("https://github-contributions-api.jogruber.de/v4/" + ACTIVE.github + "?y=last")
+      .then((r) => r.json())
+      .then((d) => renderGitHub(d))
+      .catch(() => renderGitHub(null));
+  }
+
+  function renderGitHub(d) {
+    if (!ghBox) return;
+    const body = $(".gh-body", ghBox);
+    if (!d || !d.contributions || !d.contributions.length) {
+      ghFetched = false;   // allow a retry on the next open
+      body.innerHTML = `<p class="gh-note">Couldn't reach GitHub right now — try again shortly.</p>`;
+      return;
+    }
+    const total = d.total && d.total.lastYear != null
+      ? d.total.lastYear
+      : d.contributions.reduce((s, c) => s + (c.count || 0), 0);
+    // last ~4 months as a 1-bit heat grid: 7 day-rows × 17 week-columns
+    const days = d.contributions.slice(-17 * 7);
+    const cells = days.map((c) =>
+      `<span class="gh-cell l${Math.min(4, c.level || 0)}" title="${c.date} · ${c.count}"></span>`).join("");
+    body.innerHTML =
+      `<div class="gh-total"><strong>${Number(total).toLocaleString()}</strong> contributions in the last year</div>` +
+      `<div class="gh-grid">${cells}</div>` +
+      `<div class="gh-link">@${ACTIVE.github} →</div>`;
   }
 
   function renderNowPlaying() {

@@ -26,6 +26,27 @@
   let refreshQueued = false, refreshing = false;
   let inScreenView = false;
   let zoomTarget = 0;   // desired camera→target distance; we glide toward it each frame
+  let flyIn = null;     // active fly-into-the-screen animation state
+  const ENTER_DIST = 24;   // scrolling in past this distance triggers the fly-in
+
+  // Swing the camera from wherever it is (any orbit angle) to a straight-on view
+  // of the CRT, dollying in at the same time, then hand off to the fullscreen view.
+  function startFlyIn() {
+    if (flyIn || inScreenView) return;
+    const off = camera.position.clone().sub(controls.target);
+    const sph = new T.Spherical().setFromVector3(off);
+    // shortest way around for the azimuth (avoid a >180° swing)
+    let az = sph.theta;
+    if (az > Math.PI) az -= Math.PI * 2;
+    flyIn = {
+      t0: performance.now(), dur: 1250,
+      fromR: sph.radius, fromPol: sph.phi, fromAz: az,
+      fromTx: controls.target.x, fromTy: controls.target.y, fromTz: controls.target.z,
+      toR: 9.0, toPol: Math.PI / 2, toAz: 0,
+      toTx: 0, toTy: SCREEN.y, toTz: 0
+    };
+    controls.enabled = false;
+  }
 
   /* ---------- geometry helpers ---------- */
   function roundedRect(w, h, r) {
@@ -125,9 +146,9 @@
   }
 
   function buildDesk() {
-    const topMat  = pbrMat('textures/wood', 1.6, 1.0);
-    const sideMat = pbrMat('textures/wood', 2.2, 0.32);
-    const legMat  = pbrMat('textures/wood', 0.4, 2.2);
+    const topMat  = pbrMat('shared/assets/textures/wood', 1.6, 1.0);
+    const sideMat = pbrMat('shared/assets/textures/wood', 2.2, 0.32);
+    const legMat  = pbrMat('shared/assets/textures/wood', 0.4, 2.2);
 
     const desk = new T.Group();
     const TW = 36, TD = 21, TT = 1.0;        // tabletop width / depth / thickness (top surface at y=0)
@@ -233,13 +254,21 @@
     const right = new T.Mesh(new T.PlaneGeometry(RZ * 2, RH), cMat(0xdcc7a5));
     right.position.set(RX, floorY + RH / 2, 0); right.rotation.y = -Math.PI / 2; room.add(right);
 
+    // classic Macintosh "hello" script, painted onto the back wall above the desk
+    const hello = new T.Mesh(
+      new T.PlaneGeometry(30, 15),
+      new T.MeshBasicMaterial({ map: makeTexture(drawHello, 1024, 512), transparent: true })
+    );
+    hello.position.set(0, floorY + RH * 0.62, -RZ + 0.3);
+    room.add(hello);
+
     scene.add(room);
     return { RX: RX, RZ: RZ, RH: RH, floorY: floorY };
   }
 
   /* ---------- skis leaning on the back wall ---------- */
   let skisGroup = null;
-  const SKIS_URL = 'low-poly_freeride_skis.glb';   // committed locally (no remote/CORS dependency)
+  const SKIS_URL = 'shared/assets/models/low-poly_freeride_skis.glb';   // committed locally (no remote/CORS dependency)
   function buildSkis(room) {
     if (!T.GLTFLoader) return;
     const loader = new T.GLTFLoader(loadMgr || undefined);
@@ -326,6 +355,183 @@
     scene.add(lean);
     snowboardGroup = lean;
     window.__snowboard = lean;
+    renderNow();
+  }
+
+  /* ---------- vintage mechanical keyboard (procedural) ----------
+     Aged-beige wedge case + sculpted rows of individual keycaps, sat on the
+     desk in front of the Macintosh, with a coiled cable running to the front
+     port. Built to the same world scale / shadow conventions as the Mac. */
+  let keyboardGroup = null;
+  function buildKeyboard() {
+    const g = new T.Group();
+
+    const caseMat = new T.MeshStandardMaterial({ color: 0xe4d8b8, roughness: 0.72, metalness: 0.0 });
+    const caseDk  = new T.MeshStandardMaterial({ color: 0xcdbf9a, roughness: 0.8 });
+    const keyMat  = new T.MeshStandardMaterial({ color: 0xeee3c6, roughness: 0.55 });
+    const modMat  = new T.MeshStandardMaterial({ color: 0xc9bc9a, roughness: 0.6 });
+    const footMat = new T.MeshStandardMaterial({ color: 0x161513, roughness: 0.85 });
+
+    // rows back(0) -> front(4); key widths in keyboard "units"; mod = darker caps
+    const rows = [
+      { w: [1,1,1,1,1,1,1,1,1,1,1,1,1,1], mod: [0] },
+      { w: [1.5,1,1,1,1,1,1,1,1,1,1,1,1,1], mod: [0] },
+      { w: [1.75,1,1,1,1,1,1,1,1,1,1,1,1.75], mod: [0,12] },
+      { w: [2.25,1,1,1,1,1,1,1,1,1,1,2.25], mod: [0,11] },
+      { w: [1.25,1.25,1.25,6.25,1.25,1.25,1.25,1.25], mod: [0,1,2,4,5,6,7] }
+    ];
+
+    const U = 0.5, KGAP = 0.07, RGAP = 0.07, capH = 0.36, caseH = 0.55, margin = 0.55;
+    const fieldD = rows.length * U + (rows.length - 1) * RGAP;
+    let maxRowW = 0;
+    rows.forEach(function (r) {
+      const rw = r.w.reduce(function (a, b) { return a + b; }, 0) * U + (r.w.length - 1) * KGAP;
+      if (rw > maxRowW) maxRowW = rw;
+    });
+    const caseW = maxRowW + margin * 2, caseD = fieldD + margin * 2;
+
+    // rounded slab case
+    const caseGeo = new T.ExtrudeGeometry(roundedRect(caseW, caseD, 0.45),
+      { depth: caseH, bevelEnabled: true, bevelThickness: 0.1, bevelSize: 0.12, bevelSegments: 3, steps: 1 });
+    caseGeo.center();
+    const kase = new T.Mesh(caseGeo, caseMat);
+    kase.rotation.x = -Math.PI / 2; kase.position.y = caseH / 2;
+    kase.castShadow = true; kase.receiveShadow = true; g.add(kase);
+
+    // recessed darker top plate the keys poke through
+    const plate = new T.Mesh(new T.BoxGeometry(maxRowW + 0.22, 0.08, fieldD + 0.22), caseDk);
+    plate.position.y = caseH - 0.02; plate.receiveShadow = true; g.add(plate);
+
+    // shared keycap geometry (rounded, dished top from the bevel)
+    const capGeo = new T.ExtrudeGeometry(roundedRect(1, 1, 0.30),
+      { depth: capH, bevelEnabled: true, bevelThickness: 0.07, bevelSize: 0.07, bevelSegments: 2, steps: 1 });
+    capGeo.center(); capGeo.rotateX(-Math.PI / 2);   // stand the cap upright
+
+    const capBaseY = caseH - 0.05 + capH / 2;
+    rows.forEach(function (row, ri) {
+      const rowW = row.w.reduce(function (a, b) { return a + b; }, 0) * U + (row.w.length - 1) * KGAP;
+      let x = -rowW / 2;
+      const z = -fieldD / 2 + U / 2 + ri * (U + RGAP);
+      row.w.forEach(function (wU, ki) {
+        const kw = wU * U, cx = x + kw / 2;
+        const isMod = row.mod && row.mod.indexOf(ki) !== -1;
+        const cap = new T.Mesh(capGeo, isMod ? modMat : keyMat);
+        cap.scale.set(kw - 0.12, 1, U - 0.12);
+        cap.position.set(cx, capBaseY, z);
+        cap.rotation.x = (ri - (rows.length - 1) / 2) * 0.018;   // gentle sculpt
+        cap.castShadow = true; cap.receiveShadow = true; g.add(cap);
+        x += kw + KGAP;
+      });
+    });
+
+    // rubber feet
+    [[-caseW/2+0.6,-caseD/2+0.6],[caseW/2-0.6,-caseD/2+0.6],[-caseW/2+0.6,caseD/2-0.6],[caseW/2-0.6,caseD/2-0.6]]
+      .forEach(function (p) {
+        const f = new T.Mesh(new T.CylinderGeometry(0.22, 0.24, 0.16, 16), footMat);
+        f.position.set(p[0], 0.06, p[1]); g.add(f);
+      });
+
+    // place on the desk, square in front of the Macintosh
+    g.position.set(0, 0, 7.4);
+    scene.add(g);
+    keyboardGroup = g;
+
+    // coiled cable from the back of the keyboard up to the Mac's front port
+    const startW = new T.Vector3(0, caseH * 0.7, -caseD / 2).add(g.position);
+    const end = new T.Vector3(0, 1.0, 4.55);
+    const curve = new T.CatmullRomCurve3([
+      startW,
+      new T.Vector3(0.25, 0.4, startW.z - 0.7),
+      new T.Vector3(-0.35, 0.5, (startW.z + end.z) / 2),
+      new T.Vector3(0.12, 0.8, end.z + 0.7),
+      end
+    ]);
+    const cable = new T.Mesh(new T.TubeGeometry(curve, 44, 0.09, 10, false),
+      new T.MeshStandardMaterial({ color: 0xddd2b4, roughness: 0.6 }));
+    cable.castShadow = true; scene.add(cable);
+
+    renderNow();
+  }
+
+  /* ---------- blue metal anglepoise desk lamp (procedural) ----------
+     Weighted round base, two jointed arms with parallel springs, and an open
+     conical shade aimed at the work area in front of the Mac. A warm point
+     light eases on after load so the lamp reads as switched on. */
+  let lampGroup = null, lampLight = null;
+  function buildLamp() {
+    const g = new T.Group();
+    const blue   = new T.MeshStandardMaterial({ color: 0x2f6cb6, metalness: 0.55, roughness: 0.34 });
+    const blueDk = new T.MeshStandardMaterial({ color: 0x224f86, metalness: 0.6, roughness: 0.3 });
+    const shadeIn= new T.MeshStandardMaterial({ color: 0xf3ede0, roughness: 0.5, side: T.DoubleSide, emissive: 0xffe7b8, emissiveIntensity: 0.5 });
+    const bulbMat= new T.MeshStandardMaterial({ color: 0xfff6dc, emissive: 0xffd98a, emissiveIntensity: 1.7 });
+    const spring = new T.MeshStandardMaterial({ color: 0x9fb4cc, metalness: 0.8, roughness: 0.3 });
+
+    function rod(p1, p2, radius, mat) {
+      const a = new T.Vector3().fromArray(p1), b = new T.Vector3().fromArray(p2);
+      const dir = new T.Vector3().subVectors(b, a), len = dir.length();
+      const m = new T.Mesh(new T.CylinderGeometry(radius, radius, len, 18), mat);
+      m.position.copy(a).addScaledVector(dir, 0.5);
+      m.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), dir.clone().normalize());
+      m.castShadow = true; m.receiveShadow = true; return m;
+    }
+    function joint(p, r) {
+      const m = new T.Mesh(new T.SphereGeometry(r, 20, 16), blueDk);
+      m.position.fromArray(p); m.castShadow = true; return m;
+    }
+    function springRod(p1, p2, off) {
+      const a = new T.Vector3().fromArray(p1), b = new T.Vector3().fromArray(p2);
+      const dir = new T.Vector3().subVectors(b, a).normalize();
+      const perp = new T.Vector3(dir.y, -dir.x, 0).normalize().multiplyScalar(off);
+      g.add(rod([a.x + perp.x, a.y + perp.y, a.z], [b.x + perp.x, b.y + perp.y, b.z], 0.05, spring));
+    }
+
+    // joints — local -x reaches toward the Macintosh
+    const shoulder = [0, 1.5, 0], elbow = [-1.5, 5.4, 0], wrist = [-4.6, 6.9, 0];
+
+    // weighted round base + low dome
+    const base = new T.Mesh(new T.CylinderGeometry(1.7, 1.95, 0.5, 44), blue);
+    base.position.y = 0.25; base.castShadow = true; base.receiveShadow = true; g.add(base);
+    const dome = new T.Mesh(new T.SphereGeometry(1.55, 36, 18, 0, Math.PI * 2, 0, Math.PI / 2), blue);
+    dome.position.y = 0.48; dome.scale.y = 0.4; dome.castShadow = true; g.add(dome);
+
+    g.add(rod([0, 0.5, 0], shoulder, 0.28, blue));
+    g.add(joint(shoulder, 0.42));
+    g.add(rod(shoulder, elbow, 0.17, blue)); g.add(joint(elbow, 0.4));
+    g.add(rod(elbow, wrist, 0.17, blue));   g.add(joint(wrist, 0.36));
+    springRod(shoulder, elbow, 0.34);
+    springRod(elbow, wrist, 0.3);
+
+    // conical shade aimed at the desk in front of the Mac
+    const w = new T.Vector3().fromArray(wrist);
+    const target = new T.Vector3(-7.0, 0, 2.4);
+    const dir = new T.Vector3().subVectors(target, w).normalize();
+    const head = new T.Group();
+    head.add(new T.Mesh(new T.CylinderGeometry(0.28, 1.25, 1.7, 36, 1, true), blue));
+    head.add(new T.Mesh(new T.CylinderGeometry(0.26, 1.2, 1.62, 36, 1, true), shadeIn));
+    const cap = new T.Mesh(new T.CylinderGeometry(0.3, 0.3, 0.16, 24), blueDk);
+    cap.position.y = 0.85; head.add(cap);
+    const bulb = new T.Mesh(new T.SphereGeometry(0.34, 20, 16), bulbMat);
+    bulb.position.y = 0.42; head.add(bulb);
+    lampLight = new T.PointLight(0xffd6a0, 0.0, 32, 2.0);
+    lampLight.position.y = 0.3; head.add(lampLight);
+    head.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
+    // top (small end) sits at the wrist; mouth opens toward the target
+    head.position.copy(w).addScaledVector(dir, 0.85);
+    head.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), dir.clone().negate());
+    g.add(head);
+
+    // place on the desk to the right of the Mac, angled toward the work area
+    g.position.set(10.8, 0, -1.5); g.rotation.y = -0.35;
+    scene.add(g);
+    lampGroup = g;
+
+    // ease the warm light on
+    let li = 0; const liMax = 1.1;
+    const ramp = setInterval(function () {
+      li += 0.07; lampLight.intensity = Math.min(liMax, li); renderNow();
+      if (li >= liMax) clearInterval(ramp);
+    }, 40);
+
     renderNow();
   }
 
@@ -533,7 +739,7 @@
   }
   let _logoTex = null;
   function logoTexture() {
-    if (!_logoTex) { _logoTex = new T.TextureLoader(loadMgr || undefined).load('front-logo.png'); _logoTex.encoding = T.sRGBEncoding; _logoTex.anisotropy = 8; }
+    if (!_logoTex) _logoTex = makeTexture(drawApple, 256, 280);   // classic rainbow apple
     return _logoTex;
   }
   function drawApple(x, W, H) {
@@ -561,6 +767,19 @@
     x.fillStyle = '#6cbe45';
     x.beginPath(); x.ellipse(cx + 7, 50, 15, 26, -0.6, 0, 7); x.fill();
   }
+  // the hand-script "hello" from the original 1984 Macintosh intro
+  function drawHello(x, W, H) {
+    x.clearRect(0, 0, W, H);
+    x.fillStyle = 'rgba(90, 72, 52, 0.85)';
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.font = 'italic 240px "Savoye LET", "Snell Roundhand", "Apple Chancery", "Brush Script MT", cursive';
+    x.save();
+    x.translate(W / 2, H / 2);
+    x.rotate(-0.06);                       // slight handwritten tilt
+    x.fillText('hello', 0, 0);
+    x.restore();
+  }
+
   function drawLabel(x, W, H, text) {
     x.clearRect(0, 0, W, H);
     x.fillStyle = '#403a30';
@@ -685,8 +904,9 @@
     screenEl = document.getElementById('screen');
 
     camera = new T.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.1, 1000);
-    // start front-on and centered, pulled back to show the desk/room/skis
-    camera.position.set(0, 7.6, 30);
+    // start front-on, pulled back to show the desk/room/skis. y matches the CRT
+    // screen centre (SCRY = 8.0) so the screen sits dead-centre in the view.
+    camera.position.set(0, 8.0, 30);
 
     glRenderer = new T.WebGLRenderer({ antialias: true, alpha: true });
     glRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -712,7 +932,7 @@
 
     controls = new T.OrbitControls(camera, glRenderer.domElement);
     controls.enableDamping = true; controls.dampingFactor = 0.07; controls.enablePan = true;
-    controls.target.set(0, 6.4, 0);
+    controls.target.set(0, 8.0, 0);   // CRT screen centre — keeps it dead-centre
     controls.minDistance = 8; controls.maxDistance = 42;
     // lock vertical orbit so the camera stays inside the room (no going under the
     // floor / "underground", and not up through the ceiling) at any zoom level
@@ -726,11 +946,14 @@
     controls.enableZoom = false;
     zoomTarget = camera.position.distanceTo(controls.target);
     glRenderer.domElement.addEventListener('wheel', function (e) {
-      if (inScreenView) return;
+      if (inScreenView || flyIn) return;
       e.preventDefault();
       // multiplicative so each notch feels even at any distance; gentle factor
       zoomTarget *= Math.exp(e.deltaY * 0.0012);
       zoomTarget = Math.max(controls.minDistance, Math.min(controls.maxDistance, zoomTarget));
+      // a small scroll-in is enough: swing the camera around to face the screen
+      // head-on and glide into it (see the flyIn block in animate()).
+      if (e.deltaY < 0 && zoomTarget < ENTER_DIST) startFlyIn();
     }, { passive: false });
 
     applyMood('room');
@@ -762,6 +985,8 @@
     const room = buildRoom(floorY);
     buildSkis(room);
     buildSnowboard(room);
+    buildKeyboard();
+    buildLamp();
     ready = true;
     window.__dbg = function () { return { ready: ready, f: window.__frames }; };
     burstRefresh();
@@ -782,7 +1007,24 @@
       requestAnimationFrame(animate);
       window.__frames++;
       if (autoRotate && !controls._userActive) machine.rotation.y += 0.0022;
-      if (!inScreenView && ready) {
+      if (flyIn && !inScreenView) {
+        // fly-in: ease the orbit angles to straight-on while dollying toward the CRT
+        const t = Math.min(1, (performance.now() - flyIn.t0) / flyIn.dur);
+        const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;  // easeInOutCubic
+        controls.target.set(
+          flyIn.fromTx + (flyIn.toTx - flyIn.fromTx) * e,
+          flyIn.fromTy + (flyIn.toTy - flyIn.fromTy) * e,
+          flyIn.fromTz + (flyIn.toTz - flyIn.fromTz) * e
+        );
+        const sph = new T.Spherical(
+          flyIn.fromR + (flyIn.toR - flyIn.fromR) * e,
+          flyIn.fromPol + (flyIn.toPol - flyIn.fromPol) * e,
+          flyIn.fromAz + (flyIn.toAz - flyIn.fromAz) * e
+        );
+        camera.position.setFromSpherical(sph).add(controls.target);
+        camera.lookAt(controls.target);
+        if (t >= 1) { flyIn = null; zoomTarget = 9.0; enterScreenView(); }
+      } else if (!inScreenView && ready) {
         // glide the camera toward the wheel-set target distance for a smooth approach
         const offset = camera.position.clone().sub(controls.target);
         const curDist = offset.length();
@@ -792,12 +1034,6 @@
         }
       }
       controls.update();
-      if (!inScreenView && ready) {
-        const dist = camera.position.distanceTo(controls.target);
-        const az = Math.abs(controls.getAzimuthalAngle());
-        const pol = controls.getPolarAngle();
-        if (dist < 9.3 && az < 0.42 && pol > 1.05 && pol < 1.78) enterScreenView();
-      }
       glRenderer.render(scene, camera);
     })();
   }
@@ -908,6 +1144,8 @@
     enterScreenView, exitScreenView,
     setSkis: function (p) { if (!skisGroup) return; if (p.x != null) skisGroup.position.x = p.x; if (p.z != null) skisGroup.position.z = p.z; if (p.lean != null) skisGroup.rotation.x = p.lean; if (p.skew != null) skisGroup.rotation.y = p.skew; renderNow(); return skisGroup.position; },
     setSnowboard: function (p) { if (!snowboardGroup) return; if (p.x != null) snowboardGroup.position.x = p.x; if (p.z != null) snowboardGroup.position.z = p.z; if (p.lean != null) snowboardGroup.rotation.x = p.lean; if (p.skew != null) snowboardGroup.rotation.y = p.skew; renderNow(); return snowboardGroup.position; },
+    setKeyboard: function (p) { if (!keyboardGroup) return; if (p.x != null) keyboardGroup.position.x = p.x; if (p.z != null) keyboardGroup.position.z = p.z; if (p.rot != null) keyboardGroup.rotation.y = p.rot; renderNow(); return keyboardGroup.position; },
+    setLamp: function (p) { if (!lampGroup) return; if (p.x != null) lampGroup.position.x = p.x; if (p.z != null) lampGroup.position.z = p.z; if (p.rot != null) lampGroup.rotation.y = p.rot; if (p.light != null && lampLight) lampLight.intensity = p.light; renderNow(); return lampGroup.position; },
     setBulge: function (b) { BULGE = b; rebuildScreen(); return BULGE; },
     setScreen: function (p) { Object.assign(SCREEN, p); rebuildScreen(); return SCREEN; },
     debugAzimuth: function (deg, elevDeg, dist) {

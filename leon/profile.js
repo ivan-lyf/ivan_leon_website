@@ -1,7 +1,7 @@
 /* ============================================================
    Profile — Leon (leonmeng.xyz)
    Starter content. Leon: fill in `projects`, the document builders,
-   and the icon list — same shape as profile-ivan.js.
+   and the icon list — same shape as ivan/profile.js.
    Document builders receive (P, O): P = this profile, O = the other person.
    ============================================================ */
 (function () {
@@ -84,7 +84,7 @@
     return `
       <h2 style="text-align:center;">${P.fullName}</h2>
       <p class="meta" style="text-align:center;">${P.email} · 949-738-8015</p>
-      <p style="text-align:center;"><a href="assets/resume/leon-resume.html" target="_blank" rel="noopener">Open full résumé →</a></p>
+      <p style="text-align:center;"><a href="leon/assets/resume/leon-resume.html" target="_blank" rel="noopener">Open full résumé →</a></p>
       <hr class="rule">
 
       <h3>Technical Skills</h3>
@@ -223,6 +223,8 @@
     machineName: "Leon's Device",
     avatarGlyph: "smiley",
     wallpaper: true,   // show the Apple "Think / Be Different" wallpaper (Leon's page only)
+    critters: false,   // no wandering desktop critters on Leon's side
+    deskNotes: false,  // no periodic note pop-ups on Leon's side
     projects,
     nowPlaying,
     about,
