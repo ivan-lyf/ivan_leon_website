@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Device Portfolio</title>
   <!-- 1-bit Mac OS styling (Chicago font, CRT) — unchanged engine stylesheet -->
-  <link rel="stylesheet" href="mac.css" />
+  <link rel="stylesheet" href="shared/mac.css" />
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
@@ -132,12 +132,12 @@ Initializing 3D environment ...
   <script src="https://unpkg.com/html-to-image@1.11.11/dist/html-to-image.js"></script>
 
   <!-- 3D Macintosh shell -->
-  <script src="mac-scene.js"></script>
+  <script src="shared/mac-scene.js"></script>
 
   <!-- Per-person content + domain-agnostic engine (UNCHANGED) -->
-  <script src="profile-ivan.js"></script>
-  <script src="profile-leon.js"></script>
-  <script src="mac.js"></script>
+  <script src="ivan/profile.js"></script>
+  <script src="leon/profile.js"></script>
+  <script src="shared/mac.js"></script>
 
   <script>
     (function () {

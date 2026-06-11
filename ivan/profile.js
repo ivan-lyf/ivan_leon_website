@@ -15,10 +15,10 @@
       info: "Web · live",
       links: [{ label: "Live site", href: "https://rate-my-dish-ubc.vercel.app/" }],
       shots: [
-        { src: "assets/projects/rate-my-dish-ubc-01.png", cap: "Home screen" },
-        { src: "assets/projects/rate-my-dish-ubc-02.png", cap: "Menu list" },
-        { src: "assets/projects/rate-my-dish-ubc-03.png", cap: "Dish detail" },
-        { src: "assets/projects/rate-my-dish-ubc-04.png", cap: "Chatbot" },
+        { src: "ivan/assets/projects/rate-my-dish-ubc-01.png", cap: "Home screen" },
+        { src: "ivan/assets/projects/rate-my-dish-ubc-02.png", cap: "Menu list" },
+        { src: "ivan/assets/projects/rate-my-dish-ubc-03.png", cap: "Dish detail" },
+        { src: "ivan/assets/projects/rate-my-dish-ubc-04.png", cap: "Chatbot" },
       ],
     },
     {
@@ -28,10 +28,10 @@
       info: "Mobile · in development",
       links: [{ label: "GitHub", href: "https://github.com/thomasc-0316/CS2" }],
       shots: [
-        { src: "assets/projects/cs2-tactics-01.png", cap: "Lobby" },
-        { src: "assets/projects/cs2-tactics-02.png", cap: "Map tactics" },
-        { src: "assets/projects/cs2-tactics-03.png", cap: "Lineup grid" },
-        { src: "assets/projects/cs2-tactics-04.png", cap: "Explore" },
+        { src: "ivan/assets/projects/cs2-tactics-01.png", cap: "Lobby" },
+        { src: "ivan/assets/projects/cs2-tactics-02.png", cap: "Map tactics" },
+        { src: "ivan/assets/projects/cs2-tactics-03.png", cap: "Lineup grid" },
+        { src: "ivan/assets/projects/cs2-tactics-04.png", cap: "Explore" },
       ],
     },
     {
@@ -41,7 +41,7 @@
       info: "Simulation · 2024",
       links: [{ label: "GitHub", href: "https://github.com/ivan-lyf/gravity_simulation" }],
       shots: [
-        { src: "assets/projects/gravity-sandbox-01.png", cap: "Simulation view" },
+        { src: "ivan/assets/projects/gravity-sandbox-01.png", cap: "Simulation view" },
       ],
     },
     {
@@ -64,9 +64,20 @@
 
   /* UBC Rocket ground-control-station screenshots (shown in Experience) */
   const rocketShots = [
-    { src: "assets/rocket/gcs-flight.png", cap: "Flight view — 3D attitude" },
-    { src: "assets/rocket/gcs-tuning.png", cap: "PID tuning presets" },
-    { src: "assets/rocket/gcs-map.png", cap: "UWB satellite map" },
+    { src: "ivan/assets/rocket/gcs-flight.png", cap: "Flight view — 3D attitude" },
+    { src: "ivan/assets/rocket/gcs-tuning.png", cap: "PID tuning presets" },
+    { src: "ivan/assets/rocket/gcs-map.png", cap: "UWB satellite map" },
+  ];
+
+  /* Leanpub iOS v3 screenshots — Ruboss work (shown in Experience) */
+  const leanpubShots = [
+    { src: "ivan/assets/leanpub/leanpub-library.jpg", cap: "Library — always up to date" },
+    { src: "ivan/assets/leanpub/leanpub-reader.jpg", cap: "Reader" },
+    { src: "ivan/assets/leanpub/leanpub-highlights.jpg", cap: "Highlights & notes" },
+    { src: "ivan/assets/leanpub/leanpub-explore.jpg", cap: "Explore — discover books" },
+    { src: "ivan/assets/leanpub/leanpub-book-detail.jpg", cap: "Book detail" },
+    { src: "ivan/assets/leanpub/leanpub-author.jpg", cap: "Author studio" },
+    { src: "ivan/assets/leanpub/leanpub-account.jpg", cap: "Account" },
   ];
 
   /* ---------- document windows ----------
@@ -101,6 +112,7 @@
       <h3>Ruboss — Full-Stack Software Engineer</h3>
       <p class="meta">Summer 2026 · Vancouver, BC</p>
       <p>Building Leanpub's iOS v3 in SwiftUI against a GraphQL API on a Ruby on Rails backend — a better tool for readers and authors to write and publish books.</p>
+      ${galleryHTML(P.leanpubShots, "Leanpub iOS v3")}
       <hr class="dotrule">
       <h3>UBC Rocket — Embedded Software Engineer</h3>
       <p class="meta">TVR Team · 2025–present · Vancouver, BC</p>
@@ -133,7 +145,7 @@
         <span class="tag">STM32</span><span class="tag">Protobuf</span><span class="tag">Git</span>
       </p>
       <div style="text-align:center;margin-top:16px;">
-        <a class="mac-btn default" href="assets/resume/Ivan_Luo_Resume.pdf" download="Ivan_Luo_Resume.pdf" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block;">Download PDF…</a>
+        <a class="mac-btn default" href="ivan/assets/resume/Ivan_Luo_Resume.pdf" download="Ivan_Luo_Resume.pdf" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block;">Download PDF…</a>
       </div>`;
   }
 
@@ -154,7 +166,7 @@
   /* ---------- Side Hustle folder — life outside the terminal ----------
      `build()` runs at open time so it can embed galleries via galleryHTML.
      Tone: keep it light and human. */
-  const SH = "assets/sidehustle/";
+  const SH = "ivan/assets/sidehustle/";
   function shDoc(title, body) {
     return `<h2>${title}</h2><hr class="dotrule">${body}`;
   }
@@ -249,9 +261,11 @@
     email: "yingfanluo@gmail.com",
     machineName: "Ivan's Mac",
     avatarGlyph: "avatar",
-    resumePdf: "assets/resume/Ivan_Luo_Resume.pdf",
+    resumePdf: "ivan/assets/resume/Ivan_Luo_Resume.pdf",
+    github: "ivan-lyf",   // menubar tap shows live GitHub contributions
     projects,
     rocketShots,
+    leanpubShots,
     nowPlaying,
     about,
     experience,
