@@ -1361,6 +1361,12 @@
     const wp = document.getElementById("wallpaper");
     if (!wp) return;
     if (!ACTIVE.wallpaper) { wp.innerHTML = ""; return; }
+    if (ACTIVE.wallpaper === "hello") {
+      // classic Macintosh "hello" script as the desktop ground (Ivan's side).
+      // The dithered pattern stays; a paper halo lifts the script off it.
+      wp.innerHTML = `<div class="wp-hello">hello</div>`;
+      return;
+    }
     // clean OPAQUE paper ground behind the wallpaper (no pattern). The opaque fill
     // matters for the 3D texture: a transparent ground rasterises to black, which
     // would hide the black apple/text. (Not persisted to the pattern setting.)
@@ -1404,6 +1410,10 @@
     // default position: bottom-CENTRE — clear of the left icon column (Side
     // Hustle / LeetCode sit at the bottom of it) and the corner icons.
     box.style.left = Math.max(8, Math.round((desktop.clientWidth - box.offsetWidth) / 2)) + "px";
+
+    // clicking anywhere on the widget raises it above the window stack
+    // (profile opt-in — Ivan's side only)
+    if (ACTIVE.raisableWidgets) box.addEventListener("mousedown", () => { box.style.zIndex = ++zTop; });
 
     $(".np-min", box).addEventListener("click", (e) => { e.stopPropagation(); minimizeNowPlaying(); });
     box.addEventListener("click", (e) => {
@@ -1453,15 +1463,25 @@
     ghBox = null; ghFetched = false;
     if (!ACTIVE.github) return;
 
-    const box = el("div", "ghstats hidden");
+    const box = el("div", "ghstats");
     box.innerHTML =
       `<div class="gh-bar">` +
-        `<div class="gh-min" title="Close"></div>` +
+        `<div class="gh-min" title="Minimize"></div>` +
         `<span class="gh-title-txt">GitHub</span>` +
       `</div>` +
       `<div class="gh-body"><p class="gh-note">Fetching contributions…</p></div>`;
     desktop.appendChild(box);
     ghBox = box;
+
+    // shown on entry (like Now Playing): default position is bottom-centre,
+    // stacked just above the Now Playing widget so neither covers any icon
+    const np = desktop.querySelector(".nowplaying");
+    box.style.left = Math.max(8, Math.round((desktop.clientWidth - box.offsetWidth) / 2)) + "px";
+    if (np) box.style.bottom = (18 + np.offsetHeight + 8) + "px";
+    fetchGitHub();
+
+    // clicking anywhere on the widget raises it above the window stack
+    box.addEventListener("mousedown", () => { box.style.zIndex = ++zTop; });
 
     $(".gh-min", box).addEventListener("click", (e) => { e.stopPropagation(); box.classList.add("hidden"); });
     box.addEventListener("click", (e) => {
@@ -1501,7 +1521,10 @@
     if (!ghBox) return;
     const show = ghBox.classList.contains("hidden");
     ghBox.classList.toggle("hidden", !show);
-    if (show && !ghFetched) fetchGitHub();
+    if (show) {
+      ghBox.style.zIndex = ++zTop;          // reappear on top, like a window
+      if (!ghFetched) fetchGitHub();        // retry if the first fetch failed
+    }
   }
 
   function fetchGitHub() {
