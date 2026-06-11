@@ -85,14 +85,9 @@
      default) for everything else. `.meta` is the one info-line style. */
   function about(P, O) {
     return `
-      <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;">
-        <div class="photo-dither"><div class="cap">[ ivan ]</div></div>
-        <div style="flex:1 1 180px;min-width:170px;">
-          <h2>Yingfan (Ivan) Luo</h2>
-          <p class="meta">3rd-year Computer Engineering (CPEN) @ UBC</p>
-          <p>I build software across the stack — from embedded firmware where code meets hardware, to modern web and mobile apps.</p>
-        </div>
-      </div>
+      <h2>Yingfan (Ivan) Luo</h2>
+      <p class="meta">3rd-year Computer Engineering (CPEN) @ UBC</p>
+      <p>I build software across the stack — from embedded firmware where code meets hardware, to modern web and mobile apps.</p>
       <hr class="dotrule">
       <h3>What I do</h3>
       <p>
@@ -262,7 +257,9 @@
     machineName: "Ivan's Mac",
     avatarGlyph: "avatar",
     resumePdf: "ivan/assets/resume/Ivan_Luo_Resume.pdf",
-    github: "ivan-lyf",   // menubar tap shows live GitHub contributions
+    wallpaper: "hello",   // classic Macintosh "hello" script on the desktop
+    github: "ivan-lyf",   // live GitHub contributions widget + menubar tap
+    raisableWidgets: true, // clicking a widget raises it above windows
     projects,
     rocketShots,
     leanpubShots,

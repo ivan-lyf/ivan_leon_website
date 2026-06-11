@@ -254,14 +254,6 @@
     const right = new T.Mesh(new T.PlaneGeometry(RZ * 2, RH), cMat(0xdcc7a5));
     right.position.set(RX, floorY + RH / 2, 0); right.rotation.y = -Math.PI / 2; room.add(right);
 
-    // classic Macintosh "hello" script, painted onto the back wall above the desk
-    const hello = new T.Mesh(
-      new T.PlaneGeometry(30, 15),
-      new T.MeshBasicMaterial({ map: makeTexture(drawHello, 1024, 512), transparent: true })
-    );
-    hello.position.set(0, floorY + RH * 0.62, -RZ + 0.3);
-    room.add(hello);
-
     scene.add(room);
     return { RX: RX, RZ: RZ, RH: RH, floorY: floorY };
   }
@@ -767,19 +759,6 @@
     x.fillStyle = '#6cbe45';
     x.beginPath(); x.ellipse(cx + 7, 50, 15, 26, -0.6, 0, 7); x.fill();
   }
-  // the hand-script "hello" from the original 1984 Macintosh intro
-  function drawHello(x, W, H) {
-    x.clearRect(0, 0, W, H);
-    x.fillStyle = 'rgba(90, 72, 52, 0.85)';
-    x.textAlign = 'center'; x.textBaseline = 'middle';
-    x.font = 'italic 240px "Savoye LET", "Snell Roundhand", "Apple Chancery", "Brush Script MT", cursive';
-    x.save();
-    x.translate(W / 2, H / 2);
-    x.rotate(-0.06);                       // slight handwritten tilt
-    x.fillText('hello', 0, 0);
-    x.restore();
-  }
-
   function drawLabel(x, W, H, text) {
     x.clearRect(0, 0, W, H);
     x.fillStyle = '#403a30';
