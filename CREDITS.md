@@ -6,7 +6,6 @@
 |---|---|---|---|---|
 | Low-Poly Freeride Skis | Romainhj | https://sketchfab.com/3d-models/low-poly-freeride-skis-8b27a5ff5c6f436ab18d6d1d5862aeb5 | CC Attribution (CC BY 4.0) | 2026-07-02 |
 | Lowpoly 65% Mechanical Keyboard | sleepyjoshua | https://sketchfab.com/3d-models/lowpoly-65-mechanical-keyboard-0cdd429eb08549ac954352169de5c8f8 | CC Attribution (CC BY 4.0) | 2026-07-02 |
-| Intermediate Advanced Snowboard | Final Render Animation Studio | https://sketchfab.com/3d-models/intermediate-advanced-snowboard-267e04a025434d7d8587ec2ee60ad62e | CC Attribution (CC BY 4.0) | 2026-07-02 |
 
 Models were optimized for web delivery (Draco mesh compression + WebP textures ≤1024px via
 gltf-transform); geometry and materials otherwise unmodified.
