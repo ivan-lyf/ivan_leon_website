@@ -14,6 +14,8 @@
       font-family: ui-monospace, 'Courier New', monospace; color: #4a3f30;
     }
     #gl { position: fixed; inset: 0; z-index: 1; }
+    #vignette { position: fixed; inset: 0; z-index: 2; pointer-events: none;
+      background: radial-gradient(115% 100% at 50% 42%, rgba(0,0,0,0) 52%, rgba(28,16,6,0.30) 100%); }
 
     /* Live screen engine: rasterised to a texture for the 3D mesh + used for
        click hit-testing. Invisible on the page; the 3D mesh shows it. When the
@@ -76,6 +78,7 @@ Initializing 3D environment ...
     <span><b>Scroll in</b> to enter</span><span class="sep">·</span>
     <span><b>Esc</b> to exit</span>
   </div>
+  <div id="vignette"></div>
 
   <!-- ============================================================
        Live Mac OS engine markup (IDENTICAL to the original index.html

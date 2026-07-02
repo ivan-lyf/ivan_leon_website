@@ -226,6 +226,36 @@
     return t;
   }
 
+  // one shared radial blob texture for all contact shadows + glows
+  let _blobTex = null;
+  function makeBlobTex() {
+    if (_blobTex) return _blobTex;
+    const S = 128, c = document.createElement('canvas'); c.width = S; c.height = S;
+    const x = c.getContext('2d');
+    const g = x.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+    g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.55, 'rgba(255,255,255,0.35)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = g; x.fillRect(0, 0, S, S);
+    _blobTex = new T.CanvasTexture(c);
+    return _blobTex;
+  }
+  // soft baked shadow blob under a desk object (y slightly above surface)
+  function addContactShadow(parent, w, d, x, z, opacity) {
+    const m = new T.Mesh(new T.PlaneGeometry(w, d),
+      new T.MeshBasicMaterial({ map: makeBlobTex(), color: 0x000000, transparent: true,
+        opacity: opacity || 0.3, depthWrite: false }));
+    m.rotation.x = -Math.PI / 2; m.position.set(x, 0.02, z); m.renderOrder = 1;
+    parent.add(m);
+    return m;
+  }
+  // additive glow sprite (fake bloom) — used at lamp bulb + screen
+  function addGlowSprite(size, color, opacity) {
+    const s = new T.Sprite(new T.SpriteMaterial({ map: makeBlobTex(), color: color,
+      transparent: true, opacity: opacity, blending: T.AdditiveBlending, depthWrite: false }));
+    s.scale.set(size, size, 1);
+    return s;
+  }
+
   function buildDesk() {
     const topMat  = pbrMat('shared/assets/textures/wood', 1.6, 1.0);
     const sideMat = pbrMat('shared/assets/textures/wood', 2.2, 0.32);
@@ -473,6 +503,7 @@
     g.position.set(0, 0, 7.4);
     scene.add(g);
     keyboardGroup = g;
+    addContactShadow(scene, caseW + 2, caseD + 2, 0, 7.4, 0.3);
 
     // coiled cable from the back of the keyboard up to the Mac's front port
     const startW = new T.Vector3(0, caseH * 0.7, -caseD / 2).add(g.position);
@@ -550,6 +581,7 @@
     cap.position.y = 0.85; head.add(cap);
     const bulb = new T.Mesh(new T.SphereGeometry(0.34, 20, 16), bulbMat);
     bulb.position.y = 0.42; head.add(bulb);
+    const glow = addGlowSprite(3.2, 0xffd9a0, 0.55); glow.position.copy(bulb.position); head.add(glow);
     lampLight = new T.SpotLight(0xffc98a, 0.0, 55, 0.75, 0.6, 1.3);  // warm ~2800K
     lampLight.position.y = 0.3;
     lampLight.castShadow = QUALITY.shadows;
@@ -574,6 +606,7 @@
     g.position.set(13.8, 0, -2.5); g.rotation.y = -0.35;
     scene.add(g);
     lampGroup = g;
+    addContactShadow(scene, 5.5, 5.5, 13.8, -2.5, 0.3);
 
     // ease the warm light on
     let li = 0; const liMax = 12;
@@ -756,6 +789,7 @@
       f.position.set(p[0], 0.11, p[1]); f.castShadow = true; machine.add(f);
     });
 
+    addContactShadow(scene, 12, 12, 0, 0, 0.32);
     scene.add(machine);
     buildCurvedScreen();
   }
@@ -896,6 +930,9 @@
     screenMesh.position.set(SCREEN.x, SCREEN.y, SCREEN.z);
     machine.add(screenMesh);
     window.__tex = texCanvas; window.__mesh = screenMesh;
+
+    const sGlow = addGlowSprite(7.5, 0xbfd8ff, 0.18);
+    sGlow.position.set(SCREEN.x, SCREEN.y, SCREEN.z + 1.2); machine.add(sGlow);
   }
 
   function refreshTexture() {
