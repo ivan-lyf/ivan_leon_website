@@ -1135,6 +1135,8 @@
 
   function refreshTexture() {
     if (document.hidden) return;
+    // don't rasterize the DOM mid-interaction — it's a main-thread hitch; retry shortly after
+    if (performance.now() - lastActivityT < 400) { clearTimeout(window.__rfDefer); window.__rfDefer = setTimeout(refreshTexture, 450); return; }
     if (!window.htmlToImage || !screenEl) return;
     if (inScreenView) return;
     if (refreshing) { refreshQueued = true; return; }
@@ -1310,7 +1312,9 @@
     // ---- frame governor: cap active fps, drop lower when idle, rely on rAF's
     // built-in pause when the tab is hidden. Idle animations (steam, motes)
     // stay alive at the idle rate; all animation is driven by real time.
-    const FPS_ACTIVE = 45, FPS_IDLE = 24, IDLE_AFTER_MS = 3000;
+    // active=60 for interaction smoothness (matches 60Hz displays during drag),
+    // idle stays low for thermals.
+    const FPS_ACTIVE = 60, FPS_IDLE = 24, IDLE_AFTER_MS = 3000;
     lastFrameT = 0; lastActivityT = performance.now();
 
     window.__frames = 0;
