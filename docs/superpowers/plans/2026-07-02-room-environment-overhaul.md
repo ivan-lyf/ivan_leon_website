@@ -1034,6 +1034,57 @@ git add index.html && git commit -m "feat(ui): GitHub profile link chip"
 
 ---
 
+## User-requested rework round (added 2026-07-02, after Task 9)
+
+Execution order (conflict-driven): 14 → 15 → 16 → 17, then original Tasks 10, 11, 13, 12.
+Task 10 (motes) MUST run after Task 16 (lamp moves + becomes a GLB — motes anchor to `bulbWorldPos()`).
+
+### Task 14: Wall texture upgrade (AmbientCG)
+
+User: "the wall looks blurry and dirty" — the procedural plaster mottle reads as smudgy stains under the dimmed lighting.
+
+- Source a smooth interior plaster texture from ambientcg.com (CC0, direct download, e.g. `https://ambientcg.com/get?file=Plaster001_1K-JPG.zip` — controller picks the best-looking candidate at 1K).
+- Downscale/re-encode to ≤1024px JPG (~quality 80) → `shared/assets/textures/plaster_color.jpg` (+ `_rough.jpg`/`_normal.jpg` only if they visibly help; weight budget ≤400KB total).
+- Walls: `MeshStandardMaterial` with the tiled texture (RepeatWrapping, repeat ≈ 3×1.6, warm tint via `color`), roughness ~0.9.
+- Corner/floor AO: since a tiled texture can't carry baked AO, replace the canvas-baked AO with 4 slim gradient overlay quads (transparent-black `makeBlobTex`-style linear gradient canvas, `depthWrite:false`) hugging each wall corner + a floor-line strip. Ceiling keeps `makePlaster` (unaffected by the complaint).
+- `makePlaster` stays only if the ceiling still uses it; delete the wall-AO branch (`edgeAO`) if no longer referenced.
+- CREDITS.md: add AmbientCG row (CC0).
+- Verify: walls read crisp (no smudge blobs) at default + wide orbit; corners still ground the room; console clean.
+
+### Task 15: Pan/orbit smoothness
+
+User: "optimize the code/system to make sure the pan view is smooth, it's a little laggy now."
+
+Two suspected causes (verify with profiling before/after):
+1. `FPS_ACTIVE = 45` quantizes to ~38fps on a 60Hz+ display — raise to 60 during genuine interaction. Idle (24) and hidden (0) behavior unchanged; the overheating requirement targets the idle lobby state, and interaction is transient.
+2. `refreshTexture()` (html-to-image DOM rasterization, ~10s of ms on main thread) fires on a 1500ms interval and via MutationObserver even mid-drag — a classic jank source. Gate it during interaction: skip when `performance.now() - lastActivityT < 400` and re-queue.
+- Verify with an in-page probe: rendered fps during a scripted 3s drag ≥55; DevTools long-task check during pan shows no >50ms tasks from html-to-image.
+
+### Task 16: Lamp GLB swap + move to LEFT + bonsai to right
+
+User: use `/Users/leon/Downloads/old_table_lamp_v01.glb` as the lamp; move lamp to the left side; light shines on the keyboard.
+
+- Optimize the GLB: `gltf-transform optimize` (draco + webp ≤1024) → `shared/assets/models/table_lamp.glb` (~≤700KB). It has an emissive map — keep it.
+- Replace the procedural anglepoise in `buildLamp()`: load the GLB **deferred** (same `whenInteractive`/`loadDeferredGLB` pattern; procedural lamp stays as boot stand-in/fallback? NO — the lamp motivates the key light from first paint; instead load it through `loadMgr` (boot-gated, it's only ~600KB) and drop the procedural lamp entirely).
+- Position: LEFT side of desk, `(-13.5, 0, -2.5)` starting point (mirror of current), rotated so the shade faces the keyboard; live-tune final values.
+- Light rig: keep the existing `lampLight` SpotLight (warm, intensity 15, castShadow per tier) — parent it at the GLB's bulb/shade position, target the keyboard area (world ≈ (0, 0, 6.5)); keep `bulbWorldPos()`, glow sprite at the bulb, contact shadow under the base, `dimMaterials` on the loaded model, `MacScene.setLamp` still functional.
+- **Bonsai moves to the right side** (lamp's old spot): `bonsaiGroup.position.set(12.5, 0, -3.5)` starting point (live-tune); update its contact shadow coordinates to match.
+- CREDITS.md: add row "Old Table Lamp v01 — provided by site owner (source/license: user-supplied file)".
+- Verify: lamp reads as a real object, light pool lands on the keyboard, shadows still work, bonsai sits right without crowding snowboard/mug.
+
+### Task 17: Vintage keyboard + mouse (M0110/M0100 style) + mug placement
+
+User: keyboard "too modern"; provided a reference image of the classic Apple M0110 keyboard + M0100 boxy one-button mouse; mug moves to the LEFT of the keyboard so the mouse (right of keyboard) isn't blocked.
+
+- REMOVE the modern keyboard GLB swap-in from `buildKeyboard()` (procedural path stays), `git rm shared/assets/models/mechanical_keyboard.glb`, drop its CREDITS.md row.
+- Rework the procedural keyboard to read as an M0110: cream/beige wedge case with a wide flat margin, warm-gray sculpted keycaps (slightly darker than the case), tan/beige space bar, proportions per the reference (5 rows, tall Return/Shift/Tab region), small Apple-logo decal on the case corner (reuse `logoTexture()` tinted subtle), keep the coiled cable to the Mac.
+- BUILD a matching one-button mouse (procedural): boxy chamfered body (~1.9 × 1.1 × 2.6 world units), slightly domed top, recessed square button at the front-top, tiny logo decal, thin cable curving from the mouse rear around to the Mac's rear port strip; place RIGHT of the keyboard ≈ `(7.5, 0, 8.0)`, slight yaw; contact shadow.
+- Mug: `mugGroup.position.set(-7.2, 0, 8.4)` starting point (left of keyboard, inside the new left-side lamp pool) + move its contact shadow.
+- `MacScene.setMouse({x,z,rot})` setter for placement tuning.
+- Verify: keyboard/mouse read as vintage Apple kit next to the Mac at default zoom + close-up; mug left, mouse right, nothing blocks the fly-in path; keycaps still readable silhouettes at close orbit.
+
+---
+
 ## Self-Review Notes
 
 - **Spec coverage:** Task 1 env/lighting → Tasks 3+4+5; Task 2 mug/steam → Task 8; Task 3 audio → Task 11; Task 4 skis/snowboard → Tasks 6+7; Task 5 keyboard → Tasks 6+7; Task 6 bonsai → Task 9; Task 7 perf → Tasks 1+2+12 (plus tier gates in 8/9/10); Sketchfab workflow + credits → Task 6; lazy-load requirement → Task 7's `whenInteractive`; idle motion → Tasks 8/9/10. Camera float: deliberately skipped (conflicts with the custom zoom-glide/OrbitControls damping; spec marks it optional).
