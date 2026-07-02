@@ -30,7 +30,7 @@
   }
 
   // frame-governor activity tracking — module scope so both the animate loop
-  // (init) and top-level GLB swap-in callbacks (buildKeyboard/buildSnowboard)
+  // (init) and top-level GLB swap-in callbacks (buildKeyboard)
   // can call bumpActivity() when a deferred model finishes loading.
   let lastFrameT = 0, lastActivityT = performance.now();
   function bumpActivity() { lastActivityT = performance.now(); }
@@ -459,39 +459,6 @@
     snowboardGroup = lean;
     window.__snowboard = lean;
     renderNow();
-
-    // swap in the high-fidelity model once the scene is interactive
-    whenInteractive(function () {
-      loadDeferredGLB('shared/assets/models/snowboard.glb', function (gltf) {
-        const inner = gltf.scene;
-        // orientation correction (tuned visually): inner.rotation.y = 0;
-        const hiPivot = fitAndGround(inner, 24, true);
-
-        const hiLean = new T.Group();
-        hiLean.add(hiPivot);
-        hiLean.rotation.x = -0.18;
-        hiLean.rotation.y = Math.PI - 0.1;  // orientation correction (tuned visually): topsheet graphic faces camera
-        hiLean.position.set(30, room.floorY, -(room.RZ) + 6.5);
-
-        // PBR touch-up: sourced material reads a bit hot/metal under our lights —
-        // dial back env reflections and clamp metalness so the topsheet stays matte
-        dimMaterials(inner);
-        inner.traverse(function (o) {
-          if (o.isMesh && o.material) {
-            const mats = Array.isArray(o.material) ? o.material : [o.material];
-            mats.forEach(function (m) {
-              if ('metalness' in m) m.metalness = Math.min(m.metalness, 0.2);
-            });
-          }
-        });
-
-        scene.add(hiLean);
-        scene.remove(lean);           // retire procedural snowboard
-        snowboardGroup = hiLean;
-        window.__snowboard = hiLean;
-        bumpActivity(); renderNow();
-      });
-    });
   }
 
   /* ---------- vintage mechanical keyboard (procedural) ----------
