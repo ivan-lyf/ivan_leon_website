@@ -172,9 +172,9 @@
     return t;
   }
 
-  // warm plaster wall texture: vertical tone gradient + mottle + fine speckle +
-  // baked edge/corner AO so walls read as lit surfaces, not color fills
-  function makePlaster(top, bottom, edgeAO) {
+  // warm plaster wall texture: vertical tone gradient + mottle + fine speckle
+  // (ceiling only now — walls use the AmbientCG PBR set; AO is overlay quads)
+  function makePlaster(top, bottom) {
     const S = 1024, c = document.createElement('canvas'); c.width = S; c.height = S;
     const x = c.getContext('2d');
     const g = x.createLinearGradient(0, 0, 0, S);
@@ -193,15 +193,6 @@
       const v = 0.02 + Math.random() * 0.05;
       x.fillStyle = Math.random() < 0.5 ? 'rgba(90,74,58,' + v + ')' : 'rgba(255,240,214,' + v + ')';
       x.fillRect(Math.random() * S, Math.random() * S, 1, 1);
-    }
-    if (edgeAO) {                                        // baked corner/floor AO
-      const e = x.createLinearGradient(0, 0, S * 0.14, 0);
-      e.addColorStop(0, 'rgba(60,44,30,0.34)'); e.addColorStop(1, 'rgba(0,0,0,0)');
-      x.fillStyle = e; x.fillRect(0, 0, S * 0.14, S);
-      x.save(); x.translate(S, 0); x.scale(-1, 1); x.fillRect(0, 0, S * 0.14, S); x.restore();
-      const b = x.createLinearGradient(0, S, 0, S * 0.82);
-      b.addColorStop(0, 'rgba(60,44,30,0.4)'); b.addColorStop(1, 'rgba(0,0,0,0)');
-      x.fillStyle = b; x.fillRect(0, S * 0.82, S, S * 0.18);
     }
     const t = new T.CanvasTexture(c);
     t.encoding = T.sRGBEncoding; t.anisotropy = 8;
@@ -241,6 +232,27 @@
     t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(5, 5);
     t.encoding = T.sRGBEncoding; t.anisotropy = 8;
     return t;
+  }
+
+  // soft AO gradient quad — replaces canvas-baked wall AO so the tiled plaster stays clean
+  let _aoGradTex = null;
+  function aoGradTex() {
+    if (_aoGradTex) return _aoGradTex;
+    const c = document.createElement('canvas'); c.width = 64; c.height = 8;
+    const x = c.getContext('2d');
+    const g = x.createLinearGradient(0, 0, 64, 0);
+    g.addColorStop(0, 'rgba(0,0,0,0.42)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    x.fillStyle = g; x.fillRect(0, 0, 64, 8);
+    _aoGradTex = new T.CanvasTexture(c);
+    return _aoGradTex;
+  }
+  function addAOStrip(w, h, px, py, pz, rotY, flip) {
+    const m = new T.Mesh(new T.PlaneGeometry(w, h),
+      new T.MeshBasicMaterial({ map: aoGradTex(), transparent: true, depthWrite: false }));
+    m.position.set(px, py, pz); m.rotation.y = rotY;
+    if (flip) m.scale.x = -1;
+    m.renderOrder = 1;
+    return m;
   }
 
   // one shared radial blob texture for all contact shadows + glows
@@ -319,8 +331,10 @@
     const ceilY = floorY + RH;
     const room = new T.Group();
 
-    const wallTex = makePlaster('#eadbc0', '#cdb894', true);   // shared by all 4 walls
-    const wallMat = new T.MeshStandardMaterial({ map: wallTex, roughness: 0.92, metalness: 0 });
+    // clean plaster from AmbientCG (CC0), warm-tinted; AO comes from overlay quads
+    const wallMat = pbrMat('shared/assets/textures/plaster', 3, 1.5, {
+      color: 0xe3d2b4, roughness: 0.94, normalScale: new T.Vector2(0.5, 0.5)
+    });
 
     // floor: dedicated washed-oak plank texture so it reads distinct from the desk wood
     const floorMat = new T.MeshStandardMaterial({ map: makeFloorPlanks(), roughness: 0.92, metalness: 0 });
@@ -330,13 +344,29 @@
     groundMesh = floor;
 
     const ceil = new T.Mesh(new T.PlaneGeometry(RX * 2, RZ * 2),
-      new T.MeshStandardMaterial({ map: makePlaster('#f2e8d6', '#e6d8c0', false), roughness: 0.95 }));
+      new T.MeshStandardMaterial({ map: makePlaster('#f2e8d6', '#e6d8c0'), roughness: 0.95 }));
     ceil.rotation.x = Math.PI / 2; ceil.position.set(0, ceilY, 0); room.add(ceil);
 
     [[0, -RZ, 0], [0, RZ, Math.PI], [-RX, 0, Math.PI / 2], [RX, 0, -Math.PI / 2]].forEach(function (p, i) {
       const w = new T.Mesh(new T.PlaneGeometry((i < 2 ? RX : RZ) * 2, RH), wallMat);
       w.position.set(p[0], floorY + RH / 2, p[1]); w.rotation.y = p[2];
       w.receiveShadow = true; room.add(w);
+    });
+
+    // vertical corner AO (back-left and back-right corners, both faces)
+    const cw = 10;   // strip width the gradient fades across
+    room.add(addAOStrip(cw, RH, -RX + cw / 2, floorY + RH / 2, -RZ + 0.15, 0, false));        // back wall, from left corner
+    room.add(addAOStrip(cw, RH,  RX - cw / 2, floorY + RH / 2, -RZ + 0.15, 0, true));          // back wall, from right corner
+    room.add(addAOStrip(cw, RH, -RX + 0.15, floorY + RH / 2, -RZ + cw / 2, Math.PI / 2, true)); // left wall, from back corner
+    room.add(addAOStrip(cw, RH,  RX - 0.15, floorY + RH / 2, -RZ + cw / 2, -Math.PI / 2, false));// right wall, from back corner
+    // floor-line AO along the base of each wall (rotate strip so gradient runs bottom->up)
+    [[0, -RZ + 0.15, RX * 2, 0], [-RX + 0.15, 0, RZ * 2, Math.PI / 2], [RX - 0.15, 0, RZ * 2, -Math.PI / 2]].forEach(function (p) {
+      const s = addAOStrip(6, p[2], 0, 0, 0, 0, false);
+      s.geometry.rotateZ(Math.PI / 2);   // gradient now vertical (dark at bottom) — NOTE: spec said -PI/2,
+      // but that maps the canvas' u=0 (dark) edge to local y=+3 (top), inverting the fade; +PI/2 puts
+      // u=0 at local y=-3, which sits at world y=floorY (the floor line) once positioned below.
+      s.position.set(p[0], floorY + 3, p[1]); s.rotation.y = p[3];
+      room.add(s);
     });
 
     // baseboard trim — grounds walls to floor
