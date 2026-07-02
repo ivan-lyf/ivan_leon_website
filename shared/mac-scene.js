@@ -191,6 +191,41 @@
     return t;
   }
 
+  // washed-oak floor planks — cooler + larger-scale than the desk wood so the
+  // two surfaces read as different materials
+  function makeFloorPlanks() {
+    const S = 1024, c = document.createElement('canvas'); c.width = S; c.height = S;
+    const x = c.getContext('2d');
+    const planks = 6, ph = S / planks;
+    const cols = ['#b3a28d', '#aa9a84', '#a29079', '#b8a893', '#ab9b86', '#a59480'];
+    for (let p = 0; p < planks; p++) {
+      const y0 = p * ph;
+      x.fillStyle = cols[p % cols.length];
+      x.fillRect(0, y0, S, ph);
+      for (let g2 = 0; g2 < 60; g2++) {                 // long subtle grain
+        const gy = y0 + Math.random() * ph;
+        const dark = Math.random() < 0.6;
+        x.strokeStyle = dark
+          ? 'rgba(96,84,68,' + (0.04 + Math.random() * 0.08) + ')'
+          : 'rgba(226,216,198,' + (0.03 + Math.random() * 0.05) + ')';
+        x.lineWidth = 0.5 + Math.random() * 1.4;
+        const amp = 1 + Math.random() * 3, ph2 = Math.random() * 6.28;
+        x.beginPath(); x.moveTo(0, gy);
+        for (let xx = 0; xx <= S; xx += 32) x.lineTo(xx, gy + Math.sin(xx * 0.01 + ph2) * amp);
+        x.stroke();
+      }
+      x.fillStyle = 'rgba(60,50,40,0.5)'; x.fillRect(0, y0 + ph - 2, S, 2);   // seam
+      x.fillStyle = 'rgba(236,228,212,0.05)'; x.fillRect(0, y0 + 1, S, 1);    // top catch-light
+      // staggered butt joints
+      const jx = ((p * 0.37) % 1) * S;
+      x.fillStyle = 'rgba(60,50,40,0.45)'; x.fillRect(jx, y0, 2, ph);
+    }
+    const t = new T.CanvasTexture(c);
+    t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(5, 5);
+    t.encoding = T.sRGBEncoding; t.anisotropy = 8;
+    return t;
+  }
+
   function buildDesk() {
     const topMat  = pbrMat('shared/assets/textures/wood', 1.6, 1.0);
     const sideMat = pbrMat('shared/assets/textures/wood', 2.2, 0.32);
@@ -240,8 +275,8 @@
     const wallTex = makePlaster('#eadbc0', '#cdb894', true);   // shared by all 4 walls
     const wallMat = new T.MeshStandardMaterial({ map: wallTex, roughness: 0.92, metalness: 0 });
 
-    // floor: reuse the desk's wood PBR set (texture reuse per budget), darker tint
-    const floorMat = pbrMat('shared/assets/textures/wood', 7, 7, { color: 0xb9a284, roughness: 0.9 });
+    // floor: dedicated washed-oak plank texture so it reads distinct from the desk wood
+    const floorMat = new T.MeshStandardMaterial({ map: makeFloorPlanks(), roughness: 0.92, metalness: 0 });
     const floor = new T.Mesh(new T.PlaneGeometry(RX * 2, RZ * 2), floorMat);
     floor.rotation.x = -Math.PI / 2; floor.position.set(0, floorY, 0);
     floor.receiveShadow = true; room.add(floor);
@@ -536,7 +571,7 @@
     lampLight.target = spotTarget;
 
     // place on the desk to the right of the Mac, angled toward the work area
-    g.position.set(10.8, 0, -1.5); g.rotation.y = -0.35;
+    g.position.set(13.8, 0, -2.5); g.rotation.y = -0.35;
     scene.add(g);
     lampGroup = g;
 
