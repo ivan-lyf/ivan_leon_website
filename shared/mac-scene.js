@@ -24,10 +24,10 @@
   const TEX_W = 1024, TEX_H = 768;
 
   const MOODS = {
-    room:     { bg: 'radial-gradient(120% 95% at 50% 20%, #f1e6d3 0%, #dcc8a8 60%, #c6af8b 100%)', hemi: 0.6, key: 1.05, fill: 0.42, rim: 0.4, shadow: 0.3 },
-    peach:    { bg: 'radial-gradient(120% 95% at 50% 18%, #ffe9cf 0%, #f6cda0 58%, #e9b988 100%)', hemi: 0.6, key: 1.15, fill: 0.42, rim: 0.55, shadow: 0.26 },
-    spotlight:{ bg: 'radial-gradient(95% 80% at 50% 30%, #2a2622 0%, #141210 70%, #0a0908 100%)', hemi: 0.18, key: 1.7, fill: 0.16, rim: 0.85, shadow: 0.42 },
-    white:    { bg: 'radial-gradient(120% 95% at 50% 16%, #ffffff 0%, #eef0f2 60%, #dfe3e7 100%)', hemi: 0.78, key: 1.0, fill: 0.55, rim: 0.4, shadow: 0.2 }
+    room:     { bg: 'radial-gradient(120% 95% at 50% 20%, #f1e6d3 0%, #dcc8a8 60%, #c6af8b 100%)', hemi: 0.6, key: 0.5, fill: 0.42, rim: 0.4, shadow: 0.3 },
+    peach:    { bg: 'radial-gradient(120% 95% at 50% 18%, #ffe9cf 0%, #f6cda0 58%, #e9b988 100%)', hemi: 0.6, key: 0.52, fill: 0.42, rim: 0.55, shadow: 0.26 },
+    spotlight:{ bg: 'radial-gradient(95% 80% at 50% 30%, #2a2622 0%, #141210 70%, #0a0908 100%)', hemi: 0.18, key: 0.8, fill: 0.16, rim: 0.85, shadow: 0.42 },
+    white:    { bg: 'radial-gradient(120% 95% at 50% 16%, #ffffff 0%, #eef0f2 60%, #dfe3e7 100%)', hemi: 0.78, key: 0.48, fill: 0.55, rim: 0.4, shadow: 0.2 }
   };
 
   let scene, camera, glRenderer, controls, lights = {}, shadowMat, groundMesh, texLoader;
@@ -506,7 +506,7 @@
 
     // conical shade aimed at the desk in front of the Mac
     const w = new T.Vector3().fromArray(wrist);
-    const target = new T.Vector3(-7.0, 0, 2.4);
+    const target = new T.Vector3(-6.5, 0, 6.0);
     const dir = new T.Vector3().subVectors(target, w).normalize();
     const head = new T.Group();
     head.add(new T.Mesh(new T.CylinderGeometry(0.28, 1.25, 1.7, 36, 1, true), blue));
@@ -515,8 +515,15 @@
     cap.position.y = 0.85; head.add(cap);
     const bulb = new T.Mesh(new T.SphereGeometry(0.34, 20, 16), bulbMat);
     bulb.position.y = 0.42; head.add(bulb);
-    lampLight = new T.PointLight(0xffd6a0, 0.0, 32, 2.0);
-    lampLight.position.y = 0.3; head.add(lampLight);
+    lampLight = new T.SpotLight(0xffc98a, 0.0, 55, 0.62, 0.55, 1.3);  // warm ~2800K
+    lampLight.position.y = 0.3;
+    lampLight.castShadow = QUALITY.shadows;
+    lampLight.shadow.mapSize.set(QUALITY.shadowMapSize, QUALITY.shadowMapSize);
+    lampLight.shadow.bias = -0.0004; lampLight.shadow.radius = 5;
+    lampLight.shadow.camera.near = 1; lampLight.shadow.camera.far = 60;
+    head.add(lampLight);
+    const spotTarget = new T.Object3D(); spotTarget.position.y = -6; head.add(spotTarget);
+    lampLight.target = spotTarget;
     head.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
     // top (small end) sits at the wrist; mouth opens toward the target
     head.position.copy(w).addScaledVector(dir, 0.85);
@@ -529,13 +536,19 @@
     lampGroup = g;
 
     // ease the warm light on
-    let li = 0; const liMax = 1.1;
+    let li = 0; const liMax = 2.2;
     const ramp = setInterval(function () {
       li += 0.07; lampLight.intensity = Math.min(liMax, li); renderNow();
       if (li >= liMax) clearInterval(ramp);
     }, 40);
 
     renderNow();
+  }
+
+  function bulbWorldPos() {
+    const v = new T.Vector3();
+    if (lampLight) lampLight.getWorldPosition(v);
+    return v;
   }
 
   /* ---------- procedural Macintosh (carved-recess construction) ---------- */
@@ -909,14 +922,31 @@
     glRenderer.domElement.id = 'gl';
     document.body.appendChild(glRenderer.domElement);
 
-    lights.hemi = new T.HemisphereLight(0xfff2e2, 0x8a7a66, 0.6); scene.add(lights.hemi);
-    lights.key = new T.DirectionalLight(0xffffff, 1.15);
-    lights.key.position.set(-9, 16, 13); lights.key.castShadow = true;
-    lights.key.shadow.mapSize.set(2048, 2048); lights.key.shadow.radius = 7; lights.key.shadow.bias = -0.0004;
-    const sc = lights.key.shadow.camera; sc.left = -24; sc.right = 24; sc.top = 26; sc.bottom = -26; sc.near = 1; sc.far = 80;
-    scene.add(lights.key);
-    lights.fill = new T.DirectionalLight(0xffffff, 0.42); lights.fill.position.set(12, 8, 9); scene.add(lights.fill);
-    lights.rim = new T.DirectionalLight(0xffffff, 0.55); lights.rim.position.set(2, 9, -14); scene.add(lights.rim);
+    // soft warm gradient environment -> believable speculars on metal/ceramic
+    (function makeEnv() {
+      const envScene = new T.Scene();
+      const c = document.createElement('canvas'); c.width = 4; c.height = 64;
+      const x = c.getContext('2d');
+      const g = x.createLinearGradient(0, 0, 0, 64);
+      g.addColorStop(0, '#fff3e0'); g.addColorStop(0.55, '#d9c4a4'); g.addColorStop(1, '#6e5c48');
+      x.fillStyle = g; x.fillRect(0, 0, 4, 64);
+      const t = new T.CanvasTexture(c); t.encoding = T.sRGBEncoding;
+      envScene.background = t;
+      const box = new T.Mesh(new T.BoxGeometry(100, 100, 100),
+        new T.MeshBasicMaterial({ map: t, side: T.BackSide }));
+      envScene.add(box);
+      const pmrem = new T.PMREMGenerator(glRenderer);
+      scene.environment = pmrem.fromScene(envScene, 0.04).texture;
+      pmrem.dispose();
+    })();
+
+    lights.hemi = new T.HemisphereLight(0xffe9d2, 0x6e5f4d, 0.5); scene.add(lights.hemi);
+    // soft cool "window" fill — NO shadow (lamp is the sole real-time caster)
+    lights.key = new T.DirectionalLight(0xfff2df, 0.5);
+    lights.key.position.set(-14, 18, 12); scene.add(lights.key);
+    lights.fill = new T.DirectionalLight(0xffffff, 0.28); lights.fill.position.set(12, 8, 9); scene.add(lights.fill);
+    // subtle cool rim from behind to separate props from the back wall
+    lights.rim = new T.DirectionalLight(0xd6e4ff, 0.4); lights.rim.position.set(3, 11, -16); scene.add(lights.rim);
 
     shadowMat = new T.ShadowMaterial({ opacity: 0.26 });
     // (the room floor, built below, receives the shadow)
