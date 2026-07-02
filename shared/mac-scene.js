@@ -614,7 +614,7 @@
   // pull-string toggle: lampGlow (glow sprite) + lampEmissives (shade materials with
   // emissive) are filled in once the GLB loads; lampToggleTargets always gets the
   // invisible hit-proxy (added synchronously below) plus any name-matched string mesh.
-  let lampGlow = null, lampEmissives = [], lampToggleTargets = [], lampHitMesh = null;
+  let lampGlow = null, lampEmissives = [], lampToggleTargets = [], lampHitMesh = null, stringOutline = null;
   let lampOn = true, lampFade = null;   // lampFade: {from, to, t0} — processed each rendered frame
   function buildLamp() {
     const g = new T.Group();
@@ -657,17 +657,34 @@
       glow.position.copy(lampBulbAnchor.position);
       g.add(glow);
       lampGlow = glow;
+
+      // solid white outline hugging the chain silhouette: slightly fatter white
+      // geometry along the exact chain line; depth-tested so the real chain
+      // occludes the middle and only a white rim shows around it
+      const outlineMat = new T.MeshBasicMaterial({ color: 0xffffff });
+      const oA = new T.Vector3(1.58, 5.10, 0.75), oB = new T.Vector3(1.67, 2.76, 0.89);
+      const oDir = new T.Vector3().subVectors(oB, oA);
+      const oLine = new T.Mesh(new T.CylinderGeometry(0.075, 0.075, oDir.length(), 8), outlineMat);
+      oLine.position.copy(oA).addScaledVector(oDir, 0.5);
+      oLine.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), oDir.clone().normalize());
+      const oPull = new T.Mesh(new T.ConeGeometry(0.16, 0.34, 10), outlineMat);
+      oPull.position.set(1.67, 2.62, 0.89);   // teardrop pull at the chain's end
+      stringOutline = new T.Group();
+      stringOutline.add(oLine); stringOutline.add(oPull);
+      stringOutline.visible = false;
+      g.add(stringOutline);
+
       renderNow();
     }, undefined, function (e) { console.warn('lamp glb failed', e); });
 
     // invisible click target over the pull string (GLB names may not match — this
     // fallback proxy always exists, added synchronously so it works even before /
     // if the GLB load fails). Local to the lamp group `g`, not the scaled inner GLB.
-    // Material also doubles as the hover highlight (soft white glow via additive
-    // blending); opacity is toggled by the pointermove handler in init().
+    // Stays permanently invisible (opacity 0) — it is only a raycast target; the
+    // hover affordance is the separate stringOutline mesh toggled in init().
     const lampHit = new T.Mesh(new T.CylinderGeometry(0.6, 0.6, 3.0, 8),
-      new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending }));
-    lampHit.position.set(3.04, 4.6, 0.17);   // over the pull chain (tuned live against the GLB)
+      new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
+    lampHit.position.set(1.62, 3.9, 0.79);   // centered on the pull chain (raycast-located)
     lampHit.scale.set(1.4, 1.2, 1.4);
     lampHit.renderOrder = 2;
     lampHit.userData.lampToggle = true;
@@ -1309,12 +1326,12 @@
       raycaster.setFromCamera({ x: nx, y: ny }, camera);
       const hit = raycaster.intersectObjects(lampToggleTargets, false)[0];
       glRenderer.domElement.style.cursor = hit ? 'pointer' : '';
-      // hover highlight: soft white shimmer on the pull-string proxy — only touch
-      // the material (and renderNow) when the hover state actually changes
+      // hover highlight: solid white outline hugging the chain silhouette — only
+      // touch visibility (and renderNow) when the hover state actually changes
       const nowHovered = !!hit;
       if (nowHovered !== lampHovered) {
         lampHovered = nowHovered;
-        if (lampHitMesh) { lampHitMesh.material.opacity = lampHovered ? 0.22 : 0; renderNow(); }
+        if (stringOutline) { stringOutline.visible = lampHovered; renderNow(); }
       }
     });
     // pointer leaving the canvas (or a cancelled gesture) doesn't fire further
@@ -1322,7 +1339,7 @@
     ['pointerleave', 'pointercancel'].forEach(function (type) {
       glRenderer.domElement.addEventListener(type, function () {
         glRenderer.domElement.style.cursor = '';
-        if (lampHovered) { lampHovered = false; if (lampHitMesh) { lampHitMesh.material.opacity = 0; renderNow(); } }
+        if (lampHovered) { lampHovered = false; if (stringOutline) { stringOutline.visible = false; renderNow(); } }
       });
     });
     controls._userActive = false;
