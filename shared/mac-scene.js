@@ -778,9 +778,51 @@
     mug.add(steamPts);
   }
 
+  /* ---------- procedural bonsai plant + glazed pot ---------- */
+  let bonsaiGroup = null, bonsaiFoliage = null;
+  function buildBonsai() {
+    const g = new T.Group();
+    const potMat  = new T.MeshStandardMaterial({ color: 0x3f5a52, roughness: 0.35, envMapIntensity: 0.7 });
+    const soilMat = new T.MeshStandardMaterial({ color: 0x2e2018, roughness: 1.0 });
+    const barkMat = new T.MeshStandardMaterial({ color: 0x5a4632, roughness: 0.95 });
+
+    const pot = new T.Mesh(new T.CylinderGeometry(1.5, 1.15, 1.0, 8), potMat); // low octagonal pot
+    pot.position.y = 0.5; pot.castShadow = true; pot.receiveShadow = true; g.add(pot);
+    const soil = new T.Mesh(new T.CylinderGeometry(1.32, 1.32, 0.12, 8), soilMat);
+    soil.position.y = 1.0; g.add(soil);
+
+    // S-curved trunk with a low branch
+    const trunkCurve = new T.CatmullRomCurve3([
+      new T.Vector3(0, 1.0, 0), new T.Vector3(0.35, 1.9, 0.1),
+      new T.Vector3(-0.25, 2.7, -0.1), new T.Vector3(0.15, 3.4, 0.05)]);
+    const trunk = new T.Mesh(new T.TubeGeometry(trunkCurve, 12, 0.22, 7), barkMat);
+    trunk.castShadow = true; g.add(trunk);
+    const branch = new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3([
+      new T.Vector3(0.2, 2.2, 0.05), new T.Vector3(1.0, 2.5, 0.3)]), 6, 0.1, 6), barkMat);
+    branch.castShadow = true; g.add(branch);
+
+    // foliage: flattened dark-green blobs with per-cluster tint variation
+    bonsaiFoliage = new T.Group();
+    [[0.15, 3.7, 0, 1.2], [-0.5, 3.3, -0.3, 0.85], [0.75, 3.35, 0.3, 0.8],
+     [1.15, 2.6, 0.35, 0.7], [-0.15, 4.1, 0.15, 0.75]].forEach(function (p, i) {
+      const c = new T.Color(0x3d5a2e).offsetHSL(0, 0, (i % 3 - 1) * 0.03);
+      const f = new T.Mesh(new T.SphereGeometry(p[3], 10, 7),
+        new T.MeshStandardMaterial({ color: c, roughness: 1.0, flatShading: true }));
+      f.position.set(p[0], p[1], p[2]); f.scale.y = 0.55;
+      f.castShadow = true; bonsaiFoliage.add(f);
+    });
+    g.add(bonsaiFoliage);
+
+    g.position.set(-11.5, 0, -4.0);   // back-left desk corner, opposite the lamp
+    scene.add(g); bonsaiGroup = g;
+    addContactShadow(scene, 3.6, 3.6, -11.5, -4.0, 0.3);
+    renderNow();
+  }
+
   window.__updateIdleFX = function (now) {
     if (steamMat) steamMat.uniforms.uTime.value = now / 1000;
-    // (Task 9 adds foliage sway, Task 10 adds motes here)
+    if (bonsaiFoliage && QUALITY.name === 'high') bonsaiFoliage.rotation.z = Math.sin(now / 2600) * 0.008;
+    // (Task 10 adds motes here)
   };
 
   /* ---------- procedural Macintosh (carved-recess construction) ---------- */
@@ -1248,6 +1290,7 @@
     buildKeyboard();
     buildLamp();
     buildMug();
+    buildBonsai();
 
     // dim IBL ambient so the lamp reads as the key light (r128 has no global env intensity)
     dimMaterials(scene);
@@ -1426,6 +1469,7 @@
     setKeyboard: function (p) { if (!keyboardGroup) return; if (p.x != null) keyboardGroup.position.x = p.x; if (p.z != null) keyboardGroup.position.z = p.z; if (p.rot != null) keyboardGroup.rotation.y = p.rot; renderNow(); return keyboardGroup.position; },
     setLamp: function (p) { if (!lampGroup) return; if (p.x != null) lampGroup.position.x = p.x; if (p.z != null) lampGroup.position.z = p.z; if (p.rot != null) lampGroup.rotation.y = p.rot; if (p.light != null && lampLight) lampLight.intensity = p.light; renderNow(); return lampGroup.position; },
     setMug: function (p) { if (!mugGroup) return; if (p.x != null) mugGroup.position.x = p.x; if (p.z != null) mugGroup.position.z = p.z; renderNow(); return mugGroup.position; },
+    setBonsai: function (p) { if (!bonsaiGroup) return; if (p.x != null) bonsaiGroup.position.x = p.x; if (p.z != null) bonsaiGroup.position.z = p.z; renderNow(); return bonsaiGroup.position; },
     setBulge: function (b) { BULGE = b; rebuildScreen(); return BULGE; },
     setScreen: function (p) { Object.assign(SCREEN, p); rebuildScreen(); return SCREEN; },
     debugAzimuth: function (deg, elevDeg, dist) {
