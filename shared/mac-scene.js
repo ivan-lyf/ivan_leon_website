@@ -70,7 +70,7 @@
       fromR: sph.radius, fromPol: sph.phi, fromAz: az,
       fromTx: controls.target.x, fromTy: controls.target.y, fromTz: controls.target.z,
       toR: 9.0, toPol: Math.PI / 2, toAz: 0,
-      toTx: 0, toTy: SCREEN.y, toTz: 0
+      toTx: 0, toTy: SCREEN.y, toTz: -2
     };
     controls.enabled = false;
   }
@@ -572,7 +572,7 @@
 
     // coiled cable from the back of the keyboard up to the Mac's front port
     const startW = new T.Vector3(0, caseH * 0.7, -caseD / 2).add(g.position);
-    const end = new T.Vector3(0, 1.0, 4.55);
+    const end = new T.Vector3(0, 1.0, 2.55);
     const curve = new T.CatmullRomCurve3([
       startW,
       new T.Vector3(0.25, 0.4, startW.z - 0.7),
@@ -614,8 +614,8 @@
   // pull-string toggle: lampGlow (glow sprite) + lampEmissives (shade materials with
   // emissive) are filled in once the GLB loads; lampToggleTargets always gets the
   // invisible hit-proxy (added synchronously below) plus any name-matched string mesh.
-  let lampGlow = null, lampEmissives = [], lampToggleTargets = [];
-  let lampOn = true, lampFade = null;
+  let lampGlow = null, lampEmissives = [], lampToggleTargets = [], lampHitMesh = null;
+  let lampOn = true, lampFade = null;   // lampFade: {from, to, t0} — processed each rendered frame
   function buildLamp() {
     const g = new T.Group();
     // user-supplied table lamp GLB (Draco+WebP, emissive shade) — boot-gated via loadMgr
@@ -663,12 +663,17 @@
     // invisible click target over the pull string (GLB names may not match — this
     // fallback proxy always exists, added synchronously so it works even before /
     // if the GLB load fails). Local to the lamp group `g`, not the scaled inner GLB.
+    // Material also doubles as the hover highlight (soft white glow via additive
+    // blending); opacity is toggled by the pointermove handler in init().
     const lampHit = new T.Mesh(new T.CylinderGeometry(0.6, 0.6, 3.0, 8),
-      new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
-    lampHit.position.set(1.0, 4.2, 1.0);   // near the shade's pull-chain area — controller live-tunes
+      new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending }));
+    lampHit.position.set(3.04, 4.6, 0.17);   // over the pull chain (tuned live against the GLB)
+    lampHit.scale.set(1.4, 1.2, 1.4);
+    lampHit.renderOrder = 2;
     lampHit.userData.lampToggle = true;
     g.add(lampHit);
     lampToggleTargets.push(lampHit);
+    lampHitMesh = lampHit;
 
     // key light (kept from the procedural version — the scene's only shadow caster)
     lampLight = new T.SpotLight(0xffc98a, 0.0, 55, 0.9, 0.6, 1.3);  // warm ~2800K
@@ -680,9 +685,9 @@
     g.add(lampLight);
 
     // spotlight target: local to the lamp group so it tracks MacScene.setLamp moves;
-    // straight down from the bulb (banker's lamp)
+    // mostly vertical, slight forward throw past the base (user-tuned)
     const spotTarget = new T.Object3D();
-    spotTarget.position.set(0, 0, 0.8);
+    spotTarget.position.set(0, 0, 3.0);
     g.add(spotTarget);
     lampLight.target = spotTarget;
 
@@ -709,21 +714,23 @@
   }
 
   // pull-string toggle: soft ~220ms ramp of intensity/glow/emissive; string click and
-  // MacScene.setLampOn share this one path.
+  // MacScene.setLampOn share this one path. Driven by the governed animate loop
+  // (module-level `lampFade` state, consumed each rendered frame) rather than a
+  // recursive rAF chain — rAF is suspended in hidden tabs, which used to leave a
+  // mid-fade toggle stuck forever.
   function setLampOn(on) {
     if (!lampLight) return;
     lampOn = !!on;
-    const from = lampLight.intensity, to = lampOn ? 15 : 0, t0 = performance.now();
-    cancelAnimationFrame(lampFade);
-    (function step(nw) {
-      const k = Math.min(1, (nw - t0) / 220);
-      lampLight.intensity = from + (to - from) * k;
-      if (lampGlow) lampGlow.material.opacity = 0.55 * (lampLight.intensity / 15);
-      if (lampEmissives.length) lampEmissives.forEach(function (m) { m.emissiveIntensity = m.userData.baseEmissive * Math.max(0.05, lampLight.intensity / 15); });
-      renderNow();
-      if (k < 1) lampFade = requestAnimationFrame(step);
-    })(t0);
+    lampFade = { from: lampLight.intensity, to: lampOn ? 15 : 0, t0: performance.now() };
     bumpActivity();
+    // hidden-tab safety: frames may not render — hard-set the end state shortly after
+    clearTimeout(window.__lampFadeEnd);
+    window.__lampFadeEnd = setTimeout(function () { if (lampFade) { applyLampLevel(lampFade.to); lampFade = null; } }, 300);
+  }
+  function applyLampLevel(v) {
+    lampLight.intensity = v;
+    if (lampGlow) lampGlow.material.opacity = 0.55 * (v / 15);
+    if (lampEmissives.length) lampEmissives.forEach(function (m) { m.emissiveIntensity = m.userData.baseEmissive * Math.max(0.05, v / 15); });
   }
 
   /* ---------- procedural glazed coffee mug + looping steam ---------- */
@@ -964,7 +971,8 @@
       f.position.set(p[0], 0.11, p[1]); f.castShadow = true; machine.add(f);
     });
 
-    addContactShadow(scene, 12, 12, 0, 0, 0.32);
+    addContactShadow(scene, 12, 12, 0, -2, 0.32);
+    machine.position.z = -2;   // move the monitor back from the desk front (user-tuned)
     scene.add(machine);
     buildCurvedScreen();
   }
@@ -1289,7 +1297,7 @@
     glRenderer.domElement.addEventListener('click', forwardClick);
     // lamp pull-string cursor affordance — throttled to ~10Hz (cheap raycast, but no
     // need to run it every pointermove event)
-    let _lampCursorT = 0;
+    let _lampCursorT = 0, lampHovered = false;
     glRenderer.domElement.addEventListener('pointermove', function (e) {
       const now = performance.now();
       if (now - _lampCursorT < 100) return;
@@ -1301,6 +1309,21 @@
       raycaster.setFromCamera({ x: nx, y: ny }, camera);
       const hit = raycaster.intersectObjects(lampToggleTargets, false)[0];
       glRenderer.domElement.style.cursor = hit ? 'pointer' : '';
+      // hover highlight: soft white shimmer on the pull-string proxy — only touch
+      // the material (and renderNow) when the hover state actually changes
+      const nowHovered = !!hit;
+      if (nowHovered !== lampHovered) {
+        lampHovered = nowHovered;
+        if (lampHitMesh) { lampHitMesh.material.opacity = lampHovered ? 0.22 : 0; renderNow(); }
+      }
+    });
+    // pointer leaving the canvas (or a cancelled gesture) doesn't fire further
+    // pointermoves — clear the hover highlight/cursor explicitly so it can't get stuck on
+    ['pointerleave', 'pointercancel'].forEach(function (type) {
+      glRenderer.domElement.addEventListener(type, function () {
+        glRenderer.domElement.style.cursor = '';
+        if (lampHovered) { lampHovered = false; if (lampHitMesh) { lampHitMesh.material.opacity = 0; renderNow(); } }
+      });
     });
     controls._userActive = false;
     glRenderer.domElement.addEventListener('pointerdown', () => controls._userActive = true);
@@ -1356,6 +1379,11 @@
       }
       controls.update();
       if (window.__updateIdleFX) window.__updateIdleFX(now);  // steam/motes/sway hook (later tasks)
+      if (lampFade) {
+        const k = Math.min(1, (now - lampFade.t0) / 220);
+        applyLampLevel(lampFade.from + (lampFade.to - lampFade.from) * k);
+        if (k >= 1) lampFade = null;
+      }
       glRenderer.render(scene, camera);
     })();
   }
