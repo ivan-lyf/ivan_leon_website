@@ -993,6 +993,47 @@ git add -A && git commit -m "chore(scene): final tuning + verification fixes for
 
 ---
 
+### Task 13: GitHub link icon (user addition, 2026-07-02)
+
+**Files:**
+- Modify: `index.html` — GitHub icon button + CSS.
+
+**Interfaces:**
+- Consumes: `#audio-toggle` chip styling (Task 11) — match it visually.
+- Produces: fixed bottom-right GitHub icon linking to `https://github.com/ggttlplp201`.
+
+- [ ] **Step 1: Add the link next to the sound chip in `index.html`**
+
+Add inside `<body>` (after the `#vignette` div):
+```html
+<a id="gh-link" href="https://github.com/ggttlplp201" target="_blank" rel="noopener noreferrer" aria-label="GitHub profile">
+  <svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor" aria-hidden="true">
+    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+  </svg>
+</a>
+```
+
+CSS (matches the `#audio-toggle` chip; sits to its left once Task 11 lands):
+```css
+#gh-link { position: fixed; right: 18px; bottom: 58px; z-index: 6;
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 999px;
+  background: rgba(34,26,18,0.72); color: #ffe9cf;
+  border: 1px solid rgba(255,233,207,0.25);
+  backdrop-filter: blur(6px); opacity: 0.85; }
+#gh-link:hover { opacity: 1; color: #ffd9a8; }
+```
+
+- [ ] **Step 2: Verify** — icon visible bottom-right above the sound chip, opens the GitHub profile in a new tab, doesn't overlap `#hud`, still hidden correctly behind the screen-view backdrop (z 6 < 40 — wait, hud is 5 and backdrop 40: 6 is fine).
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add index.html && git commit -m "feat(ui): GitHub profile link chip"
+```
+
+---
+
 ## Self-Review Notes
 
 - **Spec coverage:** Task 1 env/lighting → Tasks 3+4+5; Task 2 mug/steam → Task 8; Task 3 audio → Task 11; Task 4 skis/snowboard → Tasks 6+7; Task 5 keyboard → Tasks 6+7; Task 6 bonsai → Task 9; Task 7 perf → Tasks 1+2+12 (plus tier gates in 8/9/10); Sketchfab workflow + credits → Task 6; lazy-load requirement → Task 7's `whenInteractive`; idle motion → Tasks 8/9/10. Camera float: deliberately skipped (conflicts with the custom zoom-glide/OrbitControls damping; spec marks it optional).

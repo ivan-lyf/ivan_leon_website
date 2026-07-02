@@ -186,40 +186,6 @@
     return floorY;
   }
 
-  /* ---------- concrete room ---------- */
-  function makeConcrete() {
-    const S = 1024, c = document.createElement('canvas'); c.width = S; c.height = S;
-    const x = c.getContext('2d');
-    x.fillStyle = '#adaca7'; x.fillRect(0, 0, S, S);
-    // soft mottled blotches (patchy plaster)
-    for (let i = 0; i < 70; i++) {
-      const r = 80 + Math.random() * 280, gx = Math.random() * S, gy = Math.random() * S;
-      const g = x.createRadialGradient(gx, gy, 0, gx, gy, r);
-      const dk = Math.random() < 0.5;
-      g.addColorStop(0, dk ? 'rgba(118,116,112,' + (0.04 + Math.random() * 0.08) + ')' : 'rgba(214,213,208,' + (0.04 + Math.random() * 0.08) + ')');
-      g.addColorStop(1, 'rgba(0,0,0,0)');
-      x.fillStyle = g; x.fillRect(0, 0, S, S);
-    }
-    // fine aggregate speckle
-    for (let i = 0; i < 11000; i++) {
-      const v = 92 + Math.random() * 116 | 0;
-      x.fillStyle = 'rgba(' + v + ',' + v + ',' + (v - 5) + ',' + (0.04 + Math.random() * 0.1) + ')';
-      x.fillRect(Math.random() * S, Math.random() * S, 1, 1);
-    }
-    // a few hairline cracks
-    for (let i = 0; i < 6; i++) {
-      x.strokeStyle = 'rgba(68,66,62,' + (0.1 + Math.random() * 0.12) + ')';
-      x.lineWidth = 0.5 + Math.random();
-      let px = Math.random() * S, py = Math.random() * S;
-      x.beginPath(); x.moveTo(px, py);
-      const seg = 8 + Math.random() * 14;
-      for (let s = 0; s < seg; s++) { px += (Math.random() - 0.5) * 130; py += (Math.random() - 0.3) * 130; x.lineTo(px, py); }
-      x.stroke();
-    }
-    const t = new T.CanvasTexture(c);
-    t.wrapS = t.wrapT = T.RepeatWrapping; t.encoding = T.sRGBEncoding; t.anisotropy = 8;
-    return t;
-  }
 
   function buildRoom(floorY) {
     const RX = 58, RZ = 52, RH = 50;          // half-width, half-depth, height
@@ -907,7 +873,7 @@
     lights.rim = new T.DirectionalLight(0xffffff, 0.55); lights.rim.position.set(2, 9, -14); scene.add(lights.rim);
 
     shadowMat = new T.ShadowMaterial({ opacity: 0.26 });
-    // (the concrete room floor, built below, receives the shadow)
+    // (the room floor, built below, receives the shadow)
 
     controls = new T.OrbitControls(camera, glRenderer.domElement);
     controls.enableDamping = true; controls.dampingFactor = 0.07; controls.enablePan = true;
