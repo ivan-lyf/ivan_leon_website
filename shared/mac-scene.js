@@ -24,8 +24,8 @@
   const TEX_W = 1024, TEX_H = 768;
 
   const MOODS = {
-    room:     { bg: 'radial-gradient(120% 95% at 50% 20%, #f1e6d3 0%, #dcc8a8 60%, #c6af8b 100%)', hemi: 0.6, key: 0.5, fill: 0.42, rim: 0.4, shadow: 0.3 },
-    peach:    { bg: 'radial-gradient(120% 95% at 50% 18%, #ffe9cf 0%, #f6cda0 58%, #e9b988 100%)', hemi: 0.6, key: 0.52, fill: 0.42, rim: 0.55, shadow: 0.26 },
+    room:     { bg: 'radial-gradient(120% 95% at 50% 20%, #f1e6d3 0%, #dcc8a8 60%, #c6af8b 100%)', hemi: 0.42, key: 0.5, fill: 0.3, rim: 0.4, shadow: 0.3 },
+    peach:    { bg: 'radial-gradient(120% 95% at 50% 18%, #ffe9cf 0%, #f6cda0 58%, #e9b988 100%)', hemi: 0.45, key: 0.52, fill: 0.32, rim: 0.55, shadow: 0.26 },
     spotlight:{ bg: 'radial-gradient(95% 80% at 50% 30%, #2a2622 0%, #141210 70%, #0a0908 100%)', hemi: 0.18, key: 0.8, fill: 0.16, rim: 0.85, shadow: 0.42 },
     white:    { bg: 'radial-gradient(120% 95% at 50% 16%, #ffffff 0%, #eef0f2 60%, #dfe3e7 100%)', hemi: 0.78, key: 0.48, fill: 0.55, rim: 0.4, shadow: 0.2 }
   };
@@ -515,20 +515,25 @@
     cap.position.y = 0.85; head.add(cap);
     const bulb = new T.Mesh(new T.SphereGeometry(0.34, 20, 16), bulbMat);
     bulb.position.y = 0.42; head.add(bulb);
-    lampLight = new T.SpotLight(0xffc98a, 0.0, 55, 0.62, 0.55, 1.3);  // warm ~2800K
+    lampLight = new T.SpotLight(0xffc98a, 0.0, 55, 0.75, 0.6, 1.3);  // warm ~2800K
     lampLight.position.y = 0.3;
     lampLight.castShadow = QUALITY.shadows;
     lampLight.shadow.mapSize.set(QUALITY.shadowMapSize, QUALITY.shadowMapSize);
     lampLight.shadow.bias = -0.0004; lampLight.shadow.radius = 5;
     lampLight.shadow.camera.near = 1; lampLight.shadow.camera.far = 60;
     head.add(lampLight);
-    const spotTarget = new T.Object3D(); spotTarget.position.y = -6; head.add(spotTarget);
-    lampLight.target = spotTarget;
     head.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
     // top (small end) sits at the wrist; mouth opens toward the target
     head.position.copy(w).addScaledVector(dir, 0.85);
     head.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), dir.clone().negate());
     g.add(head);
+
+    // spotlight target: local to the lamp group so it tracks MacScene.setLamp moves;
+    // resolves to world ≈ (1.5, 0, 5.5) — the desk area between keyboard and Mac
+    const spotTarget = new T.Object3D();
+    spotTarget.position.set(-6.33, 0, 9.76);
+    g.add(spotTarget);
+    lampLight.target = spotTarget;
 
     // place on the desk to the right of the Mac, angled toward the work area
     g.position.set(10.8, 0, -1.5); g.rotation.y = -0.35;
@@ -536,9 +541,9 @@
     lampGroup = g;
 
     // ease the warm light on
-    let li = 0; const liMax = 2.2;
+    let li = 0; const liMax = 12;
     const ramp = setInterval(function () {
-      li += 0.07; lampLight.intensity = Math.min(liMax, li); renderNow();
+      li += 0.5; lampLight.intensity = Math.min(liMax, li); renderNow();
       if (li >= liMax) clearInterval(ramp);
     }, 40);
 
