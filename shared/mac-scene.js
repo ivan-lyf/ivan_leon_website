@@ -457,7 +457,7 @@
         const hiLean = new T.Group();
         hiLean.add(hiPivot);
         hiLean.rotation.x = -0.18;
-        hiLean.rotation.y = -0.1;
+        hiLean.rotation.y = Math.PI - 0.1;  // orientation correction (tuned visually): topsheet graphic faces camera
         hiLean.position.set(30, room.floorY, -(room.RZ) + 6.5);
 
         // PBR touch-up: sourced material reads a bit hot/metal under our lights —
