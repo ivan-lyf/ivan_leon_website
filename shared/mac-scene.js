@@ -8,6 +8,16 @@
 (function () {
   const T = window.THREE;
 
+  // device capability tier — lite gets lower DPR, baked-only shadows, fewer particles
+  const QUALITY = (function () {
+    const mobile = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+    const cores = navigator.hardwareConcurrency || 4;
+    const lite = mobile || cores <= 4;
+    return lite
+      ? { name: 'lite', dpr: 1.25, shadows: false, shadowMapSize: 1024, motes: 0,  steamCount: 24 }
+      : { name: 'high', dpr: 1.75, shadows: true,  shadowMapSize: 1024, motes: 60, steamCount: 60 };
+  })();
+
   // screen placement is derived from the model below; bulge = dome depth
   let SCREEN = { x: 0, y: 7.5, z: 0, w: 6.0, h: 4.5 };
   let BULGE = 0.24;
@@ -801,6 +811,7 @@
   }
 
   function refreshTexture() {
+    if (document.hidden) return;
     if (!window.htmlToImage || !screenEl) return;
     if (inScreenView) return;
     if (refreshing) { refreshQueued = true; return; }
@@ -854,12 +865,12 @@
     camera.position.set(0, 8.0, 30);
 
     glRenderer = new T.WebGLRenderer({ antialias: true, alpha: true });
-    glRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    glRenderer.setPixelRatio(Math.min(window.devicePixelRatio, QUALITY.dpr));
     glRenderer.setSize(window.innerWidth, window.innerHeight);
     glRenderer.outputEncoding = T.sRGBEncoding;
     glRenderer.toneMapping = T.ACESFilmicToneMapping;
     glRenderer.toneMappingExposure = 1.05;
-    glRenderer.shadowMap.enabled = true; glRenderer.shadowMap.type = T.PCFSoftShadowMap;
+    glRenderer.shadowMap.enabled = QUALITY.shadows; glRenderer.shadowMap.type = T.PCFSoftShadowMap;
     glRenderer.domElement.id = 'gl';
     document.body.appendChild(glRenderer.domElement);
 
@@ -884,6 +895,8 @@
     controls.minPolarAngle = Math.PI * 0.27;   // can't rise above the scene
     controls.maxPolarAngle = Math.PI * 0.52;   // can't drop below ~eye level (no underground)
     controls.update();
+    controls.addEventListener('change', bumpActivity);              // orbit / damping settle
+    glRenderer.domElement.addEventListener('pointerdown', bumpActivity);
 
     // Smooth "scroll to enter": OrbitControls' built-in wheel zoom is stepped and
     // jumpy. Disable it and drive a single damped distance ourselves, so the wheel
@@ -893,6 +906,7 @@
     glRenderer.domElement.addEventListener('wheel', function (e) {
       if (inScreenView || flyIn) return;
       e.preventDefault();
+      bumpActivity();
       // multiplicative so each notch feels even at any distance; gentle factor
       zoomTarget *= Math.exp(e.deltaY * 0.0012);
       zoomTarget = Math.max(controls.minDistance, Math.min(controls.maxDistance, zoomTarget));
@@ -947,9 +961,21 @@
     // zoom-in-to-fullscreen: press Esc to leave
     window.addEventListener('keydown', function (e) { if (e.key === 'Escape' && inScreenView) exitScreenView(); });
 
+    // ---- frame governor: cap active fps, drop lower when idle, rely on rAF's
+    // built-in pause when the tab is hidden. Idle animations (steam, motes)
+    // stay alive at the idle rate; all animation is driven by real time.
+    const FPS_ACTIVE = 45, FPS_IDLE = 24, IDLE_AFTER_MS = 3000;
+    let lastFrameT = 0, lastActivityT = performance.now();
+    function bumpActivity() { lastActivityT = performance.now(); }
+
     window.__frames = 0;
-    (function animate() {
+    (function animate(now) {
       requestAnimationFrame(animate);
+      now = now || performance.now();
+      const active = flyIn || (now - lastActivityT < IDLE_AFTER_MS);
+      const budget = 1000 / (active ? FPS_ACTIVE : FPS_IDLE);
+      if (now - lastFrameT < budget - 0.75) return;   // skip frame
+      lastFrameT = now;
       window.__frames++;
       if (autoRotate && !controls._userActive) machine.rotation.y += 0.0022;
       if (flyIn && !inScreenView) {
@@ -976,9 +1002,11 @@
         if (Math.abs(zoomTarget - curDist) > 0.0008) {
           const nd = curDist + (zoomTarget - curDist) * 0.12;
           camera.position.copy(controls.target).add(offset.multiplyScalar(nd / curDist));
+          bumpActivity();
         }
       }
       controls.update();
+      if (window.__updateIdleFX) window.__updateIdleFX(now);  // steam/motes/sway hook (later tasks)
       glRenderer.render(scene, camera);
     })();
   }
@@ -1087,6 +1115,7 @@
   window.MacScene = {
     init, applyTweaks, applyMood, renderNow, refresh: refreshTexture,
     enterScreenView, exitScreenView,
+    getQuality: function () { return QUALITY; },
     setSkis: function (p) { if (!skisGroup) return; if (p.x != null) skisGroup.position.x = p.x; if (p.z != null) skisGroup.position.z = p.z; if (p.lean != null) skisGroup.rotation.x = p.lean; if (p.skew != null) skisGroup.rotation.y = p.skew; renderNow(); return skisGroup.position; },
     setSnowboard: function (p) { if (!snowboardGroup) return; if (p.x != null) snowboardGroup.position.x = p.x; if (p.z != null) snowboardGroup.position.z = p.z; if (p.lean != null) snowboardGroup.rotation.x = p.lean; if (p.skew != null) snowboardGroup.rotation.y = p.skew; renderNow(); return snowboardGroup.position; },
     setKeyboard: function (p) { if (!keyboardGroup) return; if (p.x != null) keyboardGroup.position.x = p.x; if (p.z != null) keyboardGroup.position.z = p.z; if (p.rot != null) keyboardGroup.rotation.y = p.rot; renderNow(); return keyboardGroup.position; },
