@@ -685,7 +685,6 @@
       new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
     lampHit.position.set(1.60, 4.4, 0.80);   // centered on the pull chain (raycast-located)
     lampHit.scale.set(1.4, 1.25, 1.4);
-    lampHit.renderOrder = 2;
     lampHit.userData.lampToggle = true;
     g.add(lampHit);
     lampToggleTargets.push(lampHit);
@@ -713,12 +712,9 @@
     lampGroup = g;
     addContactShadow(scene, 5.5, 5.5, 13.8, -2.5, 0.3);
 
-    // ease the warm light on
-    let li = 0; const liMax = 15;
-    const ramp = setInterval(function () {
-      li += 0.5; lampLight.intensity = Math.min(liMax, li); renderNow();
-      if (li >= liMax) clearInterval(ramp);
-    }, 40);
+    // switch on through the same fade path the pull-string uses (single writer, no race)
+    applyLampLevel(0);
+    setLampOn(true);
 
     renderNow();
   }
