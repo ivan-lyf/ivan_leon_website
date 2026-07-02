@@ -13,8 +13,10 @@ gltf-transform); geometry and materials otherwise unmodified.
 ## Textures
 
 Wood PBR set (`shared/assets/textures/wood_*.jpg`): pre-existing in the repository
-(downscaled to 1024px). Wall plaster, floor planks, desk-wood grain accents, and all
-grime/label textures are generated procedurally at runtime — no third-party texture assets.
+(downscaled to 1024px). Floor planks, desk-wood grain accents, and all grime/label
+textures are generated procedurally at runtime — no third-party texture assets.
+
+Wall plaster PBR set ("Plaster001") from ambientCG.com — https://ambientcg.com/view?id=Plaster001 — CC0 1.0 (verified 2026-07-02), downscaled/re-encoded.
 
 ## Audio
 
