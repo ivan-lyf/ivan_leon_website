@@ -471,17 +471,14 @@
      desk in front of the Macintosh, with a coiled cable running to the front
      port. Built to the same world scale / shadow conventions as the Mac. */
   let keyboardGroup = null;
-  let keycaps = [];
   function buildKeyboard() {
-    keycaps = [];
     const g = new T.Group();
 
-    const caseMat  = new T.MeshStandardMaterial({ color: 0xe0d4b4, roughness: 0.72, metalness: 0.0 });
-    const caseDk   = new T.MeshStandardMaterial({ color: 0xcdbf9a, roughness: 0.8 });
-    const keyMat   = new T.MeshStandardMaterial({ color: 0xb3aa9a, roughness: 0.62 });
-    const modMat   = new T.MeshStandardMaterial({ color: 0x8f8776, roughness: 0.6 });
-    const spaceMat = new T.MeshStandardMaterial({ color: 0xcabfa0, roughness: 0.6 });
-    const footMat  = new T.MeshStandardMaterial({ color: 0x161513, roughness: 0.85 });
+    const caseMat = new T.MeshStandardMaterial({ color: 0xe4d8b8, roughness: 0.72, metalness: 0.0 });
+    const caseDk  = new T.MeshStandardMaterial({ color: 0xcdbf9a, roughness: 0.8 });
+    const keyMat  = new T.MeshStandardMaterial({ color: 0xeee3c6, roughness: 0.55 });
+    const modMat  = new T.MeshStandardMaterial({ color: 0xc9bc9a, roughness: 0.6 });
+    const footMat = new T.MeshStandardMaterial({ color: 0x161513, roughness: 0.85 });
 
     // rows back(0) -> front(4); key widths in keyboard "units"; mod = darker caps
     const rows = [
@@ -509,13 +506,6 @@
     kase.rotation.x = -Math.PI / 2; kase.position.y = caseH / 2;
     kase.castShadow = true; kase.receiveShadow = true; g.add(kase);
 
-    // small Apple logo decal on the case's front-left top margin
-    const kbLogo = new T.Mesh(new T.PlaneGeometry(0.7, 0.75),
-      new T.MeshBasicMaterial({ map: logoTexture(), transparent: true }));
-    kbLogo.rotation.x = -Math.PI / 2;
-    kbLogo.position.set(-caseW / 2 + 1.0, caseH + 0.01, fieldD / 2 + 0.35);
-    g.add(kbLogo);
-
     // recessed darker top plate the keys poke through
     const plate = new T.Mesh(new T.BoxGeometry(maxRowW + 0.22, 0.08, fieldD + 0.22), caseDk);
     plate.position.y = caseH - 0.02; plate.receiveShadow = true; g.add(plate);
@@ -533,14 +523,11 @@
       row.w.forEach(function (wU, ki) {
         const kw = wU * U, cx = x + kw / 2;
         const isMod = row.mod && row.mod.indexOf(ki) !== -1;
-        const isSpace = wU >= 5;
-        const cap = new T.Mesh(capGeo, isSpace ? spaceMat : (isMod ? modMat : keyMat));
+        const cap = new T.Mesh(capGeo, isMod ? modMat : keyMat);
         cap.scale.set(kw - 0.12, 1, U - 0.12);
         cap.position.set(cx, capBaseY, z);
         cap.rotation.x = (ri - (rows.length - 1) / 2) * 0.018;   // gentle sculpt
         cap.castShadow = true; cap.receiveShadow = true; g.add(cap);
-        cap.userData.restY = cap.position.y;
-        keycaps.push(cap);
         x += kw + KGAP;
       });
     });
@@ -573,90 +560,24 @@
     cable.castShadow = true; scene.add(cable);
 
     renderNow();
-  }
 
-  /* ---------- M0100 one-button mouse (procedural) ----------
-     Boxy cream wedge body (taller at the back) with a big square recessed
-     button on the front third, a thin seam behind it, a subtle logo decal
-     on the back half, and a thin cable curving toward the keyboard/Mac. */
-  let mouseGroup = null;
-  function buildMouse() {
-    const g = new T.Group();
+    // swap in the high-fidelity model once the scene is interactive
+    whenInteractive(function () {
+      loadDeferredGLB('shared/assets/models/mechanical_keyboard.glb', function (gltf) {
+        const inner = gltf.scene;
+        // orientation correction (tuned visually): inner.rotation.y = 0;
+        const kb = fitAndGround(inner, caseW, false);   // match procedural footprint width
+        kb.position.set(0, 0, 7.4);
 
-    const bodyMat   = new T.MeshStandardMaterial({ color: 0xe0d4b4, roughness: 0.55, metalness: 0.0 });
-    const buttonMat = new T.MeshStandardMaterial({ color: 0xd8ccae, roughness: 0.5 });
-    const seamMat   = new T.MeshStandardMaterial({ color: 0x3a352a, roughness: 0.8 });
+        // PBR touch-up: single-palette material reads a bit glossy under our env
+        dimMaterials(inner);
 
-    const mW = 1.9, mD = 2.6, mH = 1.0;
-
-    // boxy, slightly wedged body — extruded rounded-rect footprint, chamfered edges.
-    // ExtrudeGeometry local axes (pre-rotation): x/y = footprint (y = the mD/depth
-    // dimension), z = extrude thickness. After body.rotation.x = -PI/2, local z becomes
-    // world-up (height) and local y=+mD/2 (footprint "back" edge) maps to local z=-mD/2
-    // (the group's -z / cable side). Raise the top-face vertices proportionally to y so
-    // the back (cable side) sits taller than the front (button side).
-    const bodyGeo = new T.ExtrudeGeometry(roundedRect(mW, mD, 0.35),
-      { depth: mH, bevelEnabled: true, bevelThickness: 0.09, bevelSize: 0.1, bevelSegments: 2, steps: 1 });
-    bodyGeo.center();
-    (function wedgeTop(geo, riseAtBack) {
-      const pos = geo.attributes.position;
-      for (let i = 0; i < pos.count; i++) {
-        const z = pos.getZ(i), y = pos.getY(i);
-        if (z > mH * 0.15) {   // only the top cap / upper bevel rings — keep the base flat on the desk
-          const t = T.MathUtils.clamp((y / (mD / 2) + 1) / 2, 0, 1);   // 0 at front .. 1 at back
-          pos.setZ(i, z + t * riseAtBack);
-        }
-      }
-      pos.needsUpdate = true;
-      geo.computeVertexNormals();
-    })(bodyGeo, 0.18);
-    const body = new T.Mesh(bodyGeo, bodyMat);
-    body.rotation.x = -Math.PI / 2; body.position.y = mH / 2;
-    body.castShadow = true; body.receiveShadow = true; g.add(body);
-
-    // button: thin rounded box on the front third of the top, slightly proud of the surface
-    const btnGeo = new T.ExtrudeGeometry(roundedRect(1.5, 0.9, 0.18),
-      { depth: 0.12, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 2, steps: 1 });
-    btnGeo.center(); btnGeo.rotateX(-Math.PI / 2);
-    const btnZ = mD / 2 - 0.5;   // front third of the top (mD/2 = front edge)
-    const button = new T.Mesh(btnGeo, buttonMat);
-    button.position.set(0, mH + 0.02, btnZ);
-    button.castShadow = true; button.receiveShadow = true; g.add(button);
-
-    // seam line just behind the button, reading as the button's split line
-    const seam = new T.Mesh(new T.BoxGeometry(1.6, 0.03, 0.06), seamMat);
-    seam.position.set(0, mH + 0.005, btnZ - 0.9 / 2 - 0.06);
-    g.add(seam);
-
-    // subtle logo decal on the back half of the top
-    const mLogo = new T.Mesh(new T.PlaneGeometry(0.45, 0.48),
-      new T.MeshBasicMaterial({ map: logoTexture(), transparent: true, opacity: 0.85 }));
-    mLogo.rotation.x = -Math.PI / 2;
-    mLogo.position.set(0, mH + 0.015, -mD / 2 + 0.7);
-    g.add(mLogo);
-
-    // placement: right of the keyboard, slight yaw
-    g.position.set(7.5, 0, 8.0);
-    g.rotation.y = -0.18;
-    scene.add(g);
-    mouseGroup = g;
-    addContactShadow(scene, 3.0, 3.6, 7.5, 8.0, 0.3);
-
-    // thin cable from the mouse's back-center, curving toward the keyboard/Mac area
-    // with a gentle mid dip
-    const start = new T.Vector3(7.5, 0.3, 8.0 - 1.0);
-    const end = new T.Vector3(4.5, 0.4, 6.8);
-    const curve = new T.CatmullRomCurve3([
-      start,
-      new T.Vector3(6.2, 0.15, 7.6),
-      new T.Vector3(5.2, 0.1, 7.1),
-      end
-    ]);
-    const cable = new T.Mesh(new T.TubeGeometry(curve, 32, 0.05, 8, false),
-      new T.MeshStandardMaterial({ color: 0xddd2b4, roughness: 0.6 }));
-    cable.castShadow = true; scene.add(cable);
-
-    renderNow();
+        scene.add(kb);
+        scene.remove(g);            // retire procedural keyboard (keep the cable + contact shadow)
+        keyboardGroup = kb;
+        bumpActivity(); renderNow();
+      });
+    });
   }
 
   /* ---------- table lamp (user-supplied GLB) ----------
@@ -1348,7 +1269,6 @@
     buildSkis(room);
     buildSnowboard(room);
     buildKeyboard();
-    buildMouse();
     buildLamp();
     buildMug();
 
@@ -1566,7 +1486,6 @@
     setSkis: function (p) { if (!skisGroup) return; if (p.x != null) skisGroup.position.x = p.x; if (p.z != null) skisGroup.position.z = p.z; if (p.lean != null) skisGroup.rotation.x = p.lean; if (p.skew != null) skisGroup.rotation.y = p.skew; renderNow(); return skisGroup.position; },
     setSnowboard: function (p) { if (!snowboardGroup) return; if (p.x != null) snowboardGroup.position.x = p.x; if (p.z != null) snowboardGroup.position.z = p.z; if (p.lean != null) snowboardGroup.rotation.x = p.lean; if (p.skew != null) snowboardGroup.rotation.y = p.skew; renderNow(); return snowboardGroup.position; },
     setKeyboard: function (p) { if (!keyboardGroup) return; if (p.x != null) keyboardGroup.position.x = p.x; if (p.z != null) keyboardGroup.position.z = p.z; if (p.rot != null) keyboardGroup.rotation.y = p.rot; renderNow(); return keyboardGroup.position; },
-    setMouse: function (p) { if (!mouseGroup) return; if (p.x != null) mouseGroup.position.x = p.x; if (p.z != null) mouseGroup.position.z = p.z; if (p.rot != null) mouseGroup.rotation.y = p.rot; renderNow(); return mouseGroup.position; },
     setLamp: function (p) { if (!lampGroup) return; if (p.x != null) lampGroup.position.x = p.x; if (p.z != null) lampGroup.position.z = p.z; if (p.rot != null) lampGroup.rotation.y = p.rot; if (p.light != null && lampLight) lampLight.intensity = p.light; renderNow(); return lampGroup.position; },
     setLampOn: setLampOn,
     setMug: function (p) { if (!mugGroup) return; if (p.x != null) mugGroup.position.x = p.x; if (p.z != null) mugGroup.position.z = p.z; renderNow(); return mugGroup.position; },
