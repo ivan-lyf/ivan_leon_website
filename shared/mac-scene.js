@@ -673,6 +673,9 @@
       stringOutline.visible = false;
       g.add(stringOutline);
 
+      // re-sync glow + emissives to the live lamp state (they were created after the boot fade)
+      applyLampLevel(lampLight.intensity);
+
       renderNow();
     }, undefined, function (e) { console.warn('lamp glb failed', e); });
 
