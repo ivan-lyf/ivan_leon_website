@@ -1084,6 +1084,27 @@ User: keyboard "too modern"; provided a reference image of the classic Apple M01
 - `MacScene.setMouse({x,z,rot})` setter for placement tuning.
 - Verify: keyboard/mouse read as vintage Apple kit next to the Mac at default zoom + close-up; mug left, mouse right, nothing blocks the fly-in path; keycaps still readable silhouettes at close orbit.
 
+### Task 19: Lamp pull-string toggle (user addition, 2026-07-02)
+
+User: clicking the lamp's pull string turns the lamp on/off.
+
+- In `forwardClick` (or a sibling handler on the same click listener), raycast against the lamp: prefer the GLB's chain/string mesh if identifiable by name (`traverse` + name match on 'string'/'chain'/'pull'); fallback = an invisible hit-proxy cylinder (~0.5 radius × 2.5 tall) positioned over the visible string, `visible=false` but raycastable (Mesh with `material.visible=false`... in r128 use `mesh.visible = true` + fully transparent material + `mesh.userData.hitOnly = true` so it never renders opaque).
+- Toggle state: `lampOn` bool. OFF → ramp `lampLight.intensity` to 0 over ~200ms, hide glow sprite, and if the GLB shade material has `emissive`/`emissiveMap`, drop `emissiveIntensity` to ~0.05. ON → reverse (ramp to 15, glow visible, emissiveIntensity restored).
+- Shadow note: with the lamp off, the scene relies on ambient/fill — verify it stays legible (it will; ambient rig ≈ dim room). Contact shadows unaffected.
+- Cursor affordance: on pointermove raycast hit → `glRenderer.domElement.style.cursor = 'pointer'` (throttled to the governed frame, not per-event).
+- `MacScene.setLampOn(bool)` for programmatic control; clicking the string calls the same path. `bumpActivity()` on toggle.
+- Verify: click string → light + glow + emissive respond with a soft ramp; click again → back on; screen click-through unaffected (string raycast must not swallow CRT clicks — check hit ordering/distance).
+
+### Task 20: Clickable keyboard + key sounds (user addition, 2026-07-02 — AFTER Task 17)
+
+User: the (new vintage) keyboard should be clickable with sound effects.
+
+- Raycast clicks against the Task-17 keyboard's keycap meshes (share one array of keycap refs from the builder).
+- On hit: (1) animate the keycap — quick dip along its local -Y (~0.12 units, ~80ms down / ~120ms up, driven from the governed loop via a small active-anim list, no per-key timers); (2) play a synthesized key sound.
+- Sound: Web Audio, synthesized (no assets — matches scene-audio.js license posture): short filtered noise burst (2-4ms attack, ~60ms decay, bandpass ~2-4kHz) + tiny low sine thump; slight random pitch/level variation per press so repeats don't sound machine-gun; share the AudioContext with scene-audio.js if it exists (expose `window.SceneAudio.ctx()` or create lazily on first click — autoplay-safe since a click IS a gesture).
+- Space bar / wider keys use the same path. Volume low (~0.15 of full scale), respect the global mute (SceneAudio.muted() → skip).
+- Verify: clicking several keys gives satisfying varied thocks + visible dips; CRT click-through still works (keyboard sits below the screen raycast path — confirm ordering); no timers leak (grep one shared animation list).
+
 ---
 
 ## Self-Review Notes
