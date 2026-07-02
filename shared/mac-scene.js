@@ -18,6 +18,17 @@
       : { name: 'high', dpr: 1.75, shadows: true,  shadowMapSize: 1024, motes: 60, steamCount: 60 };
   })();
 
+  // scene-wide IBL dim — r128 has no global env intensity, so every material
+  // (including async-loaded GLBs) must apply this individually
+  const ENV_DIM = 0.25;
+  function dimMaterials(root) {
+    root.traverse(function (o) {
+      if (o.isMesh && o.material && o.material.isMeshStandardMaterial) {
+        o.material.envMapIntensity = ENV_DIM; o.material.needsUpdate = true;
+      }
+    });
+  }
+
   // frame-governor activity tracking — module scope so both the animate loop
   // (init) and top-level GLB swap-in callbacks (buildKeyboard/buildSnowboard)
   // can call bumpActivity() when a deferred model finishes loading.
@@ -383,6 +394,8 @@
       // scale so the longest dimension (ski length) is ~26 world units, rotate
       // upright, center x/z and rest bottom on y=0
       const pivot = fitAndGround(gltf.scene, 26, true);
+      // async GLB loads after init()'s dimMaterials(scene) pass — apply it here too
+      dimMaterials(gltf.scene);
 
       // lean group: tilt the top toward the back wall (-z), rest base on floor
       const lean = new T.Group();
@@ -462,13 +475,12 @@
 
         // PBR touch-up: sourced material reads a bit hot/metal under our lights —
         // dial back env reflections and clamp metalness so the topsheet stays matte
+        dimMaterials(inner);
         inner.traverse(function (o) {
           if (o.isMesh && o.material) {
             const mats = Array.isArray(o.material) ? o.material : [o.material];
             mats.forEach(function (m) {
-              m.envMapIntensity = 0.25;
               if ('metalness' in m) m.metalness = Math.min(m.metalness, 0.2);
-              m.needsUpdate = true;
             });
           }
         });
@@ -586,15 +598,7 @@
         kb.position.set(0, 0, 7.4);
 
         // PBR touch-up: single-palette material reads a bit glossy under our env
-        inner.traverse(function (o) {
-          if (o.isMesh && o.material) {
-            const mats = Array.isArray(o.material) ? o.material : [o.material];
-            mats.forEach(function (m) {
-              m.envMapIntensity = 0.25;
-              m.needsUpdate = true;
-            });
-          }
-        });
+        dimMaterials(inner);
 
         scene.add(kb);
         scene.remove(g);            // retire procedural keyboard (keep the cable + contact shadow)
@@ -710,7 +714,8 @@
   let mugGroup = null;
   function buildMug() {
     const g = new T.Group();
-    const glaze = new T.MeshStandardMaterial({ color: 0xb84a3a, roughness: 0.25, metalness: 0.0, envMapIntensity: 0.9 });
+    // envMapIntensity set scene-wide via dimMaterials()
+    const glaze = new T.MeshStandardMaterial({ color: 0xb84a3a, roughness: 0.25, metalness: 0.0 });
     // body: lathe profile (base -> wall -> lip), ~2.2 tall, 1.6 diameter
     const pts = [];
     pts.push(new T.Vector2(0, 0), new T.Vector2(0.62, 0), new T.Vector2(0.72, 0.08),
@@ -723,7 +728,7 @@
     handle.position.set(0.82, 1.15, 0); handle.rotation.z = -Math.PI / 2 + 0.35;
     handle.castShadow = true; g.add(handle);
     const coffee = new T.Mesh(new T.CircleGeometry(0.66, 28),
-      new T.MeshStandardMaterial({ color: 0x2a1608, roughness: 0.15, metalness: 0.0, envMapIntensity: 1.2 }));
+      new T.MeshStandardMaterial({ color: 0x2a1608, roughness: 0.15, metalness: 0.0 }));
     coffee.rotation.x = -Math.PI / 2; coffee.position.y = 1.95; g.add(coffee);
     g.position.set(6.8, 0, 8.2);          // right of keyboard, off the fly-in path (x=0)
     scene.add(g); mugGroup = g;
@@ -1245,11 +1250,7 @@
     buildMug();
 
     // dim IBL ambient so the lamp reads as the key light (r128 has no global env intensity)
-    scene.traverse(function (o) {
-      if (o.isMesh && o.material && o.material.isMeshStandardMaterial) {
-        o.material.envMapIntensity = 0.25; o.material.needsUpdate = true;
-      }
-    });
+    dimMaterials(scene);
 
     ready = true;
     window.__dbg = function () { return { ready: ready, f: window.__frames }; };
