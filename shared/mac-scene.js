@@ -605,81 +605,48 @@
     });
   }
 
-  /* ---------- blue metal anglepoise desk lamp (procedural) ----------
-     Weighted round base, two jointed arms with parallel springs, and an open
-     conical shade aimed at the work area in front of the Mac. A warm point
-     light eases on after load so the lamp reads as switched on. */
-  let lampGroup = null, lampLight = null;
+  /* ---------- table lamp (user-supplied GLB) ----------
+     Draco+WebP model with an emissive shade, loaded through loadMgr so the
+     boot bar tracks it. The key light (warm SpotLight) + its target + contact
+     shadow + bulb glow sprite are kept from the old procedural build; only
+     the visual geometry is now the GLB. */
+  let lampGroup = null, lampLight = null, lampBulbAnchor = null;
   function buildLamp() {
     const g = new T.Group();
-    const blue   = new T.MeshStandardMaterial({ color: 0x2f6cb6, metalness: 0.55, roughness: 0.34 });
-    const blueDk = new T.MeshStandardMaterial({ color: 0x224f86, metalness: 0.6, roughness: 0.3 });
-    const shadeIn= new T.MeshStandardMaterial({ color: 0xf3ede0, roughness: 0.5, side: T.DoubleSide, emissive: 0xffe7b8, emissiveIntensity: 0.5 });
-    const bulbMat= new T.MeshStandardMaterial({ color: 0xfff6dc, emissive: 0xffd98a, emissiveIntensity: 1.7 });
-    const spring = new T.MeshStandardMaterial({ color: 0x9fb4cc, metalness: 0.8, roughness: 0.3 });
-
-    function rod(p1, p2, radius, mat) {
-      const a = new T.Vector3().fromArray(p1), b = new T.Vector3().fromArray(p2);
-      const dir = new T.Vector3().subVectors(b, a), len = dir.length();
-      const m = new T.Mesh(new T.CylinderGeometry(radius, radius, len, 18), mat);
-      m.position.copy(a).addScaledVector(dir, 0.5);
-      m.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), dir.clone().normalize());
-      m.castShadow = true; m.receiveShadow = true; return m;
+    // user-supplied table lamp GLB (Draco+WebP, emissive shade) — boot-gated via loadMgr
+    // so the key light's source is visible from first paint
+    const loader = new T.GLTFLoader(loadMgr || undefined);
+    if (T.DRACOLoader) {
+      if (!_draco) { _draco = new T.DRACOLoader(); _draco.setDecoderPath('https://unpkg.com/three@0.128.0/examples/js/libs/draco/'); }
+      loader.setDRACOLoader(_draco);
     }
-    function joint(p, r) {
-      const m = new T.Mesh(new T.SphereGeometry(r, 20, 16), blueDk);
-      m.position.fromArray(p); m.castShadow = true; return m;
-    }
-    function springRod(p1, p2, off) {
-      const a = new T.Vector3().fromArray(p1), b = new T.Vector3().fromArray(p2);
-      const dir = new T.Vector3().subVectors(b, a).normalize();
-      const perp = new T.Vector3(dir.y, -dir.x, 0).normalize().multiplyScalar(off);
-      g.add(rod([a.x + perp.x, a.y + perp.y, a.z], [b.x + perp.x, b.y + perp.y, b.z], 0.05, spring));
-    }
+    loader.load('shared/assets/models/table_lamp.glb', function (gltf) {
+      const lamp = fitAndGround(gltf.scene, 7.5, false);   // ~7.5 units tall table lamp
+      dimMaterials(lamp);
+      g.add(lamp);
+      // anchor for light + glow at the shade/bulb — GLB bbox top-front area;
+      // tuned visually by the controller afterwards (see report)
+      lampBulbAnchor = new T.Object3D();
+      lampBulbAnchor.position.set(0, 5.6, 0.8);
+      g.add(lampBulbAnchor);
+      lampLight.position.copy(lampBulbAnchor.position);
+      const glow = addGlowSprite(3.2, 0xffd9a0, 0.55);
+      glow.position.copy(lampBulbAnchor.position);
+      g.add(glow);
+      renderNow();
+    }, undefined, function (e) { console.warn('lamp glb failed', e); });
 
-    // joints — local -x reaches toward the Macintosh
-    const shoulder = [0, 1.5, 0], elbow = [-1.5, 5.4, 0], wrist = [-4.6, 6.9, 0];
-
-    // weighted round base + low dome
-    const base = new T.Mesh(new T.CylinderGeometry(1.7, 1.95, 0.5, 44), blue);
-    base.position.y = 0.25; base.castShadow = true; base.receiveShadow = true; g.add(base);
-    const dome = new T.Mesh(new T.SphereGeometry(1.55, 36, 18, 0, Math.PI * 2, 0, Math.PI / 2), blue);
-    dome.position.y = 0.48; dome.scale.y = 0.4; dome.castShadow = true; g.add(dome);
-
-    g.add(rod([0, 0.5, 0], shoulder, 0.28, blue));
-    g.add(joint(shoulder, 0.42));
-    g.add(rod(shoulder, elbow, 0.17, blue)); g.add(joint(elbow, 0.4));
-    g.add(rod(elbow, wrist, 0.17, blue));   g.add(joint(wrist, 0.36));
-    springRod(shoulder, elbow, 0.34);
-    springRod(elbow, wrist, 0.3);
-
-    // conical shade aimed at the desk in front of the Mac
-    const w = new T.Vector3().fromArray(wrist);
-    const target = new T.Vector3(-6.5, 0, 6.0);
-    const dir = new T.Vector3().subVectors(target, w).normalize();
-    const head = new T.Group();
-    head.add(new T.Mesh(new T.CylinderGeometry(0.28, 1.25, 1.7, 36, 1, true), blue));
-    head.add(new T.Mesh(new T.CylinderGeometry(0.26, 1.2, 1.62, 36, 1, true), shadeIn));
-    const cap = new T.Mesh(new T.CylinderGeometry(0.3, 0.3, 0.16, 24), blueDk);
-    cap.position.y = 0.85; head.add(cap);
-    const bulb = new T.Mesh(new T.SphereGeometry(0.34, 20, 16), bulbMat);
-    bulb.position.y = 0.42; head.add(bulb);
-    const glow = addGlowSprite(3.2, 0xffd9a0, 0.55); glow.position.copy(bulb.position); head.add(glow);
+    // key light (kept from the procedural version — the scene's only shadow caster)
     lampLight = new T.SpotLight(0xffc98a, 0.0, 55, 0.75, 0.6, 1.3);  // warm ~2800K
-    lampLight.position.y = 0.3;
+    lampLight.position.set(0, 5.6, 0.8);
     lampLight.castShadow = QUALITY.shadows;
     lampLight.shadow.mapSize.set(QUALITY.shadowMapSize, QUALITY.shadowMapSize);
     lampLight.shadow.bias = -0.0004; lampLight.shadow.radius = 5;
     lampLight.shadow.camera.near = 1; lampLight.shadow.camera.far = 60;
-    head.add(lampLight);
-    head.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
-    // top (small end) sits at the wrist; mouth opens toward the target
-    head.position.copy(w).addScaledVector(dir, 0.85);
-    head.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), dir.clone().negate());
-    g.add(head);
+    g.add(lampLight);
 
     // spotlight target: local to the lamp group so it tracks MacScene.setLamp moves;
-    // resolves to world ≈ (1.5, 0, 5.5) — the desk area between keyboard and Mac
+    // resolves to world ≈ keyboard area
     const spotTarget = new T.Object3D();
     spotTarget.position.set(-6.33, 0, 9.76);
     g.add(spotTarget);
@@ -727,9 +694,9 @@
     const coffee = new T.Mesh(new T.CircleGeometry(0.66, 28),
       new T.MeshStandardMaterial({ color: 0x2a1608, roughness: 0.15, metalness: 0.0 }));
     coffee.rotation.x = -Math.PI / 2; coffee.position.y = 1.95; g.add(coffee);
-    g.position.set(6.8, 0, 8.2);          // right of keyboard, off the fly-in path (x=0)
+    g.position.set(-7.2, 0, 8.4);         // left of keyboard, off the fly-in path (x=0)
     scene.add(g); mugGroup = g;
-    addContactShadow(scene, 2.6, 2.6, 6.8, 8.2, 0.3);
+    addContactShadow(scene, 2.6, 2.6, -7.2, 8.4, 0.3);
     buildSteam(g);
     renderNow();
   }
@@ -775,50 +742,8 @@
     mug.add(steamPts);
   }
 
-  /* ---------- procedural bonsai plant + glazed pot ---------- */
-  let bonsaiGroup = null, bonsaiFoliage = null;
-  function buildBonsai() {
-    const g = new T.Group();
-    const potMat  = new T.MeshStandardMaterial({ color: 0x3f5a52, roughness: 0.35, envMapIntensity: 0.7 });
-    const soilMat = new T.MeshStandardMaterial({ color: 0x2e2018, roughness: 1.0 });
-    const barkMat = new T.MeshStandardMaterial({ color: 0x5a4632, roughness: 0.95 });
-
-    const pot = new T.Mesh(new T.CylinderGeometry(1.5, 1.15, 1.0, 8), potMat); // low octagonal pot
-    pot.position.y = 0.5; pot.castShadow = true; pot.receiveShadow = true; g.add(pot);
-    const soil = new T.Mesh(new T.CylinderGeometry(1.32, 1.32, 0.12, 8), soilMat);
-    soil.position.y = 1.0; g.add(soil);
-
-    // S-curved trunk with a low branch
-    const trunkCurve = new T.CatmullRomCurve3([
-      new T.Vector3(0, 1.0, 0), new T.Vector3(0.35, 1.9, 0.1),
-      new T.Vector3(-0.25, 2.7, -0.1), new T.Vector3(0.15, 3.4, 0.05)]);
-    const trunk = new T.Mesh(new T.TubeGeometry(trunkCurve, 12, 0.22, 7), barkMat);
-    trunk.castShadow = true; g.add(trunk);
-    const branch = new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3([
-      new T.Vector3(0.2, 2.2, 0.05), new T.Vector3(1.0, 2.5, 0.3)]), 6, 0.1, 6), barkMat);
-    branch.castShadow = true; g.add(branch);
-
-    // foliage: flattened dark-green blobs with per-cluster tint variation
-    bonsaiFoliage = new T.Group();
-    [[0.15, 3.7, 0, 1.2], [-0.5, 3.3, -0.3, 0.85], [0.75, 3.35, 0.3, 0.8],
-     [1.15, 2.6, 0.35, 0.7], [-0.15, 4.1, 0.15, 0.75]].forEach(function (p, i) {
-      const c = new T.Color(0x3d5a2e).offsetHSL(0, 0, (i % 3 - 1) * 0.03);
-      const f = new T.Mesh(new T.SphereGeometry(p[3], 10, 7),
-        new T.MeshStandardMaterial({ color: c, roughness: 1.0, flatShading: true }));
-      f.position.set(p[0], p[1], p[2]); f.scale.y = 0.55;
-      f.castShadow = true; bonsaiFoliage.add(f);
-    });
-    g.add(bonsaiFoliage);
-
-    g.position.set(-11.5, 0, -4.0);   // back-left desk corner, opposite the lamp
-    scene.add(g); bonsaiGroup = g;
-    addContactShadow(scene, 3.6, 3.6, -11.5, -4.0, 0.3);
-    renderNow();
-  }
-
   window.__updateIdleFX = function (now) {
     if (steamMat) steamMat.uniforms.uTime.value = now / 1000;
-    if (bonsaiFoliage && QUALITY.name === 'high') bonsaiFoliage.rotation.z = Math.sin(now / 2600) * 0.008;
     // (Task 10 adds motes here)
   };
 
@@ -1289,7 +1214,6 @@
     buildKeyboard();
     buildLamp();
     buildMug();
-    buildBonsai();
 
     // dim IBL ambient so the lamp reads as the key light (r128 has no global env intensity)
     dimMaterials(scene);
@@ -1472,7 +1396,6 @@
     setKeyboard: function (p) { if (!keyboardGroup) return; if (p.x != null) keyboardGroup.position.x = p.x; if (p.z != null) keyboardGroup.position.z = p.z; if (p.rot != null) keyboardGroup.rotation.y = p.rot; renderNow(); return keyboardGroup.position; },
     setLamp: function (p) { if (!lampGroup) return; if (p.x != null) lampGroup.position.x = p.x; if (p.z != null) lampGroup.position.z = p.z; if (p.rot != null) lampGroup.rotation.y = p.rot; if (p.light != null && lampLight) lampLight.intensity = p.light; renderNow(); return lampGroup.position; },
     setMug: function (p) { if (!mugGroup) return; if (p.x != null) mugGroup.position.x = p.x; if (p.z != null) mugGroup.position.z = p.z; renderNow(); return mugGroup.position; },
-    setBonsai: function (p) { if (!bonsaiGroup) return; if (p.x != null) bonsaiGroup.position.x = p.x; if (p.z != null) bonsaiGroup.position.z = p.z; renderNow(); return bonsaiGroup.position; },
     setBulge: function (b) { BULGE = b; rebuildScreen(); return BULGE; },
     setScreen: function (p) { Object.assign(SCREEN, p); rebuildScreen(); return SCREEN; },
     debugAzimuth: function (deg, elevDeg, dist) {

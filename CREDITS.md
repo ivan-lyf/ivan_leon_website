@@ -6,6 +6,7 @@
 |---|---|---|---|---|
 | Low-Poly Freeride Skis | Romainhj | https://sketchfab.com/3d-models/low-poly-freeride-skis-8b27a5ff5c6f436ab18d6d1d5862aeb5 | CC Attribution (CC BY 4.0) | 2026-07-02 |
 | Lowpoly 65% Mechanical Keyboard | sleepyjoshua | https://sketchfab.com/3d-models/lowpoly-65-mechanical-keyboard-0cdd429eb08549ac954352169de5c8f8 | CC Attribution (CC BY 4.0) | 2026-07-02 |
+| Old Table Lamp v01 | (user-supplied file) | provided by site owner | user-supplied | 2026-07-02 |
 
 Models were optimized for web delivery (Draco mesh compression + WebP textures ≤1024px via
 gltf-transform); geometry and materials otherwise unmodified.
@@ -25,5 +26,6 @@ The ambient room tone is synthesized in-browser with the Web Audio API
 
 ## Everything else
 
-The Macintosh, desk, lamp, mug, bonsai, and room geometry are procedural (built in code
-with Three.js primitives) — no external assets.
+The Macintosh, desk, mug, and room geometry are procedural (built in code
+with Three.js primitives) — no external assets. The table lamp is the user-supplied
+GLB credited above.
