@@ -155,6 +155,42 @@
     return t;
   }
 
+  // warm plaster wall texture: vertical tone gradient + mottle + fine speckle +
+  // baked edge/corner AO so walls read as lit surfaces, not color fills
+  function makePlaster(top, bottom, edgeAO) {
+    const S = 1024, c = document.createElement('canvas'); c.width = S; c.height = S;
+    const x = c.getContext('2d');
+    const g = x.createLinearGradient(0, 0, 0, S);
+    g.addColorStop(0, top); g.addColorStop(1, bottom);
+    x.fillStyle = g; x.fillRect(0, 0, S, S);
+    for (let i = 0; i < 60; i++) {                       // soft mottled blotches
+      const r = 90 + Math.random() * 260, gx = Math.random() * S, gy = Math.random() * S;
+      const rg = x.createRadialGradient(gx, gy, 0, gx, gy, r);
+      const dk = Math.random() < 0.5;
+      rg.addColorStop(0, dk ? 'rgba(120,100,80,' + (0.02 + Math.random() * 0.05) + ')'
+                            : 'rgba(255,244,224,' + (0.02 + Math.random() * 0.05) + ')');
+      rg.addColorStop(1, 'rgba(0,0,0,0)');
+      x.fillStyle = rg; x.fillRect(0, 0, S, S);
+    }
+    for (let i = 0; i < 7000; i++) {                     // fine grain
+      const v = 0.02 + Math.random() * 0.05;
+      x.fillStyle = Math.random() < 0.5 ? 'rgba(90,74,58,' + v + ')' : 'rgba(255,240,214,' + v + ')';
+      x.fillRect(Math.random() * S, Math.random() * S, 1, 1);
+    }
+    if (edgeAO) {                                        // baked corner/floor AO
+      const e = x.createLinearGradient(0, 0, S * 0.14, 0);
+      e.addColorStop(0, 'rgba(60,44,30,0.34)'); e.addColorStop(1, 'rgba(0,0,0,0)');
+      x.fillStyle = e; x.fillRect(0, 0, S * 0.14, S);
+      x.save(); x.translate(S, 0); x.scale(-1, 1); x.fillRect(0, 0, S * 0.14, S); x.restore();
+      const b = x.createLinearGradient(0, S, 0, S * 0.82);
+      b.addColorStop(0, 'rgba(60,44,30,0.4)'); b.addColorStop(1, 'rgba(0,0,0,0)');
+      x.fillStyle = b; x.fillRect(0, S * 0.82, S, S * 0.18);
+    }
+    const t = new T.CanvasTexture(c);
+    t.encoding = T.sRGBEncoding; t.anisotropy = 8;
+    return t;
+  }
+
   function buildDesk() {
     const topMat  = pbrMat('shared/assets/textures/wood', 1.6, 1.0);
     const sideMat = pbrMat('shared/assets/textures/wood', 2.2, 0.32);
@@ -196,39 +232,38 @@
     return floorY;
   }
 
-
   function buildRoom(floorY) {
-    const RX = 58, RZ = 52, RH = 50;          // half-width, half-depth, height
+    const RX = 58, RZ = 52, RH = 50;
     const ceilY = floorY + RH;
-    // smooth, warm, matte surfaces — a flat natural color per face (no texture,
-    // no normal map) so the walls read as soft warm plaster rather than concrete
-    function cMat(tint) {
-      return new T.MeshStandardMaterial({ color: tint, roughness: 0.85, metalness: 0.0, side: T.DoubleSide });
-    }
     const room = new T.Group();
 
-    // floor (also catches the desk/computer shadow) — warm sand
-    const floor = new T.Mesh(new T.PlaneGeometry(RX * 2, RZ * 2), cMat(0xcdb491));
+    const wallTex = makePlaster('#eadbc0', '#cdb894', true);   // shared by all 4 walls
+    const wallMat = new T.MeshStandardMaterial({ map: wallTex, roughness: 0.92, metalness: 0 });
+
+    // floor: reuse the desk's wood PBR set (texture reuse per budget), darker tint
+    const floorMat = pbrMat('shared/assets/textures/wood', 7, 7, { color: 0xb9a284, roughness: 0.9 });
+    const floor = new T.Mesh(new T.PlaneGeometry(RX * 2, RZ * 2), floorMat);
     floor.rotation.x = -Math.PI / 2; floor.position.set(0, floorY, 0);
     floor.receiveShadow = true; room.add(floor);
     groundMesh = floor;
 
-    // ceiling — warm cream, a touch lighter
-    const ceil = new T.Mesh(new T.PlaneGeometry(RX * 2, RZ * 2), cMat(0xeaddc9));
+    const ceil = new T.Mesh(new T.PlaneGeometry(RX * 2, RZ * 2),
+      new T.MeshStandardMaterial({ map: makePlaster('#f2e8d6', '#e6d8c0', false), roughness: 0.95 }));
     ceil.rotation.x = Math.PI / 2; ceil.position.set(0, ceilY, 0); room.add(ceil);
 
-    // four walls — warm beige, subtle per-face variation for depth
-    const back = new T.Mesh(new T.PlaneGeometry(RX * 2, RH), cMat(0xe0cba9));
-    back.position.set(0, floorY + RH / 2, -RZ); room.add(back);
+    [[0, -RZ, 0], [0, RZ, Math.PI], [-RX, 0, Math.PI / 2], [RX, 0, -Math.PI / 2]].forEach(function (p, i) {
+      const w = new T.Mesh(new T.PlaneGeometry((i < 2 ? RX : RZ) * 2, RH), wallMat);
+      w.position.set(p[0], floorY + RH / 2, p[1]); w.rotation.y = p[2];
+      w.receiveShadow = true; room.add(w);
+    });
 
-    const front = new T.Mesh(new T.PlaneGeometry(RX * 2, RH), cMat(0xd8c3a1));
-    front.position.set(0, floorY + RH / 2, RZ); front.rotation.y = Math.PI; room.add(front);
-
-    const left = new T.Mesh(new T.PlaneGeometry(RZ * 2, RH), cMat(0xdcc7a5));
-    left.position.set(-RX, floorY + RH / 2, 0); left.rotation.y = Math.PI / 2; room.add(left);
-
-    const right = new T.Mesh(new T.PlaneGeometry(RZ * 2, RH), cMat(0xdcc7a5));
-    right.position.set(RX, floorY + RH / 2, 0); right.rotation.y = -Math.PI / 2; room.add(right);
+    // baseboard trim — grounds walls to floor
+    const trimMat = new T.MeshStandardMaterial({ color: 0x8a6f4f, roughness: 0.7 });
+    [[0, -RZ + 0.3, RX * 2, 0], [-RX + 0.3, 0, RZ * 2, Math.PI / 2], [RX - 0.3, 0, RZ * 2, Math.PI / 2]].forEach(function (p) {
+      const tb = new T.Mesh(new T.BoxGeometry(p[2], 1.6, 0.5), trimMat);
+      tb.position.set(p[0], floorY + 0.8, p[1]); tb.rotation.y = p[3];
+      tb.receiveShadow = true; room.add(tb);
+    });
 
     scene.add(room);
     return { RX: RX, RZ: RZ, RH: RH, floorY: floorY };
