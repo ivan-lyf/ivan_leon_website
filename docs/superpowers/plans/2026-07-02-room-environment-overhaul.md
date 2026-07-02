@@ -1060,17 +1060,18 @@ Two suspected causes (verify with profiling before/after):
 2. `refreshTexture()` (html-to-image DOM rasterization, ~10s of ms on main thread) fires on a 1500ms interval and via MutationObserver even mid-drag — a classic jank source. Gate it during interaction: skip when `performance.now() - lastActivityT < 400` and re-queue.
 - Verify with an in-page probe: rendered fps during a scripted 3s drag ≥55; DevTools long-task check during pan shows no >50ms tasks from html-to-image.
 
-### Task 16: Lamp GLB swap + move to LEFT + bonsai to right
+### Task 16: Lamp GLB swap (stays RIGHT) + remove bonsai + mug left (REVISED per user, 2026-07-02)
 
-User: use `/Users/leon/Downloads/old_table_lamp_v01.glb` as the lamp; move lamp to the left side; light shines on the keyboard.
+User (revised): use `/Users/leon/Downloads/old_table_lamp_v01.glb` as the lamp, **keep it on the right side**; light shines on the keyboard; **remove the bonsai entirely**; **move the coffee mug to the left** of the keyboard.
 
-- Optimize the GLB: `gltf-transform optimize` (draco + webp ≤1024) → `shared/assets/models/table_lamp.glb` (~≤700KB). It has an emissive map — keep it.
-- Replace the procedural anglepoise in `buildLamp()`: load the GLB **deferred** (same `whenInteractive`/`loadDeferredGLB` pattern; procedural lamp stays as boot stand-in/fallback? NO — the lamp motivates the key light from first paint; instead load it through `loadMgr` (boot-gated, it's only ~600KB) and drop the procedural lamp entirely).
-- Position: LEFT side of desk, `(-13.5, 0, -2.5)` starting point (mirror of current), rotated so the shade faces the keyboard; live-tune final values.
-- Light rig: keep the existing `lampLight` SpotLight (warm, intensity 15, castShadow per tier) — parent it at the GLB's bulb/shade position, target the keyboard area (world ≈ (0, 0, 6.5)); keep `bulbWorldPos()`, glow sprite at the bulb, contact shadow under the base, `dimMaterials` on the loaded model, `MacScene.setLamp` still functional.
-- **Bonsai moves to the right side** (lamp's old spot): `bonsaiGroup.position.set(12.5, 0, -3.5)` starting point (live-tune); update its contact shadow coordinates to match.
-- CREDITS.md: add row "Old Table Lamp v01 — provided by site owner (source/license: user-supplied file)".
-- Verify: lamp reads as a real object, light pool lands on the keyboard, shadows still work, bonsai sits right without crowding snowboard/mug.
+- GLB already optimized by controller (2MB → 175KB draco+webp, emissive map kept) and staged at `shared/assets/models/table_lamp.glb` — commit it in this task.
+- Replace the procedural anglepoise in `buildLamp()`: load the GLB through `loadMgr` (boot-gated — it's 175KB and the lamp motivates the key light from first paint); drop the procedural lamp geometry entirely.
+- Position: RIGHT side, keep `(13.8, 0, -2.5)`, rotated so the shade faces the keyboard/Mac; live-tune final rotation + scale (fit to ~7-8 world units tall).
+- Light rig: keep the existing `lampLight` SpotLight (warm, ramp to 15, castShadow per tier) — position it at the GLB's bulb/shade location, target the keyboard area (world ≈ (0, 0, 6.5)); keep `bulbWorldPos()`, glow sprite at the bulb, contact shadow under the base, `dimMaterials` on the loaded model, `MacScene.setLamp` still functional.
+- **Remove the bonsai**: delete `buildBonsai()`, its init() call, `bonsaiGroup`/`bonsaiFoliage` vars, the foliage-sway line in `__updateIdleFX`, the `setBonsai` setter, and its contact shadow.
+- **Mug to the left of the keyboard**: `mugGroup.position.set(-7.2, 0, 8.4)` starting point (live-tune) + move its contact shadow to match. (Mouse arrives right of keyboard in Task 17.)
+- CREDITS.md: add row "Old Table Lamp v01 — provided by site owner (user-supplied file)".
+- Verify: lamp reads as a real object on the right, light pool lands on the keyboard, shadows still work, mug sits left without blocking the fly-in path, no bonsai remnants (grep clean).
 
 ### Task 17: Vintage keyboard + mouse (M0110/M0100 style) + mug placement
 
