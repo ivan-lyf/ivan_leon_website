@@ -18,6 +18,7 @@ Wood PBR set (`shared/assets/textures/wood_*.jpg`): pre-existing in the reposito
 textures are generated procedurally at runtime — no third-party texture assets.
 
 Wall plaster PBR set ("Plaster001") from ambientCG.com — https://ambientcg.com/view?id=Plaster001 — CC0 1.0 (verified 2026-07-02), downscaled/re-encoded.
+Ceiling plaster ("Plaster002") from ambientCG.com — https://ambientcg.com/view?id=Plaster002 — CC0 1.0 (verified 2026-07-02).
 
 ## Audio
 

@@ -172,32 +172,6 @@
     return t;
   }
 
-  // warm plaster wall texture: vertical tone gradient + mottle + fine speckle
-  // (ceiling only now — walls use the AmbientCG PBR set; AO is overlay quads)
-  function makePlaster(top, bottom) {
-    const S = 1024, c = document.createElement('canvas'); c.width = S; c.height = S;
-    const x = c.getContext('2d');
-    const g = x.createLinearGradient(0, 0, 0, S);
-    g.addColorStop(0, top); g.addColorStop(1, bottom);
-    x.fillStyle = g; x.fillRect(0, 0, S, S);
-    for (let i = 0; i < 60; i++) {                       // soft mottled blotches
-      const r = 90 + Math.random() * 260, gx = Math.random() * S, gy = Math.random() * S;
-      const rg = x.createRadialGradient(gx, gy, 0, gx, gy, r);
-      const dk = Math.random() < 0.5;
-      rg.addColorStop(0, dk ? 'rgba(120,100,80,' + (0.02 + Math.random() * 0.05) + ')'
-                            : 'rgba(255,244,224,' + (0.02 + Math.random() * 0.05) + ')');
-      rg.addColorStop(1, 'rgba(0,0,0,0)');
-      x.fillStyle = rg; x.fillRect(0, 0, S, S);
-    }
-    for (let i = 0; i < 7000; i++) {                     // fine grain
-      const v = 0.02 + Math.random() * 0.05;
-      x.fillStyle = Math.random() < 0.5 ? 'rgba(90,74,58,' + v + ')' : 'rgba(255,240,214,' + v + ')';
-      x.fillRect(Math.random() * S, Math.random() * S, 1, 1);
-    }
-    const t = new T.CanvasTexture(c);
-    t.encoding = T.sRGBEncoding; t.anisotropy = 8;
-    return t;
-  }
 
   // washed-oak floor planks — cooler + larger-scale than the desk wood so the
   // two surfaces read as different materials
@@ -343,8 +317,9 @@
     floor.receiveShadow = true; room.add(floor);
     groundMesh = floor;
 
+    const ceilTex = loadTex('shared/assets/textures/ceiling_color.jpg', 3, 3, true);
     const ceil = new T.Mesh(new T.PlaneGeometry(RX * 2, RZ * 2),
-      new T.MeshStandardMaterial({ map: makePlaster('#f2e8d6', '#e6d8c0'), roughness: 0.95 }));
+      new T.MeshStandardMaterial({ map: ceilTex, color: 0xf2ead8, roughness: 0.95, metalness: 0 }));
     ceil.rotation.x = Math.PI / 2; ceil.position.set(0, ceilY, 0); room.add(ceil);
 
     [[0, -RZ, 0], [0, RZ, Math.PI], [-RX, 0, Math.PI / 2], [RX, 0, -Math.PI / 2]].forEach(function (p, i) {
