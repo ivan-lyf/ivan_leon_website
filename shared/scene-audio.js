@@ -4,12 +4,15 @@
  * when the tab is hidden. Mute chip bottom-right, persisted in localStorage. */
 (function () {
   const KEY = 'ambient-muted';
-  const TARGET_VOL = 0.022;                       // felt, not heard
+  const TARGET_VOL = 0.075;                       // low ambient bed, clearly audible
   let ctx = null, master = null, started = false;
   let muted = localStorage.getItem(KEY) === '1';
 
   function buildGraph() {
     ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // wheel/scroll may not count as an activation gesture in every engine — a freshly
+    // built context can come up 'suspended'; resume so the fade-in is actually audible
+    if (ctx.state === 'suspended') ctx.resume().catch(function () {});
     const sr = ctx.sampleRate, secs = 6, len = sr * secs;
     const buf = ctx.createBuffer(2, len, sr);
     for (let ch = 0; ch < 2; ch++) {
