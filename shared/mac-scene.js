@@ -660,15 +660,16 @@
 
       // solid white outline hugging the chain silhouette: slightly fatter white
       // geometry along the exact chain line; depth-tested so the real chain
-      // occludes the middle and only a white rim shows around it
+      // occludes the middle and only a white rim shows around it. Endpoints raycast-traced
+      // from the rendered chain (attach under shade → teardrop).
       const outlineMat = new T.MeshBasicMaterial({ color: 0xffffff });
-      const oA = new T.Vector3(1.58, 5.10, 0.75), oB = new T.Vector3(1.67, 2.76, 0.89);
+      const oA = new T.Vector3(1.97, 6.10, -0.04), oB = new T.Vector3(1.64, 2.99, 0.84);
       const oDir = new T.Vector3().subVectors(oB, oA);
-      const oLine = new T.Mesh(new T.CylinderGeometry(0.075, 0.075, oDir.length(), 8), outlineMat);
+      const oLine = new T.Mesh(new T.CylinderGeometry(0.045, 0.045, oDir.length(), 8), outlineMat);
       oLine.position.copy(oA).addScaledVector(oDir, 0.5);
       oLine.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), oDir.clone().normalize());
-      const oPull = new T.Mesh(new T.ConeGeometry(0.16, 0.34, 10), outlineMat);
-      oPull.position.set(1.67, 2.62, 0.89);   // teardrop pull at the chain's end
+      const oPull = new T.Mesh(new T.ConeGeometry(0.14, 0.29, 10), outlineMat);
+      oPull.position.set(1.64, 2.85, 0.84);   // teardrop pull at the chain's end
       stringOutline = new T.Group();
       stringOutline.add(oLine); stringOutline.add(oPull);
       stringOutline.visible = false;
