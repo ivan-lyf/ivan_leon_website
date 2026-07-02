@@ -590,6 +590,8 @@
   // emissive) are filled in once the GLB loads; lampToggleTargets always gets the
   // invisible hit-proxy (added synchronously below) plus any name-matched string mesh.
   let lampGlow = null, lampEmissives = [], lampToggleTargets = [], lampHitMesh = null, stringOutline = null;
+  // dust motes drifting in the lamp light (Task 10)
+  let motes = null, motesMat = null;
   let lampOn = true, lampFade = null;   // lampFade: {from, to, t0} — processed each rendered frame
   function buildLamp() {
     const g = new T.Group();
@@ -703,6 +705,45 @@
     return v;
   }
 
+  // dust motes drifting in the lamp light (high tier only)
+  function buildMotes() {
+    if (!QUALITY.motes) return;
+    const N = QUALITY.motes, b = bulbWorldPos();
+    const pos = new Float32Array(N * 3), seed = new Float32Array(N);
+    for (let i = 0; i < N; i++) {
+      pos[i * 3]     = b.x - 2 + (Math.random() - 0.5) * 7;   // roughly inside the light cone
+      pos[i * 3 + 1] = b.y * Math.random();
+      pos[i * 3 + 2] = b.z + 2 + (Math.random() - 0.5) * 7;
+      seed[i] = Math.random();
+    }
+    const geo = new T.BufferGeometry();
+    geo.setAttribute('position', new T.BufferAttribute(pos, 3));
+    geo.setAttribute('aSeed', new T.BufferAttribute(seed, 1));
+    motesMat = new T.ShaderMaterial({
+      uniforms: { uTime: { value: 0 }, uTex: { value: makeBlobTex() } },
+      transparent: true, depthWrite: false, blending: T.AdditiveBlending,
+      vertexShader: [
+        'attribute float aSeed; uniform float uTime; varying float vA;',
+        'void main() {',
+        '  vec3 p = position;',
+        '  p.x += sin(uTime * (0.05 + aSeed * 0.1) + aSeed * 50.0) * 1.2;',
+        '  p.y += sin(uTime * (0.04 + aSeed * 0.08) + aSeed * 30.0) * 0.9;',
+        '  p.z += cos(uTime * (0.05 + aSeed * 0.07) + aSeed * 70.0) * 1.2;',
+        '  vA = 0.05 + 0.05 * sin(uTime * (0.3 + aSeed) + aSeed * 90.0);',   // twinkle
+        '  vec4 mv = modelViewMatrix * vec4(p, 1.0);',
+        '  gl_PointSize = (2.0 + aSeed * 2.5) * (24.0 / -mv.z);',
+        '  gl_Position = projectionMatrix * mv;',
+        '}'].join('\n'),
+      fragmentShader: [
+        'uniform sampler2D uTex; varying float vA;',
+        'void main() { gl_FragColor = vec4(1.0, 0.9, 0.75, texture2D(uTex, gl_PointCoord).a * vA); }'
+      ].join('\n')
+    });
+    motes = new T.Points(geo, motesMat);
+    motes.frustumCulled = false;
+    scene.add(motes);
+  }
+
   // pull-string toggle: soft ~220ms ramp of intensity/glow/emissive; string click and
   // MacScene.setLampOn share this one path. Driven by the governed animate loop
   // (module-level `lampFade` state, consumed each rendered frame) rather than a
@@ -793,7 +834,7 @@
 
   window.__updateIdleFX = function (now) {
     if (steamMat) steamMat.uniforms.uTime.value = now / 1000;
-    // (Task 10 adds motes here)
+    if (motesMat) motesMat.uniforms.uTime.value = now / 1000;
   };
 
   /* ---------- procedural Macintosh (carved-recess construction) ---------- */
@@ -1270,6 +1311,7 @@
     buildSnowboard(room);
     buildKeyboard();
     buildLamp();
+    buildMotes();
     buildMug();
 
     // dim IBL ambient so the lamp reads as the key light (r128 has no global env intensity)
