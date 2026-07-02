@@ -1323,8 +1323,10 @@
       now = now || performance.now();
       const active = flyIn || (now - lastActivityT < IDLE_AFTER_MS);
       const budget = 1000 / (active ? FPS_ACTIVE : FPS_IDLE);
-      if (now - lastFrameT < budget - 0.75) return;   // skip frame
-      lastFrameT = now;
+      // half-a-display-tick slack + remainder-preserving catch-up: avoids the
+      // 120Hz jitter trap where a 16.6ms tick measures 15.5ms and drops to 1/3 rate
+      if (now - lastFrameT < budget - 4) return;   // skip frame
+      lastFrameT = now - ((now - lastFrameT) % budget);
       window.__frames++;
       if (autoRotate && !controls._userActive) machine.rotation.y += 0.0022;
       if (flyIn && !inScreenView) {
