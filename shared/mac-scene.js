@@ -611,6 +611,11 @@
      shadow + bulb glow sprite are kept from the old procedural build; only
      the visual geometry is now the GLB. */
   let lampGroup = null, lampLight = null, lampBulbAnchor = null;
+  // pull-string toggle: lampGlow (glow sprite) + lampEmissives (shade materials with
+  // emissive) are filled in once the GLB loads; lampToggleTargets always gets the
+  // invisible hit-proxy (added synchronously below) plus any name-matched string mesh.
+  let lampGlow = null, lampEmissives = [], lampToggleTargets = [];
+  let lampOn = true, lampFade = null;
   function buildLamp() {
     const g = new T.Group();
     // user-supplied table lamp GLB (Draco+WebP, emissive shade) — boot-gated via loadMgr
@@ -624,6 +629,24 @@
       const lamp = fitAndGround(gltf.scene, 7.5, false);   // ~7.5 units tall table lamp
       dimMaterials(lamp);
       g.add(lamp);
+      // pull-string toggle: name-match any chain/string/pull mesh/node (GLB names may
+      // not match — the invisible hit-proxy fallback below always works regardless)
+      // and collect shade materials with emissive so setLampOn can dim them too.
+      lamp.traverse(function (o) {
+        if (/string|chain|pull|cord/i.test(o.name || '')) {
+          o.userData.lampToggle = true;
+          if (o.isMesh) lampToggleTargets.push(o);
+        }
+        if (o.isMesh && o.material) {
+          const mats = Array.isArray(o.material) ? o.material : [o.material];
+          mats.forEach(function (m) {
+            if (m.emissive && (m.emissiveIntensity > 0 || m.emissiveMap)) {
+              m.userData.baseEmissive = m.emissiveIntensity || 1;
+              lampEmissives.push(m);
+            }
+          });
+        }
+      });
       // anchor for light + glow at the shade/bulb — GLB bbox top-front area;
       // tuned visually by the controller afterwards (see report)
       lampBulbAnchor = new T.Object3D();
@@ -633,8 +656,19 @@
       const glow = addGlowSprite(3.2, 0xffd9a0, 0.55);
       glow.position.copy(lampBulbAnchor.position);
       g.add(glow);
+      lampGlow = glow;
       renderNow();
     }, undefined, function (e) { console.warn('lamp glb failed', e); });
+
+    // invisible click target over the pull string (GLB names may not match — this
+    // fallback proxy always exists, added synchronously so it works even before /
+    // if the GLB load fails). Local to the lamp group `g`, not the scaled inner GLB.
+    const lampHit = new T.Mesh(new T.CylinderGeometry(0.6, 0.6, 3.0, 8),
+      new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
+    lampHit.position.set(1.0, 4.2, 1.0);   // near the shade's pull-chain area — controller live-tunes
+    lampHit.userData.lampToggle = true;
+    g.add(lampHit);
+    lampToggleTargets.push(lampHit);
 
     // key light (kept from the procedural version — the scene's only shadow caster)
     lampLight = new T.SpotLight(0xffc98a, 0.0, 55, 0.9, 0.6, 1.3);  // warm ~2800K
@@ -672,6 +706,24 @@
     const v = new T.Vector3();
     if (lampLight) lampLight.getWorldPosition(v);
     return v;
+  }
+
+  // pull-string toggle: soft ~220ms ramp of intensity/glow/emissive; string click and
+  // MacScene.setLampOn share this one path.
+  function setLampOn(on) {
+    if (!lampLight) return;
+    lampOn = !!on;
+    const from = lampLight.intensity, to = lampOn ? 15 : 0, t0 = performance.now();
+    cancelAnimationFrame(lampFade);
+    (function step(nw) {
+      const k = Math.min(1, (nw - t0) / 220);
+      lampLight.intensity = from + (to - from) * k;
+      if (lampGlow) lampGlow.material.opacity = 0.55 * (lampLight.intensity / 15);
+      if (lampEmissives.length) lampEmissives.forEach(function (m) { m.emissiveIntensity = m.userData.baseEmissive * Math.max(0.05, lampLight.intensity / 15); });
+      renderNow();
+      if (k < 1) lampFade = requestAnimationFrame(step);
+    })(t0);
+    bumpActivity();
   }
 
   /* ---------- procedural glazed coffee mug + looping steam ---------- */
@@ -1085,11 +1137,18 @@
   function burstRefresh() { [0, 140, 360, 700].forEach(function (d) { setTimeout(refreshTexture, d); }); }
 
   function forwardClick(e) {
-    if (!screenMesh || !screenEl) return;
     const rect = glRenderer.domElement.getBoundingClientRect();
     const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     const ny = -((e.clientY - rect.top) / rect.height) * 2 + 1;
     raycaster.setFromCamera({ x: nx, y: ny }, camera);
+
+    // lamp pull-string first — a string click must never fall through to the CRT forward
+    if (lampToggleTargets.length) {
+      const lampHit = raycaster.intersectObjects(lampToggleTargets, false)[0];
+      if (lampHit) { setLampOn(!lampOn); return; }
+    }
+
+    if (!screenMesh || !screenEl) return;
     const hit = raycaster.intersectObject(screenMesh)[0];
     if (!hit || !hit.uv) return;
     const r = screenEl.getBoundingClientRect();
@@ -1228,6 +1287,21 @@
         .observe(screenEl, { childList: true, subtree: true, attributes: true, characterData: true });
     }
     glRenderer.domElement.addEventListener('click', forwardClick);
+    // lamp pull-string cursor affordance — throttled to ~10Hz (cheap raycast, but no
+    // need to run it every pointermove event)
+    let _lampCursorT = 0;
+    glRenderer.domElement.addEventListener('pointermove', function (e) {
+      const now = performance.now();
+      if (now - _lampCursorT < 100) return;
+      _lampCursorT = now;
+      if (!lampToggleTargets.length) return;
+      const rect = glRenderer.domElement.getBoundingClientRect();
+      const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      const ny = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera({ x: nx, y: ny }, camera);
+      const hit = raycaster.intersectObjects(lampToggleTargets, false)[0];
+      glRenderer.domElement.style.cursor = hit ? 'pointer' : '';
+    });
     controls._userActive = false;
     glRenderer.domElement.addEventListener('pointerdown', () => controls._userActive = true);
     // zoom-in-to-fullscreen: press Esc to leave
@@ -1395,6 +1469,7 @@
     setSnowboard: function (p) { if (!snowboardGroup) return; if (p.x != null) snowboardGroup.position.x = p.x; if (p.z != null) snowboardGroup.position.z = p.z; if (p.lean != null) snowboardGroup.rotation.x = p.lean; if (p.skew != null) snowboardGroup.rotation.y = p.skew; renderNow(); return snowboardGroup.position; },
     setKeyboard: function (p) { if (!keyboardGroup) return; if (p.x != null) keyboardGroup.position.x = p.x; if (p.z != null) keyboardGroup.position.z = p.z; if (p.rot != null) keyboardGroup.rotation.y = p.rot; renderNow(); return keyboardGroup.position; },
     setLamp: function (p) { if (!lampGroup) return; if (p.x != null) lampGroup.position.x = p.x; if (p.z != null) lampGroup.position.z = p.z; if (p.rot != null) lampGroup.rotation.y = p.rot; if (p.light != null && lampLight) lampLight.intensity = p.light; renderNow(); return lampGroup.position; },
+    setLampOn: setLampOn,
     setMug: function (p) { if (!mugGroup) return; if (p.x != null) mugGroup.position.x = p.x; if (p.z != null) mugGroup.position.z = p.z; renderNow(); return mugGroup.position; },
     setBulge: function (b) { BULGE = b; rebuildScreen(); return BULGE; },
     setScreen: function (p) { Object.assign(SCREEN, p); rebuildScreen(); return SCREEN; },
