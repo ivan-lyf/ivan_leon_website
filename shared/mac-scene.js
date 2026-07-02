@@ -662,14 +662,12 @@
       // geometry along the exact chain line; depth-tested so the real chain
       // occludes the middle and only a white rim shows around it. Endpoints raycast-traced
       // from the rendered chain (attach under shade → teardrop).
-      const outlineMat = new T.MeshBasicMaterial({ color: 0xffffff });
-      const oA = new T.Vector3(1.97, 6.10, -0.04), oB = new T.Vector3(1.64, 2.99, 0.84);
-      const oDir = new T.Vector3().subVectors(oB, oA);
-      const oLine = new T.Mesh(new T.CylinderGeometry(0.045, 0.045, oDir.length(), 8), outlineMat);
-      oLine.position.copy(oA).addScaledVector(oDir, 0.5);
-      oLine.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), oDir.clone().normalize());
-      const oPull = new T.Mesh(new T.ConeGeometry(0.14, 0.29, 10), outlineMat);
-      oPull.position.set(1.64, 2.85, 0.84);   // teardrop pull at the chain's end
+      const outlineMat = new T.MeshBasicMaterial({ color: 0xffffff, side: T.BackSide });  // BackSide: only the far wall renders -> chain shows inside a white contour (sticker-style)
+      // chain axis extracted from GLB vertex data: local x 1.60, z 0.80, y 2.95..6.16
+      const oLine = new T.Mesh(new T.CylinderGeometry(0.085, 0.085, 3.21, 10), outlineMat);
+      oLine.position.set(1.60, 4.555, 0.80);
+      const oPull = new T.Mesh(new T.ConeGeometry(0.24, 0.5, 12), outlineMat);
+      oPull.position.set(1.60, 2.62, 0.80);   // teardrop at the chain's end
       stringOutline = new T.Group();
       stringOutline.add(oLine); stringOutline.add(oPull);
       stringOutline.visible = false;
@@ -685,8 +683,8 @@
     // hover affordance is the separate stringOutline mesh toggled in init().
     const lampHit = new T.Mesh(new T.CylinderGeometry(0.6, 0.6, 3.0, 8),
       new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
-    lampHit.position.set(1.62, 3.9, 0.79);   // centered on the pull chain (raycast-located)
-    lampHit.scale.set(1.4, 1.2, 1.4);
+    lampHit.position.set(1.60, 4.4, 0.80);   // centered on the pull chain (raycast-located)
+    lampHit.scale.set(1.4, 1.25, 1.4);
     lampHit.renderOrder = 2;
     lampHit.userData.lampToggle = true;
     g.add(lampHit);
