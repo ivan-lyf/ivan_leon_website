@@ -18,6 +18,12 @@
       : { name: 'high', dpr: 1.75, shadows: true,  shadowMapSize: 1024, motes: 60, steamCount: 60 };
   })();
 
+  // frame-governor activity tracking — module scope so both the animate loop
+  // (init) and top-level GLB swap-in callbacks (buildKeyboard/buildSnowboard)
+  // can call bumpActivity() when a deferred model finishes loading.
+  let lastFrameT = 0, lastActivityT = performance.now();
+  function bumpActivity() { lastActivityT = performance.now(); }
+
   // screen placement is derived from the model below; bulge = dome depth
   let SCREEN = { x: 0, y: 7.5, z: 0, w: 6.0, h: 4.5 };
   let BULGE = 0.24;
@@ -334,6 +340,39 @@
     return { RX: RX, RZ: RZ, RH: RH, floorY: floorY };
   }
 
+  // deferred loader: runs AFTER the boot screen clears so first paint stays fast
+  let _draco = null;
+  function loadDeferredGLB(url, cb) {
+    const l = new T.GLTFLoader();
+    if (T.DRACOLoader) {
+      if (!_draco) { _draco = new T.DRACOLoader(); _draco.setDecoderPath('https://unpkg.com/three@0.128.0/examples/js/libs/draco/'); }
+      l.setDRACOLoader(_draco);
+    }
+    l.load(url, cb, undefined, function (e) { console.warn('deferred glb failed', url, e); });
+  }
+  function whenInteractive(fn) {
+    if (window.__sceneLoaded) { fn(); return; }
+    const iv = setInterval(function () { if (window.__sceneLoaded) { clearInterval(iv); fn(); } }, 250);
+  }
+  // scale longest dimension to `longest`, rotate longest axis to Y if `upright`,
+  // center x/z and rest bottom on y=0 — returns a pivot group (existing skis logic, generalized)
+  function fitAndGround(inner, longest, upright) {
+    let box = new T.Box3().setFromObject(inner);
+    let size = box.getSize(new T.Vector3());
+    inner.scale.setScalar(longest / Math.max(size.x, size.y, size.z));
+    if (upright) {
+      box = new T.Box3().setFromObject(inner); size = box.getSize(new T.Vector3());
+      if (size.x >= size.y && size.x >= size.z) inner.rotation.z = Math.PI / 2;
+      else if (size.z >= size.y && size.z >= size.x) inner.rotation.x = -Math.PI / 2;
+    }
+    const pivot = new T.Group(); pivot.add(inner);
+    const pb = new T.Box3().setFromObject(pivot);
+    const pc = pb.getCenter(new T.Vector3());
+    inner.position.x -= pc.x; inner.position.z -= pc.z; inner.position.y -= pb.min.y;
+    inner.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    return pivot;
+  }
+
   /* ---------- skis leaning on the back wall ---------- */
   let skisGroup = null;
   const SKIS_URL = 'shared/assets/models/low-poly_freeride_skis.glb';   // committed locally (no remote/CORS dependency)
@@ -341,26 +380,9 @@
     if (!T.GLTFLoader) return;
     const loader = new T.GLTFLoader(loadMgr || undefined);
     loader.load(SKIS_URL, function (gltf) {
-      const inner = gltf.scene;
-      // scale so the longest dimension (ski length) is ~26 world units
-      let box = new T.Box3().setFromObject(inner);
-      let size = box.getSize(new T.Vector3());
-      const maxDim = Math.max(size.x, size.y, size.z);
-      inner.scale.setScalar(26 / maxDim);
-
-      // re-evaluate axes; rotate the longest one to vertical (Y)
-      box = new T.Box3().setFromObject(inner); size = box.getSize(new T.Vector3());
-      if (size.x >= size.y && size.x >= size.z) inner.rotation.z = Math.PI / 2;      // long axis X -> Y
-      else if (size.z >= size.y && size.z >= size.x) inner.rotation.x = -Math.PI / 2; // long axis Z -> Y
-
-      // center on x/z and drop bottom to y=0 inside a pivot
-      const pivot = new T.Group();
-      pivot.add(inner);
-      let pb = new T.Box3().setFromObject(pivot);
-      const pc = pb.getCenter(new T.Vector3());
-      inner.position.x -= pc.x; inner.position.z -= pc.z; inner.position.y -= pb.min.y;
-
-      inner.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+      // scale so the longest dimension (ski length) is ~26 world units, rotate
+      // upright, center x/z and rest bottom on y=0
+      const pivot = fitAndGround(gltf.scene, 26, true);
 
       // lean group: tilt the top toward the back wall (-z), rest base on floor
       const lean = new T.Group();
@@ -424,6 +446,40 @@
     snowboardGroup = lean;
     window.__snowboard = lean;
     renderNow();
+
+    // swap in the high-fidelity model once the scene is interactive
+    whenInteractive(function () {
+      loadDeferredGLB('shared/assets/models/snowboard.glb', function (gltf) {
+        const inner = gltf.scene;
+        // orientation correction (tuned visually): inner.rotation.y = 0;
+        const hiPivot = fitAndGround(inner, 24, true);
+
+        const hiLean = new T.Group();
+        hiLean.add(hiPivot);
+        hiLean.rotation.x = -0.18;
+        hiLean.rotation.y = -0.1;
+        hiLean.position.set(30, room.floorY, -(room.RZ) + 6.5);
+
+        // PBR touch-up: sourced material reads a bit hot/metal under our lights —
+        // dial back env reflections and clamp metalness so the topsheet stays matte
+        inner.traverse(function (o) {
+          if (o.isMesh && o.material) {
+            const mats = Array.isArray(o.material) ? o.material : [o.material];
+            mats.forEach(function (m) {
+              m.envMapIntensity = 0.6;
+              if ('metalness' in m) m.metalness = Math.min(m.metalness, 0.2);
+              m.needsUpdate = true;
+            });
+          }
+        });
+
+        scene.add(hiLean);
+        scene.remove(lean);           // retire procedural snowboard
+        snowboardGroup = hiLean;
+        window.__snowboard = hiLean;
+        bumpActivity(); renderNow();
+      });
+    });
   }
 
   /* ---------- vintage mechanical keyboard (procedural) ----------
@@ -520,6 +576,32 @@
     cable.castShadow = true; scene.add(cable);
 
     renderNow();
+
+    // swap in the high-fidelity model once the scene is interactive
+    whenInteractive(function () {
+      loadDeferredGLB('shared/assets/models/mechanical_keyboard.glb', function (gltf) {
+        const inner = gltf.scene;
+        // orientation correction (tuned visually): inner.rotation.y = 0;
+        const kb = fitAndGround(inner, caseW, false);   // match procedural footprint width
+        kb.position.set(0, 0, 7.4);
+
+        // PBR touch-up: single-palette material reads a bit glossy under our env
+        inner.traverse(function (o) {
+          if (o.isMesh && o.material) {
+            const mats = Array.isArray(o.material) ? o.material : [o.material];
+            mats.forEach(function (m) {
+              m.envMapIntensity = 0.6;
+              m.needsUpdate = true;
+            });
+          }
+        });
+
+        scene.add(kb);
+        scene.remove(g);            // retire procedural keyboard (keep the cable + contact shadow)
+        keyboardGroup = kb;
+        bumpActivity(); renderNow();
+      });
+    });
   }
 
   /* ---------- blue metal anglepoise desk lamp (procedural) ----------
@@ -1107,8 +1189,7 @@
     // built-in pause when the tab is hidden. Idle animations (steam, motes)
     // stay alive at the idle rate; all animation is driven by real time.
     const FPS_ACTIVE = 45, FPS_IDLE = 24, IDLE_AFTER_MS = 3000;
-    let lastFrameT = 0, lastActivityT = performance.now();
-    function bumpActivity() { lastActivityT = performance.now(); }
+    lastFrameT = 0; lastActivityT = performance.now();
 
     window.__frames = 0;
     (function animate(now) {
