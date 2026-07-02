@@ -706,6 +706,78 @@
     return v;
   }
 
+  /* ---------- procedural glazed coffee mug + looping steam ---------- */
+  let mugGroup = null;
+  function buildMug() {
+    const g = new T.Group();
+    const glaze = new T.MeshStandardMaterial({ color: 0xb84a3a, roughness: 0.25, metalness: 0.0, envMapIntensity: 0.9 });
+    // body: lathe profile (base -> wall -> lip), ~2.2 tall, 1.6 diameter
+    const pts = [];
+    pts.push(new T.Vector2(0, 0), new T.Vector2(0.62, 0), new T.Vector2(0.72, 0.08),
+             new T.Vector2(0.78, 0.5), new T.Vector2(0.8, 1.7), new T.Vector2(0.84, 2.15),
+             new T.Vector2(0.8, 2.2), new T.Vector2(0.74, 2.18), new T.Vector2(0.7, 1.7),
+             new T.Vector2(0.68, 0.35), new T.Vector2(0, 0.3));
+    const body = new T.Mesh(new T.LatheGeometry(pts, 36), glaze);
+    body.castShadow = true; body.receiveShadow = true; g.add(body);
+    const handle = new T.Mesh(new T.TorusGeometry(0.55, 0.13, 12, 24, Math.PI * 1.6), glaze);
+    handle.position.set(0.82, 1.15, 0); handle.rotation.z = -Math.PI / 2 + 0.35;
+    handle.castShadow = true; g.add(handle);
+    const coffee = new T.Mesh(new T.CircleGeometry(0.66, 28),
+      new T.MeshStandardMaterial({ color: 0x2a1608, roughness: 0.15, metalness: 0.0, envMapIntensity: 1.2 }));
+    coffee.rotation.x = -Math.PI / 2; coffee.position.y = 1.95; g.add(coffee);
+    g.position.set(6.8, 0, 8.2);          // right of keyboard, off the fly-in path (x=0)
+    scene.add(g); mugGroup = g;
+    addContactShadow(scene, 2.6, 2.6, 6.8, 8.2, 0.3);
+    buildSteam(g);
+    renderNow();
+  }
+
+  let steamPts = null, steamMat = null;
+  function buildSteam(mug) {
+    const N = QUALITY.steamCount, LIFE = 5.0;
+    const pos = new Float32Array(N * 3), seed = new Float32Array(N);
+    for (let i = 0; i < N; i++) { pos[i * 3] = 0; pos[i * 3 + 1] = 0; pos[i * 3 + 2] = 0; seed[i] = Math.random(); }
+    const geo = new T.BufferGeometry();
+    geo.setAttribute('position', new T.BufferAttribute(pos, 3));
+    geo.setAttribute('aSeed', new T.BufferAttribute(seed, 1));
+    steamMat = new T.ShaderMaterial({
+      uniforms: { uTime: { value: 0 }, uTex: { value: makeBlobTex() } },
+      transparent: true, depthWrite: false, blending: T.AdditiveBlending,
+      vertexShader: [
+        'attribute float aSeed;',
+        'uniform float uTime;',
+        'varying float vA;',
+        'void main() {',
+        '  float life = 5.0;',
+        '  float t = mod(uTime * (0.75 + aSeed * 0.5) + aSeed * life, life) / life;', // 0..1 loop
+        '  vec3 p = position;',
+        '  p.y = t * 3.2;',                                              // rise
+        '  float sw = sin(t * 6.2831 * (1.5 + aSeed) + aSeed * 40.0);',  // horizontal sway
+        '  p.x += sw * (0.12 + t * 0.3); p.z += cos(t * 5.0 + aSeed * 20.0) * (0.1 + t * 0.25);',
+        '  vA = smoothstep(0.0, 0.15, t) * (1.0 - smoothstep(0.55, 1.0, t)) * 0.16;',
+        '  vec4 mv = modelViewMatrix * vec4(p, 1.0);',
+        '  gl_PointSize = (26.0 + t * 60.0 + aSeed * 14.0) * (24.0 / -mv.z);',
+        '  gl_Position = projectionMatrix * mv;',
+        '}'].join('\n'),
+      fragmentShader: [
+        'uniform sampler2D uTex;',
+        'varying float vA;',
+        'void main() {',
+        '  float m = texture2D(uTex, gl_PointCoord).a;',
+        '  gl_FragColor = vec4(1.0, 0.92, 0.8, m * vA);',   // warm tint = catches lamp mood
+        '}'].join('\n')
+    });
+    steamPts = new T.Points(geo, steamMat);
+    steamPts.position.y = 2.0;      // coffee surface
+    steamPts.frustumCulled = false; // origin-bbox geometry; displacement is in the vertex shader
+    mug.add(steamPts);
+  }
+
+  window.__updateIdleFX = function (now) {
+    if (steamMat) steamMat.uniforms.uTime.value = now / 1000;
+    // (Task 9 adds foliage sway, Task 10 adds motes here)
+  };
+
   /* ---------- procedural Macintosh (carved-recess construction) ---------- */
   function buildMac() {
     machine = new T.Group();
@@ -1170,6 +1242,7 @@
     buildSnowboard(room);
     buildKeyboard();
     buildLamp();
+    buildMug();
     ready = true;
     window.__dbg = function () { return { ready: ready, f: window.__frames }; };
     burstRefresh();
@@ -1343,6 +1416,7 @@
     setSnowboard: function (p) { if (!snowboardGroup) return; if (p.x != null) snowboardGroup.position.x = p.x; if (p.z != null) snowboardGroup.position.z = p.z; if (p.lean != null) snowboardGroup.rotation.x = p.lean; if (p.skew != null) snowboardGroup.rotation.y = p.skew; renderNow(); return snowboardGroup.position; },
     setKeyboard: function (p) { if (!keyboardGroup) return; if (p.x != null) keyboardGroup.position.x = p.x; if (p.z != null) keyboardGroup.position.z = p.z; if (p.rot != null) keyboardGroup.rotation.y = p.rot; renderNow(); return keyboardGroup.position; },
     setLamp: function (p) { if (!lampGroup) return; if (p.x != null) lampGroup.position.x = p.x; if (p.z != null) lampGroup.position.z = p.z; if (p.rot != null) lampGroup.rotation.y = p.rot; if (p.light != null && lampLight) lampLight.intensity = p.light; renderNow(); return lampGroup.position; },
+    setMug: function (p) { if (!mugGroup) return; if (p.x != null) mugGroup.position.x = p.x; if (p.z != null) mugGroup.position.z = p.z; renderNow(); return mugGroup.position; },
     setBulge: function (b) { BULGE = b; rebuildScreen(); return BULGE; },
     setScreen: function (p) { Object.assign(SCREEN, p); rebuildScreen(); return SCREEN; },
     debugAzimuth: function (deg, elevDeg, dist) {
