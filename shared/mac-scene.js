@@ -30,8 +30,8 @@
   const TEX_W = 1024, TEX_H = 768;
 
   const MOODS = {
-    room:     { bg: 'radial-gradient(120% 95% at 50% 20%, #f1e6d3 0%, #dcc8a8 60%, #c6af8b 100%)', hemi: 0.42, key: 0.5, fill: 0.3, rim: 0.4, shadow: 0.3 },
-    peach:    { bg: 'radial-gradient(120% 95% at 50% 18%, #ffe9cf 0%, #f6cda0 58%, #e9b988 100%)', hemi: 0.45, key: 0.52, fill: 0.32, rim: 0.55, shadow: 0.26 },
+    room:     { bg: 'radial-gradient(120% 95% at 50% 20%, #f1e6d3 0%, #dcc8a8 60%, #c6af8b 100%)', hemi: 0.2, key: 0.26, fill: 0.14, rim: 0.24, shadow: 0.3 },
+    peach:    { bg: 'radial-gradient(120% 95% at 50% 18%, #ffe9cf 0%, #f6cda0 58%, #e9b988 100%)', hemi: 0.22, key: 0.28, fill: 0.15, rim: 0.28, shadow: 0.26 },
     spotlight:{ bg: 'radial-gradient(95% 80% at 50% 30%, #2a2622 0%, #141210 70%, #0a0908 100%)', hemi: 0.18, key: 0.8, fill: 0.16, rim: 0.85, shadow: 0.42 },
     white:    { bg: 'radial-gradient(120% 95% at 50% 16%, #ffffff 0%, #eef0f2 60%, #dfe3e7 100%)', hemi: 0.78, key: 0.48, fill: 0.55, rim: 0.4, shadow: 0.2 }
   };
@@ -466,7 +466,7 @@
           if (o.isMesh && o.material) {
             const mats = Array.isArray(o.material) ? o.material : [o.material];
             mats.forEach(function (m) {
-              m.envMapIntensity = 0.6;
+              m.envMapIntensity = 0.25;
               if ('metalness' in m) m.metalness = Math.min(m.metalness, 0.2);
               m.needsUpdate = true;
             });
@@ -590,7 +590,7 @@
           if (o.isMesh && o.material) {
             const mats = Array.isArray(o.material) ? o.material : [o.material];
             mats.forEach(function (m) {
-              m.envMapIntensity = 0.6;
+              m.envMapIntensity = 0.25;
               m.needsUpdate = true;
             });
           }
@@ -691,7 +691,7 @@
     addContactShadow(scene, 5.5, 5.5, 13.8, -2.5, 0.3);
 
     // ease the warm light on
-    let li = 0; const liMax = 12;
+    let li = 0; const liMax = 15;
     const ramp = setInterval(function () {
       li += 0.5; lampLight.intensity = Math.min(liMax, li); renderNow();
       if (li >= liMax) clearInterval(ramp);
@@ -754,7 +754,7 @@
         '  p.y = t * 3.2;',                                              // rise
         '  float sw = sin(t * 6.2831 * (1.5 + aSeed) + aSeed * 40.0);',  // horizontal sway
         '  p.x += sw * (0.12 + t * 0.3); p.z += cos(t * 5.0 + aSeed * 20.0) * (0.1 + t * 0.25);',
-        '  vA = smoothstep(0.0, 0.15, t) * (1.0 - smoothstep(0.55, 1.0, t)) * 0.16;',
+        '  vA = smoothstep(0.0, 0.15, t) * (1.0 - smoothstep(0.55, 1.0, t)) * 0.10;',
         '  vec4 mv = modelViewMatrix * vec4(p, 1.0);',
         '  gl_PointSize = (26.0 + t * 60.0 + aSeed * 14.0) * (24.0 / -mv.z);',
         '  gl_Position = projectionMatrix * mv;',
@@ -1171,13 +1171,13 @@
       pmrem.dispose();
     })();
 
-    lights.hemi = new T.HemisphereLight(0xffe9d2, 0x6e5f4d, 0.5); scene.add(lights.hemi);
+    lights.hemi = new T.HemisphereLight(0xffe9d2, 0x6e5f4d, 0.2); scene.add(lights.hemi);
     // soft cool "window" fill — NO shadow (lamp is the sole real-time caster)
-    lights.key = new T.DirectionalLight(0xfff2df, 0.5);
+    lights.key = new T.DirectionalLight(0xfff2df, 0.26);
     lights.key.position.set(-14, 18, 12); scene.add(lights.key);
-    lights.fill = new T.DirectionalLight(0xffffff, 0.28); lights.fill.position.set(12, 8, 9); scene.add(lights.fill);
+    lights.fill = new T.DirectionalLight(0xffffff, 0.14); lights.fill.position.set(12, 8, 9); scene.add(lights.fill);
     // subtle cool rim from behind to separate props from the back wall
-    lights.rim = new T.DirectionalLight(0xd6e4ff, 0.4); lights.rim.position.set(3, 11, -16); scene.add(lights.rim);
+    lights.rim = new T.DirectionalLight(0xd6e4ff, 0.24); lights.rim.position.set(3, 11, -16); scene.add(lights.rim);
 
     shadowMat = new T.ShadowMaterial({ opacity: 0.26 });
     // (the room floor, built below, receives the shadow)
@@ -1243,6 +1243,14 @@
     buildKeyboard();
     buildLamp();
     buildMug();
+
+    // dim IBL ambient so the lamp reads as the key light (r128 has no global env intensity)
+    scene.traverse(function (o) {
+      if (o.isMesh && o.material && o.material.isMeshStandardMaterial) {
+        o.material.envMapIntensity = 0.25; o.material.needsUpdate = true;
+      }
+    });
+
     ready = true;
     window.__dbg = function () { return { ready: ready, f: window.__frames }; };
     burstRefresh();
