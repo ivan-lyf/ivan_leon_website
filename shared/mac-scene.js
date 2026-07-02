@@ -637,7 +637,7 @@
     }, undefined, function (e) { console.warn('lamp glb failed', e); });
 
     // key light (kept from the procedural version — the scene's only shadow caster)
-    lampLight = new T.SpotLight(0xffc98a, 0.0, 55, 0.75, 0.6, 1.3);  // warm ~2800K
+    lampLight = new T.SpotLight(0xffc98a, 0.0, 55, 0.9, 0.6, 1.3);  // warm ~2800K
     lampLight.position.set(0, 5.6, 0.8);
     lampLight.castShadow = QUALITY.shadows;
     lampLight.shadow.mapSize.set(QUALITY.shadowMapSize, QUALITY.shadowMapSize);
@@ -646,9 +646,9 @@
     g.add(lampLight);
 
     // spotlight target: local to the lamp group so it tracks MacScene.setLamp moves;
-    // resolves to world ≈ keyboard area
+    // straight down from the bulb (banker's lamp)
     const spotTarget = new T.Object3D();
-    spotTarget.position.set(-6.33, 0, 9.76);
+    spotTarget.position.set(0, 0, 0.8);
     g.add(spotTarget);
     lampLight.target = spotTarget;
 
