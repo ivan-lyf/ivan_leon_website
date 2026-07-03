@@ -84,7 +84,7 @@
     return `
       <h2 style="text-align:center;">${P.fullName}</h2>
       <p class="meta" style="text-align:center;">${P.email} · 949-738-8015</p>
-      <p style="text-align:center;"><a href="leon/assets/resume/leon-resume.html" target="_blank" rel="noopener">Open full résumé →</a></p>
+      <p style="text-align:center;"><a href="leon/assets/resume/Leon_Resume.pdf" target="_blank" rel="noopener">Open full résumé →</a></p>
       <hr class="rule">
 
       <h3>Technical Skills</h3>

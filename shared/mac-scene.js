@@ -545,20 +545,24 @@
     keyboardGroup = g;
     addContactShadow(scene, caseW + 2, caseD + 2, 0, 7.4, 0.3);
 
-    // cable from the keyboard back to the Mac's front-lower port. Endpoints are
-    // EMBEDDED into both bodies (keyboard back z>5.72, Mac front z<2.91 after the
-    // monitor moved to z=-2) so no gap shows despite the procedural/GLB size
-    // mismatch; sags onto the desk between them. World coords (cable is added to scene).
-    const start = new T.Vector3(0.3, 0.9, 6.5);     // into the keyboard back
-    const end = new T.Vector3(0, 1.35, 2.75);       // into the Mac front-lower port
+    // cable from the keyboard back to the Mac's REAR 3-slot port (world ~2.7,4.6,-6).
+    // Physically routed: a cable can't pass through the Mac, so it drops to the desk,
+    // drapes around the Mac's RIGHT side (Mac x-edge 4.37), rounds the back corner, and
+    // climbs the rear face into the port. World coords (cable is added to scene, so it
+    // is independent of which keyboard model sits at ~(0,0,7.4) — carries over to any).
+    const start = new T.Vector3(0.3, 0.9, 6.4);      // into the keyboard back
+    const end = new T.Vector3(2.7, 4.5, -6.25);      // into the rear 3-slot port
     const curve = new T.CatmullRomCurve3([
       start,
-      new T.Vector3(0.35, 0.25, 5.6),   // drop to the desk
-      new T.Vector3(-0.2, 0.16, 4.3),   // rest / sag on the desk
-      new T.Vector3(0.1, 0.3, 3.3),     // rise to the Mac port
+      new T.Vector3(1.6, 0.14, 6.1),    // drop to the desk
+      new T.Vector3(4.2, 0.13, 5.2),    // head right to clear the Mac's side
+      new T.Vector3(5.25, 0.13, 3.0),   // drape along the right of the Mac
+      new T.Vector3(5.25, 0.13, -3.0),
+      new T.Vector3(4.9, 0.15, -6.2),   // round the back-right corner
+      new T.Vector3(3.7, 2.4, -6.7),    // climb the rear face
       end
     ]);
-    const cable = new T.Mesh(new T.TubeGeometry(curve, 44, 0.09, 10, false),
+    const cable = new T.Mesh(new T.TubeGeometry(curve, 90, 0.09, 10, false),
       new T.MeshStandardMaterial({ color: 0xddd2b4, roughness: 0.6 }));
     cable.castShadow = true; scene.add(cable);
 
@@ -566,7 +570,7 @@
 
     // swap in the high-fidelity model once the scene is interactive
     whenInteractive(function () {
-      loadDeferredGLB('shared/assets/models/mechanical_keyboard.glb', function (gltf) {
+      loadDeferredGLB('shared/assets/models/low_poly_keyboard.glb', function (gltf) {
         const inner = gltf.scene;
         // orientation correction (tuned visually): inner.rotation.y = 0;
         const kb = fitAndGround(inner, caseW, false);   // match procedural footprint width
@@ -644,9 +648,9 @@
       // from the rendered chain (attach under shade → teardrop).
       const outlineMat = new T.MeshBasicMaterial({ color: 0xffffff, side: T.BackSide });  // BackSide: only the far wall renders -> chain shows inside a white contour (sticker-style)
       // chain axis extracted from GLB vertex data: local x 1.60, z 0.80, y 2.95..6.16
-      const oLine = new T.Mesh(new T.CylinderGeometry(0.085, 0.085, 3.21, 10), outlineMat);
+      const oLine = new T.Mesh(new T.CylinderGeometry(0.048, 0.048, 3.21, 10), outlineMat);
       oLine.position.set(1.60, 4.555, 0.80);
-      const oPull = new T.Mesh(new T.ConeGeometry(0.24, 0.5, 12), outlineMat);
+      const oPull = new T.Mesh(new T.ConeGeometry(0.14, 0.37, 12), outlineMat);
       oPull.position.set(1.60, 2.62, 0.80);   // teardrop at the chain's end
       stringOutline = new T.Group();
       stringOutline.add(oLine); stringOutline.add(oPull);
@@ -781,9 +785,17 @@
              new T.Vector2(0.68, 0.35), new T.Vector2(0, 0.3));
     const body = new T.Mesh(new T.LatheGeometry(pts, 36), glaze);
     body.castShadow = true; body.receiveShadow = true; g.add(body);
-    const handle = new T.Mesh(new T.TorusGeometry(0.55, 0.13, 12, 24, Math.PI * 1.6), glaze);
-    handle.position.set(0.82, 1.15, 0); handle.rotation.z = -Math.PI / 2 + 0.35;
-    handle.castShadow = true; g.add(handle);
+    // C-handle as a tube that attaches to the mug wall (x~0.8) at top and bottom
+    // and bows out — reads as a real handle rather than a floating torus ring
+    const hCurve = new T.CatmullRomCurve3([
+      new T.Vector3(0.72, 1.6, 0),     // top attach (embedded into wall)
+      new T.Vector3(1.36, 1.5, 0),
+      new T.Vector3(1.56, 1.05, 0),    // outermost bow
+      new T.Vector3(1.3, 0.62, 0),
+      new T.Vector3(0.72, 0.5, 0)      // bottom attach (embedded into wall)
+    ]);
+    const handle = new T.Mesh(new T.TubeGeometry(hCurve, 28, 0.12, 12, false), glaze);
+    handle.castShadow = true; handle.receiveShadow = true; g.add(handle);
     const coffee = new T.Mesh(new T.CircleGeometry(0.66, 28),
       new T.MeshStandardMaterial({ color: 0x2a1608, roughness: 0.15, metalness: 0.0 }));
     coffee.rotation.x = -Math.PI / 2; coffee.position.y = 1.95; g.add(coffee);
