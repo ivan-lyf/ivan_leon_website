@@ -545,22 +545,23 @@
     keyboardGroup = g;
     addContactShadow(scene, caseW + 2, caseD + 2, 0, 7.4, 0.3);
 
-    // cable from the keyboard back to the Mac's REAR 3-slot port (world ~2.7,4.6,-6).
-    // Physically routed: a cable can't pass through the Mac, so it drops to the desk,
-    // drapes around the Mac's RIGHT side (Mac x-edge 4.37), rounds the back corner, and
-    // climbs the rear face into the port. World coords (cable is added to scene, so it
-    // is independent of which keyboard model sits at ~(0,0,7.4) — carries over to any).
+    // cable from the keyboard back to the Mac's REAR 3-slot port (pins at x2.46/2.70/2.94,
+    // y4.6, front face z~-6.05). A cable can't pass through the Mac: it drops to the desk,
+    // drapes around the RIGHT side (Mac x-edge 4.37), routes BEHIND the Mac (z<-6.84, past
+    // all its geometry), climbs there, then pushes STRAIGHT (+z) into the port so it aligns
+    // with the slot and never clips the shell. World coords → carries to any keyboard.
     const start = new T.Vector3(0.3, 0.9, 6.4);      // into the keyboard back
-    const end = new T.Vector3(2.7, 4.5, -6.25);      // into the rear 3-slot port
+    const end = new T.Vector3(2.7, 4.6, -6.02);      // straight into the 3-slot port
     const curve = new T.CatmullRomCurve3([
       start,
       new T.Vector3(1.6, 0.14, 6.1),    // drop to the desk
-      new T.Vector3(4.2, 0.13, 5.2),    // head right to clear the Mac's side
-      new T.Vector3(5.25, 0.13, 3.0),   // drape along the right of the Mac
-      new T.Vector3(5.25, 0.13, -3.0),
-      new T.Vector3(4.9, 0.15, -6.2),   // round the back-right corner
-      new T.Vector3(3.7, 2.4, -6.7),    // climb the rear face
-      end
+      new T.Vector3(4.5, 0.13, 4.6),    // head right to clear the Mac's side
+      new T.Vector3(5.3, 0.13, 0.5),    // drape along the right of the Mac
+      new T.Vector3(5.1, 0.13, -5.2),
+      new T.Vector3(3.6, 0.16, -7.7),   // round BEHIND the Mac (z<-6.84, clear of shell)
+      new T.Vector3(2.7, 2.4, -7.7),    // climb straight up behind the rear face
+      new T.Vector3(2.7, 4.6, -7.3),    // reach port height, still behind
+      end                                // straight +z push into the slot
     ]);
     const cable = new T.Mesh(new T.TubeGeometry(curve, 90, 0.09, 10, false),
       new T.MeshStandardMaterial({ color: 0xddd2b4, roughness: 0.6 }));
@@ -572,7 +573,8 @@
     whenInteractive(function () {
       loadDeferredGLB('shared/assets/models/low_poly_keyboard.glb', function (gltf) {
         const inner = gltf.scene;
-        // orientation correction (tuned visually): inner.rotation.y = 0;
+        // GLB ships standing on its back edge (keys facing +z); lay it flat, keys up
+        inner.rotation.x = -Math.PI / 2;
         const kb = fitAndGround(inner, caseW, false);   // match procedural footprint width
         kb.position.set(0, 0, 7.4);
 
@@ -777,17 +779,18 @@
   let chairGroup = null;
   function buildChair(floorY) {
     loadDeferredGLB('shared/assets/models/office_chair.glb', function (gltf) {
-      const inner = fitAndGround(gltf.scene, 18, false);   // ~18 units tall; bottom at y=0
+      const inner = fitAndGround(gltf.scene, 25, false);   // ~25 units tall; bottom at y=0
       dimMaterials(inner);                                  // async: covered here, not by init's pass
       const chair = new T.Group();
       chair.add(inner);
-      // in front of the desk (+z), rolled back + slightly off-centre so the seat/back
-      // clears the sight line to the screen; faced toward the desk (rot tuned visually)
-      chair.position.set(-1.5, floorY, 16.5);
-      chair.rotation.y = Math.PI;
+      // in front of the desk, pushed to the side + swivelled at an angle with a slight
+      // tilt, as if someone just got up and left the spot; clears the path to the screen
+      chair.position.set(-5, floorY, 15);
+      chair.rotation.y = Math.PI + 0.55;   // swivelled ~31° off straight
+      chair.rotation.z = 0.04;             // slight tilt
       scene.add(chair);
       chairGroup = chair;
-      addContactShadow(scene, 9, 9, -1.5, 16.5, 0.3);
+      addContactShadow(scene, 14, 14, -5, 15, 0.3);
       bumpActivity(); renderNow();
     });
   }
