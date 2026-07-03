@@ -545,14 +545,17 @@
     keyboardGroup = g;
     addContactShadow(scene, caseW + 2, caseD + 2, 0, 7.4, 0.3);
 
-    // coiled cable from the back of the keyboard up to the Mac's front port
-    const startW = new T.Vector3(0, caseH * 0.7, -caseD / 2).add(g.position);
-    const end = new T.Vector3(0, 1.0, 2.55);
+    // cable from the keyboard back to the Mac's front-lower port. Endpoints are
+    // EMBEDDED into both bodies (keyboard back z>5.72, Mac front z<2.91 after the
+    // monitor moved to z=-2) so no gap shows despite the procedural/GLB size
+    // mismatch; sags onto the desk between them. World coords (cable is added to scene).
+    const start = new T.Vector3(0.3, 0.9, 6.5);     // into the keyboard back
+    const end = new T.Vector3(0, 1.35, 2.75);       // into the Mac front-lower port
     const curve = new T.CatmullRomCurve3([
-      startW,
-      new T.Vector3(0.25, 0.4, startW.z - 0.7),
-      new T.Vector3(-0.35, 0.5, (startW.z + end.z) / 2),
-      new T.Vector3(0.12, 0.8, end.z + 0.7),
+      start,
+      new T.Vector3(0.35, 0.25, 5.6),   // drop to the desk
+      new T.Vector3(-0.2, 0.16, 4.3),   // rest / sag on the desk
+      new T.Vector3(0.1, 0.3, 3.3),     // rise to the Mac port
       end
     ]);
     const cable = new T.Mesh(new T.TubeGeometry(curve, 44, 0.09, 10, false),
