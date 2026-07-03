@@ -786,12 +786,14 @@
       chair.add(inner);
       // in front of the desk, pushed to the side + swivelled at an angle with a slight
       // tilt, as if someone just got up and left the spot; clears the path to the screen
-      chair.position.set(-2, floorY, 17.5);
+      // pushed to the right (lamp side) and toward the desk so it clears the default
+      // entry camera's line to the screen while staying by the table
+      chair.position.set(10, floorY, 13);
       chair.rotation.y = Math.PI + 0.55;   // swivelled ~31° off straight
       chair.rotation.z = 0.04;             // slight tilt
       scene.add(chair);
       chairGroup = chair;
-      addContactShadow(scene, 14, 14, -2, 17.5, 0.3);
+      addContactShadow(scene, 14, 14, 10, 13, 0.3);
       bumpActivity(); renderNow();
     });
   }
