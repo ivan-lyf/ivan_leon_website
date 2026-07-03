@@ -46,10 +46,11 @@
     }
     #hud b { color: #ffd9a8; font-weight: 600; }
     #hud .sep { opacity: 0.35; }
-    #audio-toggle { position: fixed; right: 18px; bottom: 20px; z-index: 6;
-      background: rgba(34,26,18,0.72); color: #ffe9cf; border: 1px solid rgba(255,233,207,0.25);
-      padding: 7px 12px; border-radius: 999px; font: 11px ui-monospace, 'Courier New', monospace;
-      letter-spacing: 0.3px; cursor: pointer; backdrop-filter: blur(6px); opacity: 0.85; }
+    #audio-toggle { position: fixed; right: 18px; bottom: 18px; z-index: 6;
+      width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+      background: rgba(34,26,18,0.72); border: 1px solid rgba(255,233,207,0.25);
+      border-radius: 999px; font-size: 17px; line-height: 1; cursor: pointer;
+      backdrop-filter: blur(6px); opacity: 0.85; }
     #audio-toggle:hover { opacity: 1; }
     /* boot overlay — Macintosh terminal, shown until the whole 3D scene loads */
     #loading {

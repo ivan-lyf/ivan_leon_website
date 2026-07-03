@@ -4,7 +4,7 @@
  * when the tab is hidden. Mute chip bottom-right, persisted in localStorage. */
 (function () {
   const KEY = 'ambient-muted';
-  const TARGET_VOL = 0.075;                       // low ambient bed, clearly audible
+  const TARGET_VOL = 0.14;                        // ambient bed, clearly present
   let ctx = null, master = null, started = false;
   let muted = localStorage.getItem(KEY) === '1';
 
@@ -63,7 +63,10 @@
   const btn = document.createElement('button');
   btn.id = 'audio-toggle'; btn.type = 'button';
   btn.setAttribute('aria-label', 'Toggle ambient sound');
-  function paint() { btn.textContent = muted ? '🔇 sound off' : '🔊 sound on'; }
+  function paint() {
+    btn.textContent = muted ? '🔇' : '🔊';
+    btn.setAttribute('aria-label', muted ? 'Unmute ambient sound' : 'Mute ambient sound');
+  }
   paint();
   btn.addEventListener('click', function (e) {
     e.stopPropagation();
