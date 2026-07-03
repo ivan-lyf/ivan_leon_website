@@ -558,9 +558,10 @@
       new T.Vector3(4.5, 0.13, 4.6),    // head right to clear the Mac's side
       new T.Vector3(5.3, 0.13, 0.5),    // drape along the right of the Mac
       new T.Vector3(5.1, 0.13, -5.2),
-      new T.Vector3(3.6, 0.16, -7.7),   // round BEHIND the Mac (z<-6.84, clear of shell)
-      new T.Vector3(2.7, 2.4, -7.7),    // climb straight up behind the rear face
-      new T.Vector3(2.7, 4.6, -7.3),    // reach port height, still behind
+      new T.Vector3(3.7, 0.16, -7.9),   // round BEHIND the Mac (z<-6.84, clear of shell)
+      new T.Vector3(3.55, 1.5, -8.6),   // dangle: cable bellies out with slack (gravity droop)
+      new T.Vector3(2.9, 3.5, -8.0),    // rises toward the port in a lazy curve
+      new T.Vector3(2.72, 4.55, -7.0),  // just behind the port
       end                                // straight +z push into the slot
     ]);
     const cable = new T.Mesh(new T.TubeGeometry(curve, 90, 0.09, 10, false),
@@ -785,12 +786,12 @@
       chair.add(inner);
       // in front of the desk, pushed to the side + swivelled at an angle with a slight
       // tilt, as if someone just got up and left the spot; clears the path to the screen
-      chair.position.set(-5, floorY, 15);
+      chair.position.set(-2, floorY, 17.5);
       chair.rotation.y = Math.PI + 0.55;   // swivelled ~31° off straight
       chair.rotation.z = 0.04;             // slight tilt
       scene.add(chair);
       chairGroup = chair;
-      addContactShadow(scene, 14, 14, -5, 15, 0.3);
+      addContactShadow(scene, 14, 14, -2, 17.5, 0.3);
       bumpActivity(); renderNow();
     });
   }
