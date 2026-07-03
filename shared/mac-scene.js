@@ -771,6 +771,27 @@
     if (lampEmissives.length) lampEmissives.forEach(function (m) { m.emissiveIntensity = m.userData.baseEmissive * Math.max(0.05, v / 15); });
   }
 
+  /* ---------- 1960s office chair (user-supplied GLB) ----------
+     Loaded deferred; sits in front of the desk facing the screen, rolled back
+     a bit so it doesn't block the viewer's path to the Mac. */
+  let chairGroup = null;
+  function buildChair(floorY) {
+    loadDeferredGLB('shared/assets/models/office_chair.glb', function (gltf) {
+      const inner = fitAndGround(gltf.scene, 18, false);   // ~18 units tall; bottom at y=0
+      dimMaterials(inner);                                  // async: covered here, not by init's pass
+      const chair = new T.Group();
+      chair.add(inner);
+      // in front of the desk (+z), rolled back + slightly off-centre so the seat/back
+      // clears the sight line to the screen; faced toward the desk (rot tuned visually)
+      chair.position.set(-1.5, floorY, 16.5);
+      chair.rotation.y = Math.PI;
+      scene.add(chair);
+      chairGroup = chair;
+      addContactShadow(scene, 9, 9, -1.5, 16.5, 0.3);
+      bumpActivity(); renderNow();
+    });
+  }
+
   /* ---------- procedural glazed coffee mug + looping steam ---------- */
   let mugGroup = null;
   function buildMug() {
@@ -1328,6 +1349,7 @@
     buildLamp();
     buildMotes();
     buildMug();
+    buildChair(floorY);
 
     // dim IBL ambient so the lamp reads as the key light (r128 has no global env intensity)
     dimMaterials(scene);
@@ -1546,6 +1568,7 @@
     setLamp: function (p) { if (!lampGroup) return; if (p.x != null) lampGroup.position.x = p.x; if (p.z != null) lampGroup.position.z = p.z; if (p.rot != null) lampGroup.rotation.y = p.rot; if (p.light != null && lampLight) lampLight.intensity = p.light; renderNow(); return lampGroup.position; },
     setLampOn: setLampOn,
     setMug: function (p) { if (!mugGroup) return; if (p.x != null) mugGroup.position.x = p.x; if (p.z != null) mugGroup.position.z = p.z; renderNow(); return mugGroup.position; },
+    setChair: function (p) { if (!chairGroup) return; if (p.x != null) chairGroup.position.x = p.x; if (p.z != null) chairGroup.position.z = p.z; if (p.rot != null) chairGroup.rotation.y = p.rot; if (p.s != null) chairGroup.scale.setScalar(p.s); renderNow(); return chairGroup.position; },
     setBulge: function (b) { BULGE = b; rebuildScreen(); return BULGE; },
     setScreen: function (p) { Object.assign(SCREEN, p); rebuildScreen(); return SCREEN; },
     debugAzimuth: function (deg, elevDeg, dist) {

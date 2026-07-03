@@ -7,6 +7,7 @@
 | Low-Poly Freeride Skis | Romainhj | https://sketchfab.com/3d-models/low-poly-freeride-skis-8b27a5ff5c6f436ab18d6d1d5862aeb5 | CC Attribution (CC BY 4.0) | 2026-07-02 |
 | Low-poly Keyboard | (user-supplied file) | provided by site owner | user-supplied | 2026-07-03 |
 | Old Table Lamp v01 | (user-supplied file) | provided by site owner | user-supplied | 2026-07-02 |
+| 1960s Office Chair | (user-supplied file) | provided by site owner | user-supplied | 2026-07-03 |
 
 Models were optimized for web delivery (Draco mesh compression + WebP textures ≤1024px via
 gltf-transform); geometry and materials otherwise unmodified.
