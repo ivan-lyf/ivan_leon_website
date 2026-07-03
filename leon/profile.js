@@ -83,45 +83,49 @@
   function resume(P, O) {
     return `
       <h2 style="text-align:center;">${P.fullName}</h2>
-      <p class="meta" style="text-align:center;">${P.email} · 949-738-8015</p>
+      <p class="meta" style="text-align:center;">leonm6@uci.edu · 949-738-8015 · leonmeng.xyz</p>
       <p style="text-align:center;"><a href="leon/assets/resume/Leon_Resume.pdf" target="_blank" rel="noopener">Open full résumé →</a></p>
       <hr class="rule">
 
+      <h3>Education</h3>
+      <p><strong>University of California, Irvine</strong></p>
+      <p class="meta">B.S. Computer Science and Engineering · 2025–2029 · Irvine, CA</p>
+      <hr class="dotrule">
+
       <h3>Technical Skills</h3>
-      <p><strong>Languages</strong><br>Java, Python, JavaScript, HTML, CSS, SQL</p>
-      <p><strong>Tools</strong><br>Git, GitHub Actions, Docker, IntelliJ IDEA, Supabase, PostgreSQL, REST APIs, Fusion 360, 3D printing</p>
-      <p><strong>Cloud &amp; DevOps</strong><br>CI/CD pipelines, containerized deploys (Docker), cloud hosting (Railway, Netlify)</p>
+      <p><strong>Programming Languages</strong><br>Python, Java, JavaScript, TypeScript, HTML, CSS, SQL</p>
+      <p><strong>Web &amp; Backend</strong><br>React, Vite, FastAPI, Supabase, PostgreSQL, Vercel serverless functions, REST APIs</p>
+      <p><strong>AI &amp; Automation</strong><br>Anthropic Claude &amp; OpenAI APIs, AI image-processing pipelines, LLM tooling, workflow automation</p>
+      <p><strong>Robotics &amp; Vision</strong><br>Autonomous systems, odometry &amp; localization, path planning (Roadrunner), finite state machines, OpenCV, Limelight 3A vision, CAD (Fusion 360), 3D printing</p>
+      <p><strong>Developer Tools</strong><br>Git, GitHub, Docker, Linux, CI/CD pipelines</p>
       <hr class="dotrule">
 
       <h3>Experience</h3>
-      <p><strong>Mechanical Engineer &amp; Robot Operator</strong> — FTC Teams 16031 &amp; 16205</p>
+      <p><strong>SomaFuture</strong> — Software Engineer</p>
+      <p class="meta">Jun 2026 – Aug 2026 · Oeiras, Portugal</p>
+      <p>• Designed &amp; built a completely new company website that redefined SomaFuture's strategic direction toward standardizing and digitalizing its product line — translating a physical catalog into a structured digital experience<br>
+         • Built and integrated AI &amp; automation tools into internal workflows, streamlining repetitive tasks and accelerating design and content production<br>
+         • Prototyped 3D room configurators and evaluated outsourcing platforms against catalog-import, modular-configuration, and EU/GDPR requirements, authoring the comparative assessment used to guide the platform decision</p>
+      <p><strong>First Tech Challenge</strong> — Teams 16031 &amp; 16205, Autonomous &amp; Mechanical Engineer</p>
       <p class="meta">Oct 2021 – Jun 2025 · Vancouver, BC</p>
-      <p>• Led design &amp; fabrication of the robot chassis, drivetrain, arm pivot, and scoring mechanism<br>
-         • Designed custom 3D-printed parts in Fusion 360 and integrated them onto the robot<br>
-         • Contributed robot-control code and the Engineering Portfolio on GitHub<br>
-         • Top-scoring team — multiple awards at BC &amp; Alberta championships</p>
+      <p>• Implemented an encoder-based odometry system: computed per-step displacement, corrected for rotational drift, and converted to field coordinates via trigonometric transforms for sub-centimeter localization<br>
+         • Built a vision-guided detection system (Limelight 3A + OpenCV) with a color-isolation pipeline to detect, classify, and localize game elements in real time and auto-align the robot for pickup<br>
+         • Coordinated all mechanisms with a finite state machine and integrated Roadrunner for smooth, repeatable multi-step autonomous routines<br>
+         • Designed &amp; fabricated custom 3D-printed components and co-authored the Engineering Portfolio — multiple top-scoring awards at BC &amp; Alberta championships</p>
       <hr class="dotrule">
 
       <h3>Projects</h3>
-      <p><strong>Plastering Robot</strong> — Autonomous Construction Robotics</p>
-      <p class="meta">Jan 2026 – ongoing · Irvine, CA</p>
-      <p>• Prototyped an autonomous wall-plastering system for consistent material deposition &amp; finishing<br>
-         • Modeled mechanical &amp; motion systems in CAD — linear actuation, guided multi-axis movement<br>
-         • Defined system architecture &amp; constraints with a multidisciplinary team</p>
-      <p><strong>GARDEROBE</strong> — Full-Stack Wardrobe Web App</p>
-      <p class="meta">Jan 2026 – ongoing · Irvine, CA</p>
-      <p>• React SPA + Python/FastAPI backend exposing RESTful AI-tagging &amp; background-removal endpoints<br>
-         • Dockerized backend, cloud-deployed; CI/CD via GitHub Actions (ESLint, Ruff, Vite build)<br>
-         • Supabase (PostgreSQL) auth, queries &amp; storage with row-level security policies</p>
+      <p><strong>GARDEROBE</strong> — Full-Stack Wardrobe Manager · React, Supabase, FastAPI, Claude API</p>
+      <p>• Shipped to production a full-stack wardrobe app with AI auto-tagging that extracts item name, brand, color, and type from a photo via the Anthropic Claude API<br>
+         • Built in-browser ML background removal, a drag-and-drop outfit builder, and a live price-tracking wishlist backed by scheduled FastAPI scraping jobs (Grailed, SSENSE) every 6 hours<br>
+         • Built a full social platform on Supabase realtime — profiles, publishing, Explore, a people directory, friends, and likes — plus a feed aggregating fashion &amp; culture articles from multiple news APIs</p>
+      <p><strong>BugLens</strong> — VS Code Extension · TypeScript, OpenAI &amp; Anthropic APIs</p>
+      <p>• Built a VS Code extension that explains the logic behind a highlighted bug — what the code does, what the user intended, and the underlying concept — without handing back a rewritten fix, to reinforce learning<br>
+         • Integrated streaming LLM output across both OpenAI and Anthropic providers, bundled with esbuild and rendered in a WebView side panel</p>
       <hr class="dotrule">
 
-      <h3>Awards</h3>
-      <p>• USACO Gold Division (2023)</p>
-      <hr class="dotrule">
-
-      <h3>Education</h3>
-      <p><strong>University of California, Irvine</strong></p>
-      <p class="meta">B.S. Computer Engineering · 2025–2029 · Irvine, CA</p>`;
+      <h3>Awards &amp; Achievements</h3>
+      <p>• USACO Gold Division (2023)</p>`;
   }
 
   /* ---------- live LeetCode stats (via /api/leetcode serverless proxy) ---------- */
