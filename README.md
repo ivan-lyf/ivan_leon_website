@@ -1,45 +1,3 @@
-# Ivan and Leon's website
-
-A personal site for two people, styled as a 1984 Macintosh. Each domain shows its
-owner's desktop. The home page shows a 3D Macintosh with the live site running on
-its screen; you can orbit it, then zoom in to actually use it.
-
-## Project structure
-
-The repo is split by ownership: shared engine code lives in `shared/`, and each
-person's content + assets live in their own directory.
-
-```
-.
-├── index.html            # page shell: 3D scene + the Mac OS markup it renders
-├── api/
-│   └── leetcode.js       # Vercel serverless proxy for Leon's live LeetCode stats
-├── shared/               # the engine — knows nothing about Ivan or Leon
-│   ├── mac-scene.js      # the 3D Macintosh, desk, room, keyboard, lamp (Three.js)
-│   ├── mac.js            # the OS engine: boot, login, windows, menus, control panel
-│   ├── mac.css           # all styles (chassis, CRT, windows, icons, dither)
-│   └── assets/
-│       ├── fonts/        # self-hosted Chicago and Monaco
-│       ├── models/       # low-poly skis (GLB)
-│       └── textures/     # PBR wood / concrete maps for the 3D desk
-├── ivan/
-│   ├── profile.js        # Ivan's content -> window.PROFILES.ivan
-│   └── assets/
-│       ├── projects/     # project screenshots
-│       ├── rocket/       # UBC Rocket screenshots
-│       ├── leanpub/      # Leanpub iOS v3 screenshots (Ruboss)
-│       ├── sidehustle/   # misc photos
-│       └── resume/       # Ivan_Luo_Resume.pdf
-└── leon/
-    ├── profile.js        # Leon's content -> window.PROFILES.leon
-    └── assets/
-        ├── resume/       # leon-resume.html
-        └── apple.png     # Leon's desktop wallpaper
-```
-
-It is plain HTML, CSS, and JavaScript with no build step. Serve the folder and open
-`index.html`, or put it on any static host.
-
 ## Engine and content
 
 `shared/mac.js` is the engine. It does not know anything about Ivan or Leon; it just
@@ -67,13 +25,6 @@ then the screen scales up so you can use it directly. Press Esc to exit.
 To run the plain 2D version instead, point a page at the Mac OS markup and the three
 scripts (`ivan/profile.js`, `leon/profile.js`, `shared/mac.js`) without the scene.
 
-## Screenshots
-
-Project screenshots appear inside that project's window as a small framed strip. They
-are monochrome at rest, show color on hover, and open enlarged in their own window when
-clicked (dismiss with the close box, a click outside, or Esc). Change which images
-appear by editing a profile's `projects[].shots`.
-
 ## Two domains, one codebase
 
 Both profile files load on both domains. At startup the engine picks the owner from the
@@ -93,15 +44,3 @@ python3 -m http.server 8000
 
 Add `?as=leon` or `?as=ivan` to force a side without changing the hostname. This is
 useful for editing one person's page while working on the other's machine.
-
-## Deploying (Vercel)
-
-1. Push the repo and import it to Vercel as a static project (no framework, no build).
-2. Add both `leonmeng.xyz` and `ivanluo.xyz` as domains on the one project.
-3. Point each registrar's DNS at Vercel. HTTPS is issued automatically.
-
-## Controls
-
-Apple menu, then Control Panel: black and white or green phosphor, CRT scanlines on or
-off, and live or outline window dragging. Leon's desktop also has a Now Playing widget
-that shows one song per visit. Settings are saved in the browser.
