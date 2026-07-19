@@ -20,7 +20,17 @@
       stack: ["Python", "Pandas", "NumPy", "scikit-learn", "SQLite", "Streamlit"],
       info: "Quant · 2026",
       links: [{ label: "GitHub", href: "https://github.com/ggttlplp201/cs666" }],
-      shots: [],
+      shots: [
+        { src: "leon/assets/shots/cs2-quant/01.jpg", cap: "Overview: per-strategy viability and capital deployed" },
+        { src: "leon/assets/shots/cs2-quant/06.jpg", cap: "Spreads, and trading cost against liquidity" },
+        { src: "leon/assets/shots/cs2-quant/07.jpg", cap: "Out-of-sample scorecard for each trading rule" },
+        { src: "leon/assets/shots/cs2-quant/05.jpg", cap: "Event timeline: net return per trade" },
+        { src: "leon/assets/shots/cs2-quant/04.jpg", cap: "Decision log, with the raw JSON behind each signal" },
+        { src: "leon/assets/shots/cs2-quant/08.jpg", cap: "Live market: bid, ask and spread per item" },
+        { src: "leon/assets/shots/cs2-quant/09.jpg", cap: "Data health: poller status and gaps in the series" },
+        { src: "leon/assets/shots/cs2-quant/03.jpg", cap: "Trade-up class returns against the broad market" },
+        { src: "leon/assets/shots/cs2-quant/02.jpg", cap: "Monopoly watch: concentration per item" },
+      ],
     },
     {
       id: "ui-library", name: "UI Library", icon: "g-doc",
@@ -31,7 +41,12 @@
         { label: "Live demo", href: "https://ui-library-iota-neon.vercel.app" },
         { label: "GitHub", href: "https://github.com/ggttlplp201/UI-Library" },
       ],
-      shots: [],
+      shots: [
+        { src: "leon/assets/shots/ui-library/01.jpg", cap: "Launcher: open a React project or a bundled sample" },
+        { src: "leon/assets/shots/ui-library/02.jpg", cap: "Editing a live component on the canvas" },
+        { src: "leon/assets/shots/ui-library/03.jpg", cap: "Pages wired together in the node graph" },
+        { src: "leon/assets/shots/ui-library/04.jpg", cap: "Component library, with a button selected on the canvas" },
+      ],
     },
     {
       id: "garderobe", name: "GARDEROBE", icon: "g-doc",
@@ -42,7 +57,13 @@
         { label: "Live site", href: "https://the-garderobe.com/" },
         { label: "GitHub", href: "https://github.com/ggttlplp201/GARDER0BE" },
       ],
-      shots: [],
+      shots: [
+        { src: "leon/assets/shots/garderobe/01.jpg", cap: "Outfit builder, with the closet alongside" },
+        { src: "leon/assets/shots/garderobe/02.jpg", cap: "The look book, walkable in 3D" },
+        { src: "leon/assets/shots/garderobe/03.jpg", cap: "Explore feed of fashion and culture articles" },
+        { src: "leon/assets/shots/garderobe/04.jpg", cap: "An outfit published, with comments" },
+        { src: "leon/assets/shots/garderobe/05.jpg", cap: "People directory" },
+      ],
     },
     {
       id: "domusmat", name: "DoMusMat", icon: "g-doc",
@@ -53,7 +74,15 @@
         { label: "Live site", href: "https://do-mus-mat-v2.vercel.app" },
         { label: "GitHub", href: "https://github.com/ggttlplp201/DoMusMatV2" },
       ],
-      shots: [],
+      shots: [
+        { src: "leon/assets/shots/domusmat/01.jpg", cap: "Configurator: an empty room with placement hotspots" },
+        { src: "leon/assets/shots/domusmat/02.jpg", cap: "Choosing a door to drop into the room" },
+        { src: "leon/assets/shots/domusmat/03.jpg", cap: "Windows placed, materials palette on the left" },
+        { src: "leon/assets/shots/domusmat/04.jpg", cap: "A furnished room, ready to share or render" },
+        { src: "leon/assets/shots/domusmat/05.jpg", cap: "Photoreal walkthrough by day" },
+        { src: "leon/assets/shots/domusmat/08.jpg", cap: "The same room at night" },
+        { src: "leon/assets/shots/domusmat/06.jpg", cap: "Virtual tour, stepping between rooms" },
+      ],
     },
     {
       id: "pdf-translator", name: "pdfTranslator", icon: "g-doc",
@@ -61,7 +90,13 @@
       stack: ["Python", "PyMuPDF", "FastAPI", "Tesseract OCR", "Docker"],
       info: "Tooling · 2026",
       links: [{ label: "GitHub", href: "https://github.com/ggttlplp201/pdfTranslator" }],
-      shots: [],
+      shots: [
+        { src: "leon/assets/shots/pdf-translator/01.jpg", cap: "Upload a PDF, then pick languages and engine" },
+        { src: "leon/assets/shots/pdf-translator/02.jpg", cap: "Original and translation, side by side" },
+        { src: "leon/assets/shots/pdf-translator/03.jpg", cap: "Figures and diagrams keep their place" },
+        { src: "leon/assets/shots/pdf-translator/04.jpg", cap: "Tables survive the translation intact" },
+        { src: "leon/assets/shots/pdf-translator/05.jpg", cap: "A circuit diagram with its caption translated" },
+      ],
     },
     {
       id: "drop-tracker", name: "Drop Tracker", icon: "g-doc",
@@ -69,7 +104,10 @@
       stack: ["Python", "BeautifulSoup", "Discord", "Railway"],
       info: "Automation · 2026",
       links: [{ label: "GitHub", href: "https://github.com/ggttlplp201/Drop-Tracker" }],
-      shots: [],
+      shots: [
+        { src: "leon/assets/shots/drop-tracker/01.jpg", cap: "Chrome Hearts drop alerts landing in Discord" },
+        { src: "leon/assets/shots/drop-tracker/02.jpg", cap: "An Anti Promo drop, with price and image" },
+      ],
     },
     {
       id: "buglens", name: "BugLens", icon: "g-doc",
