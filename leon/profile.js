@@ -61,7 +61,7 @@
     },
     {
       id: "drop-tracker", name: "Drop Tracker", icon: "g-doc",
-      blurb: "An automated drop monitor for streetwear and resale shops. It polls Shopify storefronts (Anti Promo, Luke's, 2nd Street USA, and others) for newly listed products and fires a Discord notification — with title, price, and image — the moment something new drops. Runs as a scheduled worker on Railway.",
+      blurb: "An automated drop monitor built around Chrome Hearts and Anti Promo, extended to storefronts like Luke's NYC and 2nd Street. It polls Shopify for newly listed products and fires a Discord message — title, price, and image — the moment something drops, running as a scheduled worker on Railway. In progress: automated purchasing, so anything with enough margin gets bought before it's gone. That's gated behind a model I'm building to decide what's actually worth buying, scoring an item's expected resale against market history rather than treating every drop as equal.",
       stack: ["Python", "BeautifulSoup", "Discord", "Railway"],
       info: "Automation · 2026",
       links: [{ label: "GitHub", href: "https://github.com/ggttlplp201/Drop-Tracker" }],
