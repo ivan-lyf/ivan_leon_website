@@ -908,11 +908,43 @@ img { image-rendering: pixelated; }
 .peter-row { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
 /* nudged down/left so he sits optically centred against the bio column */
 .peter-wrap { position: relative; flex: 0 0 auto; padding-right: 70px; transform: translate(-6px, 10px); }
-.peter-wrap svg {
+.peter-anim { position: relative; display: block; width: 98px; }
+.peter-anim .pf {
   display: block;
-  width: 98px; height: auto;
+  width: 100%; height: auto;
   color: var(--ink);
   image-rendering: pixelated;
+}
+/* the two extra frames sit exactly on top of the resting one */
+.peter-anim .pf-blink,
+.peter-anim .pf-wave { position: absolute; left: 0; top: 0; opacity: 0; }
+
+/* One 7s loop: he waves twice early, blinks once late. Values are held flat
+   between keyframes so each swap is a hard cut, never a fade. */
+@keyframes peter-rest {
+  0%, 19.99% { opacity: 1 }   20%, 23.99% { opacity: 0 }
+  24%, 27.99% { opacity: 1 }  28%, 31.99% { opacity: 0 }
+  32%, 69.99% { opacity: 1 }  70%, 72.49% { opacity: 0 }
+  72.5%, 100% { opacity: 1 }
+}
+@keyframes peter-wave {
+  0%, 19.99% { opacity: 0 }   20%, 23.99% { opacity: 1 }
+  24%, 27.99% { opacity: 0 }  28%, 31.99% { opacity: 1 }
+  32%, 100% { opacity: 0 }
+}
+@keyframes peter-blink {
+  0%, 69.99% { opacity: 0 }   70%, 72.49% { opacity: 1 }
+  72.5%, 100% { opacity: 0 }
+}
+.peter-anim .pf-rest  { animation: peter-rest  7s linear infinite; }
+.peter-anim .pf-wave  { animation: peter-wave  7s linear infinite; }
+.peter-anim .pf-blink { animation: peter-blink 7s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .peter-anim .pf-rest,
+  .peter-anim .pf-wave,
+  .peter-anim .pf-blink { animation: none; }
+  .peter-anim .pf-rest { opacity: 1; }
 }
 .peter-zot {
   position: absolute;

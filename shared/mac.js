@@ -256,11 +256,11 @@
       <h2>${p.name}</h2>
       <p style="font-family:'Monaco',monospace;font-size:13px;margin-top:-4px;">${p.info}</p>
       <hr class="dotrule">
+      ${galleryHTML(p.shots, "Screenshots")}
       <p>${p.blurb}</p>
       ${linksHTML}
       <h3>Tech</h3>
-      <p>${p.stack.map((s) => `<span class="tag">${s}</span>`).join("")}</p>
-      ${galleryHTML(p.shots, "Screenshots")}`;
+      <p>${p.stack.map((s) => `<span class="tag">${s}</span>`).join("")}</p>`;
     openWindow("proj-" + p.id, p.name, body, p.info, { w: 480, h: 440 });
   }
 
