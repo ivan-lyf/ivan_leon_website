@@ -152,6 +152,9 @@
       case "g-globe":
         // Low-poly wireframe globe (GARDEROBE desktop link)
         return `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none" stroke="#000" stroke-width="1.5" shape-rendering="geometricPrecision" style="display:block"><circle cx="16" cy="16" r="13" fill="#fff"/><ellipse cx="16" cy="16" rx="6.5" ry="13"/><line x1="16" y1="3" x2="16" y2="29"/><line x1="4.5" y1="10.5" x2="27.5" y2="10.5"/><line x1="3" y1="16" x2="29" y2="16"/><line x1="4.5" y1="21.5" x2="27.5" y2="21.5"/></svg>`;
+      case "g-house":
+        // Pitched-roof house (DoMusMat desktop link) — building materials, so a building
+        return s(`<path d="M16 4 L29 15 H25 V28 H7 V15 H3 Z" fill="#fff"/>${L(7,15,25,15)}<rect x="13" y="19" width="6" height="9" fill="#fff"/>`);
       case "smiley":
         // 1-bit pixel smiley — white face, black outline + eyes + grin (Leon's user icon)
         return `<svg width="${size}" height="${size}" viewBox="0 0 32 32" shape-rendering="crispEdges" style="display:block"><circle cx="16" cy="16" r="14.5" fill="#fff" stroke="#000" stroke-width="2"/><rect x="9.5" y="10" width="3.5" height="4.5" fill="#000"/><rect x="19" y="10" width="3.5" height="4.5" fill="#000"/><path d="M9 18 Q16 25 23 18" fill="none" stroke="#000" stroke-width="2.5"/></svg>`;
@@ -691,6 +694,16 @@
   }
 
   /* ---------- picture viewer (lightbox, with ‹ › navigation) ---------- */
+  // Magnifying glass carrying a + or a -, for the enlarged viewer's zoom control.
+  function magGlyph(sign) {
+    const plus = sign === "+" ? `<path d="M7.5 4.5v6" stroke="currentColor" stroke-width="1.8"/>` : "";
+    return `<svg viewBox="0 0 18 18" aria-hidden="true" fill="none">
+      <circle cx="7.5" cy="7.5" r="5.2" stroke="currentColor" stroke-width="1.8"/>
+      <path d="M4.5 7.5h6" stroke="currentColor" stroke-width="1.8"/>${plus}
+      <path d="M11.6 11.6 16 16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+    </svg>`;
+  }
+
   function openLightbox(shots, index) {
     if (!Array.isArray(shots)) shots = [{ src: shots, cap: index || "" }], index = 0; // back-compat
     let i = index || 0;
@@ -705,25 +718,88 @@
           `<img src="" alt="">` +
           (multi ? `<button class="lb-nav next" type="button" aria-label="Next picture">›</button>` : "") +
         `</div>` +
+        `<div class="lb-zoom">` +
+          `<button class="zoom-out" type="button" aria-label="Zoom out" title="Zoom out">${magGlyph("-")}</button>` +
+          `<button class="zoom-in" type="button" aria-label="Zoom in" title="Zoom in">${magGlyph("+")}</button>` +
+        `</div>` +
         `<div class="lb-cap"></div>` +
       `</div>`;
     const img = $(".pic-body img", lb);
+    const body = $(".pic-body", lb);
     const titleEl = $(".titlebar .t", lb);
     const capEl = $(".lb-cap", lb);
+    const btnIn = $(".lb-zoom .zoom-in", lb);
+    const btnOut = $(".lb-zoom .zoom-out", lb);
+
+    // 1 = fit to the frame; the rest are multiples of that fitted width.
+    const STEPS = [1, 1.5, 2, 3, 4];
+    let step = 0;
+    let fitW = 0;               // measured once the picture has settled at fit size
+
+    // Measured on demand rather than in onload: render() runs before the lightbox
+    // is in the DOM, so an onload measurement can come back as 0 and silently
+    // pin every zoom level to fit size.
+    function measureFit() {
+      if (!img.naturalWidth) return 0;
+      const wasZoomed = body.classList.contains("zoomed");
+      const prev = img.style.width;
+      body.classList.remove("zoomed");
+      img.style.width = "";
+      // offsetWidth, not getBoundingClientRect: the desktop sits under CSS
+      // transforms (and the window's open animation), which scale the rect and
+      // would bake a bogus factor into every zoom step.
+      const w = img.offsetWidth;
+      if (wasZoomed) body.classList.add("zoomed");
+      img.style.width = prev;
+      return w;
+    }
+    function applyZoom() {
+      if (step === 0 || !fitW) {
+        body.classList.remove("zoomed");
+        img.style.width = "";
+      } else {
+        body.classList.add("zoomed");
+        img.style.width = Math.round(fitW * STEPS[step]) + "px";
+      }
+      btnOut.disabled = step === 0;
+      btnIn.disabled = step === STEPS.length - 1;
+    }
+    function zoom(d) {
+      const next = Math.min(STEPS.length - 1, Math.max(0, step + d));
+      if (next === step) return;
+      if (!fitW) fitW = measureFit();
+      if (!fitW) return;        // picture hasn't loaded yet
+      // keep the middle of the view roughly put across a zoom change
+      const cx = (body.scrollLeft + body.clientWidth / 2) / Math.max(1, body.scrollWidth);
+      const cy = (body.scrollTop + body.clientHeight / 2) / Math.max(1, body.scrollHeight);
+      step = next;
+      applyZoom();
+      body.scrollLeft = cx * body.scrollWidth - body.clientWidth / 2;
+      body.scrollTop = cy * body.scrollHeight - body.clientHeight / 2;
+    }
     function render() {
       const s = shots[i];
+      step = 0; fitW = 0;
+      img.style.width = "";
+      body.classList.remove("zoomed");
       img.src = s.src; img.alt = s.cap || "";
+      img.onload = () => { fitW = 0; applyZoom(); };   // re-measured on first zoom
       titleEl.textContent = s.cap || "Picture";
       capEl.textContent = multi ? `${i + 1} / ${shots.length}` + (s.cap ? ` · ${s.cap}` : "") : (s.cap || "");
+      applyZoom();
     }
     function go(d) { i = (i + d + shots.length) % shots.length; render(); }
     const close = () => { lb.remove(); document.removeEventListener("keydown", onKey); };
     const onKey = (e) => {
       if (e.key === "Escape") close();
+      else if (e.key === "+" || e.key === "=") zoom(1);
+      else if (e.key === "-" || e.key === "_") zoom(-1);
       else if (multi && e.key === "ArrowRight") go(1);
       else if (multi && e.key === "ArrowLeft") go(-1);
     };
     lb.addEventListener("click", (e) => {
+      if (e.target.closest(".lb-zoom .zoom-in")) { zoom(1); return; }
+      if (e.target.closest(".lb-zoom .zoom-out")) { zoom(-1); return; }
       if (e.target.closest(".lb-nav.next")) { go(1); return; }
       if (e.target.closest(".lb-nav.prev")) { go(-1); return; }
       // click the backdrop (anywhere outside the framed picture) or the close box to dismiss

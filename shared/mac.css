@@ -1114,17 +1114,55 @@ img { image-rendering: pixelated; }
   align-items: center;
   justify-content: center;
   gap: 10px;
+  /* claim the leftover height and allow shrinking, so the picture is bounded by
+     the window rather than spilling past it */
+  flex: 1 1 auto;
   min-height: 0;
+  min-width: 0;
 }
 .picwin .pic-body img {
   display: block;
+  /* bounded by the frame, NOT by vh — the desktop is a scaled element inside the
+     scene, so viewport units overflow it and clip the corners */
   max-width: 100%;
-  max-height: 78vh;
+  max-height: 100%;
+  min-width: 0;
   object-fit: contain;
   image-rendering: auto;     /* show the photo, not pixelated */
   border: 2px solid var(--ink);
   background: var(--paper);
 }
+/* zoomed: the picture is free to exceed the frame and pic-body scrolls to it */
+.picwin .pic-body.zoomed { align-items: flex-start; justify-content: flex-start; }
+/* flex-shrink must be off, or the flex item collapses straight back to the
+   container width and the zoom does nothing */
+.picwin .pic-body.zoomed img { max-width: none; max-height: none; flex: 0 0 auto; }
+
+/* ---- zoom control, bottom-right of the enlarged viewer ---- */
+.picwin .lb-zoom {
+  position: absolute;
+  right: 10px;
+  bottom: 36px;
+  z-index: 3;
+  display: flex;
+  gap: 4px;
+}
+.picwin .lb-zoom button {
+  width: 28px; height: 28px;
+  padding: 0;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  cursor: var(--cursor-arrow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 2px 2px 0 0 var(--ink);
+}
+.picwin .lb-zoom button:hover:not(:disabled) { background: var(--ink); color: var(--paper); }
+.picwin .lb-zoom button:active:not(:disabled) { transform: translate(1px, 1px); box-shadow: 1px 1px 0 0 var(--ink); }
+.picwin .lb-zoom button:disabled { opacity: 0.4; cursor: var(--cursor-arrow); }
+.picwin .lb-zoom svg { width: 16px; height: 16px; display: block; }
 /* ‹ › navigation inside the enlarged viewer */
 .picwin .lb-nav {
   flex: 0 0 34px;
@@ -1448,6 +1486,7 @@ img { image-rendering: pixelated; }
 
 /* long single-word desktop labels that must stay on one line */
 .icon[data-id="garderobe-site"] .label,
+.icon[data-id="domusmat-site"] .label,
 .icon[data-id="experience"] .label {
   white-space: nowrap;
   max-width: none;
