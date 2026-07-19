@@ -7,7 +7,28 @@
 (function () {
   "use strict";
 
+  // Ordered: active work first, then projects that are no longer being maintained
+  // (those carry "inactive" in their `info` line so it shows in the window header).
   const projects = [
+    {
+      id: "cs2-quant", name: "CS2 Quant", icon: "g-doc",
+      blurb: "A quantitative trading system for CS2 weapon skins on the BUFF163 market, running two independent agents over one shared data layer, indicator library, and signal bus. System A is event-driven — it trades the repricings that follow game updates and balance changes. System B is positional — it accumulates undervalued items on structural factors and holds. Includes a walk-forward backtester that models BUFF's T+7 settlement and seller-fund timing, JSONL provenance logging for every decision, a paper-trading mode, a key-less synthetic market for offline development, and a read-only Streamlit research dashboard for market health, spreads, and rule performance.",
+      stack: ["Python", "Pandas", "NumPy", "scikit-learn", "SQLite", "Streamlit"],
+      info: "Quant · 2026",
+      links: [{ label: "GitHub", href: "https://github.com/ggttlplp201/cs666" }],
+      shots: [],
+    },
+    {
+      id: "ui-library", name: "Component Style Studio", icon: "g-doc",
+      blurb: "A local-first visual page builder for React. Point it at a project folder and every component inside becomes a live, draggable block — rendered with its real CSS, Tailwind config, and dependencies, so what you preview is what you export. Compose multi-page sites across a browser-style tab strip wired together by a node graph, attach animations with real triggers, then export a self-contained HTML file or a zip of the edited source. Visual edits are written back into the component's actual source by an AST engine that touches style, text, and animation but never your logic. Ships with 240+ working components across 11 design kits and five complete sample builds.",
+      stack: ["TypeScript", "React", "Vite", "Tailwind v4", "AST tooling"],
+      info: "Tooling · live",
+      links: [
+        { label: "Live demo", href: "https://ui-library-iota-neon.vercel.app" },
+        { label: "GitHub", href: "https://github.com/ggttlplp201/UI-Library" },
+      ],
+      shots: [],
+    },
     {
       id: "garderobe", name: "GARDEROBE", icon: "g-doc",
       blurb: "A personal wardrobe manager and living archive for your clothes — catalog what you own, log wears and spend, build outfits on a visual mannequin, and keep a wishlist with live price tracking scraped from Grailed, SSENSE, and more. Upload a photo and Claude auto-tags the item while an in-browser ML model removes the background; an interactive 3D globe lets you explore other users' collections. Fully functional and running in production.",
@@ -20,11 +41,22 @@
       shots: [],
     },
     {
-      id: "drafted", name: "Drafted", icon: "g-doc",
-      blurb: "A real-time champion-select overlay for League of Legends. It hooks into the local League client (LCU API) to auto-read picks, bans, and your role the moment draft starts, then surfaces data-driven recommendations — meta strength, counters, synergies, builds, runes, and win-rate-by-game-length — scraped live from Lolalytics, all in a floating Electron window that stays on top during champion select.",
-      stack: ["Python", "Flask", "Electron", "SSE"],
-      info: "Desktop · 2026",
-      links: [{ label: "GitHub", href: "https://github.com/ggttlplp201/Drafted" }],
+      id: "domusmat", name: "DoMusMat", icon: "g-doc",
+      blurb: "A B2B digital product library for a Portuguese building-materials manufacturer, replacing a physical catalog with a structured online one — 47 products across LED lighting, flooring, doors, drainage, metalwork, custom carpentry, and smart mirrors. Architects and designers can filter the catalogue, compare products side by side, build materials lists, request quotes, and pull 239 downloadable BIM/CAD files across 9 formats. Also includes a 3D showroom configurator and a virtual tour built on React Three Fiber and Photo Sphere Viewer.",
+      stack: ["Next.js", "TypeScript", "React Three Fiber", "Supabase", "GSAP"],
+      info: "Web · live",
+      links: [
+        { label: "Live site", href: "https://do-mus-mat-v2.vercel.app" },
+        { label: "GitHub", href: "https://github.com/ggttlplp201/DoMusMatV2" },
+      ],
+      shots: [],
+    },
+    {
+      id: "pdf-translator", name: "pdfTranslator", icon: "g-doc",
+      blurb: "A format-preserving PDF translator for Chinese, Portuguese, and English. Rather than dumping plain text, it rewrites translated copy back into the original layout with PyMuPDF — real fonts embedded and subset into the output so the document still looks like the document. Scanned pages fall back to OCR via Tesseract, translation runs through the Anthropic or OpenAI APIs, and it ships as both a CLI and a FastAPI web app, containerized for deployment on Render.",
+      stack: ["Python", "PyMuPDF", "FastAPI", "Tesseract OCR", "Docker"],
+      info: "Tooling · 2026",
+      links: [{ label: "GitHub", href: "https://github.com/ggttlplp201/pdfTranslator" }],
       shots: [],
     },
     {
@@ -36,10 +68,44 @@
       shots: [],
     },
     {
+      id: "buglens", name: "BugLens", icon: "g-doc",
+      blurb: "A VS Code extension that explains the logic behind a highlighted bug — what the code actually does, what you probably intended, and the concept underneath — without handing back a rewritten fix, so you still have to make the change yourself. Streams LLM output from either OpenAI or Anthropic into a WebView side panel, bundled with esbuild.",
+      stack: ["TypeScript", "VS Code API", "OpenAI", "Anthropic"],
+      info: "Extension · 2026",
+      links: [{ label: "GitHub", href: "https://github.com/ggttlplp201/BugLens" }],
+      shots: [],
+    },
+
+    /* ---- no longer maintained ---- */
+    {
+      id: "drafted", name: "Drafted", icon: "g-doc",
+      blurb: "A real-time champion-select overlay for League of Legends. It hooks into the local League client (LCU API) to auto-read picks, bans, and your role the moment draft starts, then surfaces data-driven recommendations — meta strength, counters, synergies, builds, runes, and win-rate-by-game-length — scraped live from Lolalytics, all in a floating Electron window that stays on top during champion select.",
+      stack: ["Python", "Flask", "Electron", "SSE"],
+      info: "Desktop · inactive",
+      links: [{ label: "GitHub", href: "https://github.com/ggttlplp201/Drafted" }],
+      shots: [],
+    },
+    {
+      id: "lineups-cs2", name: "CS2 Lineup Overlay", icon: "g-doc",
+      blurb: "A transparent, always-on-top lineup overlay for Counter-Strike 2 that surfaces the right smoke, flash, or molly for wherever you're standing. It stays VAC-safe by design — no memory reading and no injection, ever — reading state only from Valve's official Game State Integration feed and filtering lineups by map, position, and proximity.",
+      stack: ["JavaScript", "Electron", "Game State Integration"],
+      info: "Desktop · inactive",
+      links: [{ label: "GitHub", href: "https://github.com/ggttlplp201/lineups_cs2" }],
+      shots: [],
+    },
+    {
+      id: "better-cli", name: "Better CLI", icon: "g-doc",
+      blurb: "A native macOS desktop app that wraps the Claude Code CLI in a real GUI. The chat tab runs Claude in streaming JSON mode and renders the events as proper Markdown UI; the terminal tab runs it inside a real PTY so TTY-dependent flows like login and permission prompts still work. Multiple named sessions with their own working directories, slash-command autocomplete, and permission-mode controls.",
+      stack: ["Electron", "React", "TypeScript", "node-pty", "xterm.js"],
+      info: "Desktop · inactive",
+      links: [{ label: "GitHub", href: "https://github.com/ggttlplp201/Better-CLI" }],
+      shots: [],
+    },
+    {
       id: "mylisp", name: "mylisp", icon: "g-doc",
       blurb: "A tree-walking interpreter for a Scheme-flavored Lisp, written in Python with no runtime dependencies — special forms, arbitrary-precision integers, a Lisp-defined prelude (map/filter/fold), file loading, and a REPL with persistent history. Built as an experiment in autonomous-agent harness engineering: the source was written end-to-end by AI coding agents with no human edits.",
       stack: ["Python", "Scheme", "Interpreter"],
-      info: "Languages · 2026",
+      info: "Languages · inactive",
       links: [{ label: "GitHub", href: "https://github.com/ggttlplp201/mylisp" }],
       shots: [],
     },
@@ -52,15 +118,9 @@
         <div style="flex:1 1 180px;min-width:170px;">
           <h2>${P.fullName}</h2>
           <p class="meta">${P.tagline}</p>
-          <p>I'm a first-year Computer Engineering student at UC Irvine. I've been building robots for the past four years, and I'm genuinely passionate about it.</p>
+          <p>Part-time ski instructor, also building stuff.</p>
         </div>
       </div>
-      <hr class="dotrule">
-      <h3>Robotics</h3>
-      <p>Four years competing in FIRST Tech Challenge (teams 16031 &amp; 16205) — chassis and mechanism design, custom 3D-printed parts, and the control code that ties it all together. These days I'm prototyping an autonomous wall-plastering robot.</p>
-      <hr class="dotrule">
-      <h3>Off the clock</h3>
-      <p>Outside the classroom I'm a ski instructor, and I spend most of my weekends in the mountains.</p>
       <hr class="dotrule">
       <p>Reach me at <a href="mailto:${P.email}">${P.email}</a>.</p>`;
   }
@@ -83,45 +143,55 @@
   function resume(P, O) {
     return `
       <h2 style="text-align:center;">${P.fullName}</h2>
-      <p class="meta" style="text-align:center;">leonm6@uci.edu · 949-738-8015 · leonmeng.xyz</p>
+      <p class="meta" style="text-align:center;">leonm6@uci.edu · 949-738-8015 · leonmeng.xyz<br>github.com/ggttlplp201 · linkedin.com/in/leonylmeng</p>
       <p style="text-align:center;"><a href="leon/assets/resume/Leon_Resume.pdf" target="_blank" rel="noopener">Open full résumé →</a></p>
       <hr class="rule">
 
       <h3>Education</h3>
       <p><strong>University of California, Irvine</strong></p>
-      <p class="meta">B.S. Computer Science and Engineering · 2025–2029 · Irvine, CA</p>
+      <p class="meta">Bachelor of Computer Science and Engineering · 2025–2029 · Irvine, CA</p>
       <hr class="dotrule">
 
       <h3>Technical Skills</h3>
       <p><strong>Programming Languages</strong><br>Python, Java, JavaScript, TypeScript, HTML, CSS, SQL</p>
-      <p><strong>Web &amp; Backend</strong><br>React, Vite, FastAPI, Supabase, PostgreSQL, Vercel serverless functions, REST APIs</p>
-      <p><strong>AI &amp; Automation</strong><br>Anthropic Claude &amp; OpenAI APIs, AI image-processing pipelines, LLM tooling, workflow automation</p>
-      <p><strong>Robotics &amp; Vision</strong><br>Autonomous systems, odometry &amp; localization, path planning (Roadrunner), finite state machines, OpenCV, Limelight 3A vision, CAD (Fusion 360), 3D printing</p>
-      <p><strong>Developer Tools</strong><br>Git, GitHub, Docker, Linux, CI/CD pipelines</p>
+      <p><strong>Web &amp; Backend</strong><br>React, Vite, Tailwind, FastAPI, Supabase, PostgreSQL, Vercel serverless functions, REST APIs</p>
+      <p><strong>AI &amp; Automation</strong><br>Anthropic Claude &amp; OpenAI APIs, image processing pipelines, LLM tooling, workflow automation</p>
+      <p><strong>Data &amp; Quantitative</strong><br>pandas, NumPy, scikit-learn, SciPy, SQLite, Streamlit, backtesting &amp; walk-forward validation</p>
+      <p><strong>Robotics &amp; Vision</strong><br>Odometry &amp; localization, path planning (Roadrunner), finite state machines, OpenCV, Limelight 3A vision, CAD (Fusion 360), photogrammetry (RealityScan), 3D printing</p>
+      <p><strong>Developer Tools</strong><br>Git, GitHub, Docker, Linux, CI/CD pipelines, pytest, vitest</p>
       <hr class="dotrule">
 
       <h3>Experience</h3>
       <p><strong>SomaFuture</strong> — Software Engineer</p>
       <p class="meta">Jun 2026 – Aug 2026 · Oeiras, Portugal</p>
-      <p>• Designed &amp; built a completely new company website that redefined SomaFuture's strategic direction toward standardizing and digitalizing its product line — translating a physical catalog into a structured digital experience<br>
-         • Built and integrated AI &amp; automation tools into internal workflows, streamlining repetitive tasks and accelerating design and content production<br>
-         • Prototyped 3D room configurators and evaluated outsourcing platforms against catalog-import, modular-configuration, and EU/GDPR requirements, authoring the comparative assessment used to guide the platform decision</p>
+      <p>• Designed and built a completely new company website (<a href="https://do-mus-mat-v2.vercel.app" target="_blank" rel="noopener">live demo</a>) that redefined SomaFuture's strategic direction toward standardizing and digitalizing its product line, translating a physical catalog into a structured digital experience<br>
+         • Built internal mini-apps and automation programs — including file translators that preserve the original document formatting — eliminating manual reformatting and accelerating office workflows<br>
+         • Prototyped a mock-up 3D room configurator and evaluated competing methods for reconstructing product geometry, comparing photogrammetry (RealityScan) against CAD-authored models to determine a viable digitalization pipeline<br>
+         • Defined the company's roadmap for incorporating AI into its products and initiated outreach to potential collaborators, including AiHouse, on tooling for floor-plan-to-3D generation and custom home configuration in 3D space</p>
       <p><strong>First Tech Challenge</strong> — Teams 16031 &amp; 16205, Autonomous &amp; Mechanical Engineer</p>
       <p class="meta">Oct 2021 – Jun 2025 · Vancouver, BC</p>
-      <p>• Implemented an encoder-based odometry system: computed per-step displacement, corrected for rotational drift, and converted to field coordinates via trigonometric transforms for sub-centimeter localization<br>
-         • Built a vision-guided detection system (Limelight 3A + OpenCV) with a color-isolation pipeline to detect, classify, and localize game elements in real time and auto-align the robot for pickup<br>
-         • Coordinated all mechanisms with a finite state machine and integrated Roadrunner for smooth, repeatable multi-step autonomous routines<br>
-         • Designed &amp; fabricated custom 3D-printed components and co-authored the Engineering Portfolio — multiple top-scoring awards at BC &amp; Alberta championships</p>
+      <p>• Implemented an odometry system using encoders; computed horizontal/vertical displacement per time step, corrected for rotational drift, and converted to field coordinates via trigonometric transforms for sub-centimeter localization accuracy<br>
+         • Built a vision-guided object detection system using Limelight 3A and OpenCV: designed a color-isolation pipeline (contour detection, color filtering) to detect and localize game elements in real time, then computed target contour angle and position to autonomously align the robot for pickup<br>
+         • Implemented a finite state machine coordinating all robot mechanisms via event triggers, and integrated Roadrunner for trajectory planning and tuning to produce repeatable multi-step autonomous routines<br>
+         • Designed and fabricated custom 3D-printed mechanical components (chassis, drivetrain, arm pivot, scoring mechanism) and co-authored the team's Engineering Portfolio; earned multiple top-scoring awards at the British Columbia and Alberta championships</p>
       <hr class="dotrule">
 
       <h3>Projects</h3>
-      <p><strong>GARDEROBE</strong> — Full-Stack Wardrobe Manager · React, Supabase, FastAPI, Claude API</p>
-      <p>• Shipped to production a full-stack wardrobe app with AI auto-tagging that extracts item name, brand, color, and type from a photo via the Anthropic Claude API<br>
-         • Built in-browser ML background removal, a drag-and-drop outfit builder, and a live price-tracking wishlist backed by scheduled FastAPI scraping jobs (Grailed, SSENSE) every 6 hours<br>
-         • Built a full social platform on Supabase realtime — profiles, publishing, Explore, a people directory, friends, and likes — plus a feed aggregating fashion &amp; culture articles from multiple news APIs</p>
-      <p><strong>BugLens</strong> — VS Code Extension · TypeScript, OpenAI &amp; Anthropic APIs</p>
-      <p>• Built a VS Code extension that explains the logic behind a highlighted bug — what the code does, what the user intended, and the underlying concept — without handing back a rewritten fix, to reinforce learning<br>
-         • Integrated streaming LLM output across both OpenAI and Anthropic providers, bundled with esbuild and rendered in a WebView side panel</p>
+      <p><strong>GARDEROBE</strong> — <a href="https://the-garderobe.com/" target="_blank" rel="noopener">the-garderobe.com</a></p>
+      <p class="meta">Full-Stack Wardrobe Manager — React, Supabase, FastAPI, Claude API</p>
+      <p>• Built and shipped to production a full-stack wardrobe management app with AI auto-tagging that extracts item name, brand, color, and type from an uploaded photo via the Anthropic Claude API<br>
+         • Implemented in-browser ML background removal, a drag-and-drop outfit builder, and a live price-tracking wishlist backed by scheduled FastAPI scraping jobs (Grailed, SSENSE) refreshed every 6 hours<br>
+         • Built a full social layer on Supabase realtime — profiles, publishing, an Explore page, a people directory, friends, and likes — plus a feed aggregating fashion and culture articles from multiple third-party news APIs</p>
+      <p><strong>Component Style Studio</strong> — <a href="https://github.com/ggttlplp201/UI-Library" target="_blank" rel="noopener">github.com/ggttlplp201/UI-Library</a></p>
+      <p class="meta">Visual Page Builder for React Codebases — TypeScript, React, Vite, Tailwind, AST tooling</p>
+      <p>• Built a local-first visual page builder in which every block is a live React component: scans any React project folder in place, extracts props via react-docgen-typescript, and renders each component in a per-project child dev server so previews use its real CSS, Tailwind config, and dependencies<br>
+         • Wrote an AST edit engine that writes visual changes (style, text, animation) back into the component's actual source without touching program logic, and exports either a self-contained single-file HTML site or a diffable zip of the edited source<br>
+         • Designed a multi-page authoring model with a node-graph root connecting pages, per-page loading screens and cursor effects, and a live preview mode; ships a bundled library of 130+ components across three design themes</p>
+      <p><strong>CS2 Quant — Skin Trading Agents</strong> — <a href="https://github.com/ggttlplp201/cs666" target="_blank" rel="noopener">github.com/ggttlplp201/cs666</a></p>
+      <p class="meta">Quantitative Research System — Python, pandas, scikit-learn, SQLite, Streamlit</p>
+      <p>• Built two independent paper-trading agents on the CS2 skin market — one event-driven (trading update-induced repricings), one positional value/trend — over a shared data layer, indicator library, signal bus, and provenance-logged ledger<br>
+         • Implemented a T+7-aware settlement model, market regime classifier, risk gate, and honest walk-forward backtester that quarantines in-sample results from out-of-sample scoring; covered by a 186-test suite<br>
+         • Shipped a read-only Streamlit research dashboard surfacing poller data-health gaps, spread-vs-liquidity trading costs, per-rule out-of-sample scorecards, and a browsable decision log tracing why each signal fired</p>
       <hr class="dotrule">
 
       <h3>Awards &amp; Achievements</h3>
@@ -163,9 +233,9 @@
     { id: "harddrive", kind: "harddrive", label: "Leon's Device", glyph: "g-hd", corner: "tr",
       title: "Leon's Device", info: "5 items · 512K in disk · 480K available", size: { w: 360, h: 270 } },
     { id: "about", doc: "about", label: "About Me", glyph: "g-doc", x: 24, y: 14,
-      title: "About Me", info: "About · 8K", size: { w: 440, h: 340 } },
+      title: "About Me", info: "About · 2K", size: { w: 440, h: 240 } },
     { id: "projects", kind: "folder", label: "Projects", glyph: "g-folder", x: 24, y: 120,
-      title: "Projects", info: "4 items · 96K in folder", size: { w: 380, h: 300 } },
+      title: "Projects", info: "11 items · 264K in folder", size: { w: 380, h: 340 } },
     { id: "garderobe-site", kind: "link", href: "https://the-garderobe.com/", label: "GARDEROBE",
       glyph: "g-globe", x: 24, y: 226, title: "GARDEROBE" },
     { id: "leetcode", doc: "leetcode", label: "LeetCode", glyph: "g-doc", x: 24, y: 332,
