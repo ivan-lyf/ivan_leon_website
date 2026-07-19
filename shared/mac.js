@@ -289,7 +289,11 @@
         <p style="font-family:'Monaco',monospace;font-size:13px;">This folder is empty.</p></div>`);
     }
     return fileListWindow(
-      projects.map((p) => ({ name: p.name, icon: p.icon, open: () => openProject(p) }))
+      projects.map((p) => ({
+        name: p.inactive ? `${p.name} - inactive` : p.name,
+        icon: p.icon,
+        open: () => openProject(p),
+      }))
     );
   }
 

@@ -903,6 +903,28 @@ img { image-rendering: pixelated; }
   color: var(--ink);
 }
 
+/* ---- Peter the Anteater (Leon's About window) ----
+   The SVG is a 1-bit bitmap, so it must scale on whole pixels and never smooth. */
+.peter-row { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+.peter-wrap { position: relative; flex: 0 0 auto; padding-right: 70px; }
+.peter-wrap svg {
+  display: block;
+  width: 98px; height: auto;
+  color: var(--ink);
+  image-rendering: pixelated;
+}
+.peter-zot {
+  position: absolute;
+  left: 70px; top: 8px;
+  font-family: 'Chicago', sans-serif;
+  font-size: 13px;
+  color: var(--ink);
+  white-space: nowrap;
+  transform: rotate(-14deg);
+  transform-origin: 0 50%;
+}
+.peter-bio { flex: 1 1 190px; min-width: 175px; }
+
 .tag {
   display: inline-block;
   border: 2px solid var(--ink);

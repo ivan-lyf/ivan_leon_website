@@ -7,20 +7,24 @@
 (function () {
   "use strict";
 
+  /* Peter the Anteater — a 46x51 1-bit bitmap (solid outline, 25% dithered fill)
+     flattened to one path. `fill: currentColor` so he follows --ink across themes. */
+  const PETER = `<svg viewBox="0 0 46 51" width="46" height="51" shape-rendering="crispEdges" fill="currentColor" aria-hidden="true"><path d="M19 2h3v1h-3zM28 2h3v1h-3zM19 3h1v1h-1zM21 3h1v1h-1zM28 3h1v1h-1zM30 3h1v1h-1zM19 4h3v1h-3zM28 4h1v1h-1zM30 4h1v1h-1zM19 5h1v1h-1zM21 5h1v1h-1zM24 5h1v1h-1zM28 5h1v1h-1zM30 5h1v1h-1zM18 6h1v1h-1zM20 6h1v1h-1zM22 6h7v1h-7zM30 6h1v1h-1zM18 7h1v1h-1zM29 7h1v1h-1zM18 8h1v1h-1zM20 8h1v1h-1zM22 8h1v1h-1zM24 8h1v1h-1zM26 8h1v1h-1zM28 8h1v1h-1zM30 8h1v1h-1zM18 9h1v1h-1zM30 9h1v1h-1zM17 10h2v1h-2zM20 10h2v1h-2zM24 10h1v1h-1zM27 10h2v1h-2zM30 10h2v1h-2zM16 11h1v1h-1zM20 11h2v1h-2zM27 11h2v1h-2zM31 11h1v1h-1zM15 12h2v1h-2zM18 12h1v1h-1zM20 12h2v1h-2zM24 12h1v1h-1zM27 12h2v1h-2zM30 12h2v1h-2zM13 13h2v1h-2zM31 13h1v1h-1zM12 14h1v1h-1zM14 14h1v1h-1zM16 14h1v1h-1zM18 14h1v1h-1zM20 14h1v1h-1zM22 14h1v1h-1zM24 14h1v1h-1zM26 14h1v1h-1zM28 14h1v1h-1zM30 14h2v1h-2zM11 15h1v1h-1zM30 15h1v1h-1zM10 16h1v1h-1zM12 16h1v1h-1zM14 16h1v1h-1zM16 16h1v1h-1zM18 16h1v1h-1zM20 16h1v1h-1zM22 16h1v1h-1zM24 16h1v1h-1zM26 16h1v1h-1zM28 16h1v1h-1zM30 16h1v1h-1zM9 17h1v1h-1zM19 17h2v1h-2zM28 17h2v1h-2zM8 18h1v1h-1zM10 18h1v1h-1zM12 18h1v1h-1zM14 18h1v1h-1zM16 18h3v1h-3zM21 18h2v1h-2zM24 18h1v1h-1zM26 18h2v1h-2zM7 19h1v1h-1zM16 19h1v1h-1zM22 19h1v1h-1zM26 19h1v1h-1zM5 20h2v1h-2zM8 20h1v1h-1zM10 20h1v1h-1zM12 20h1v1h-1zM14 20h2v1h-2zM22 20h1v1h-1zM24 20h1v1h-1zM26 20h1v1h-1zM4 21h1v1h-1zM13 21h1v1h-1zM22 21h1v1h-1zM26 21h1v1h-1zM3 22h2v1h-2zM6 22h7v1h-7zM22 22h1v1h-1zM24 22h1v1h-1zM26 22h1v1h-1zM2 23h1v1h-1zM9 23h2v1h-2zM22 23h1v1h-1zM27 23h2v1h-2zM3 24h2v1h-2zM6 24h1v1h-1zM8 24h1v1h-1zM20 24h3v1h-3zM24 24h1v1h-1zM26 24h1v1h-1zM28 24h3v1h-3zM4 25h4v1h-4zM19 25h1v1h-1zM31 25h1v1h-1zM18 26h15v1h-15zM15 27h21v1h-21zM15 28h2v1h-2zM18 28h15v1h-15zM34 28h1v1h-1zM36 28h1v1h-1zM14 29h1v1h-1zM19 29h13v1h-13zM37 29h1v1h-1zM13 30h2v1h-2zM16 30h1v1h-1zM18 30h1v1h-1zM20 30h1v1h-1zM30 30h1v1h-1zM32 30h1v1h-1zM34 30h1v1h-1zM36 30h1v1h-1zM38 30h1v1h-1zM13 31h1v1h-1zM15 31h1v1h-1zM17 31h1v1h-1zM21 31h1v1h-1zM29 31h1v1h-1zM39 31h1v1h-1zM12 32h1v1h-1zM14 32h3v1h-3zM18 32h1v1h-1zM20 32h1v1h-1zM22 32h2v1h-2zM27 32h2v1h-2zM30 32h1v1h-1zM32 32h1v1h-1zM34 32h1v1h-1zM36 32h1v1h-1zM38 32h2v1h-2zM12 33h1v1h-1zM14 33h1v1h-1zM17 33h1v1h-1zM23 33h5v1h-5zM34 33h2v1h-2zM40 33h1v1h-1zM11 34h2v1h-2zM14 34h1v1h-1zM17 34h2v1h-2zM20 34h1v1h-1zM22 34h1v1h-1zM24 34h3v1h-3zM28 34h1v1h-1zM30 34h1v1h-1zM32 34h2v1h-2zM36 34h1v1h-1zM38 34h1v1h-1zM40 34h2v1h-2zM10 35h1v1h-1zM13 35h1v1h-1zM17 35h1v1h-1zM33 35h1v1h-1zM37 35h1v1h-1zM40 35h1v1h-1zM10 36h1v1h-1zM12 36h1v1h-1zM17 36h2v1h-2zM20 36h1v1h-1zM22 36h1v1h-1zM24 36h1v1h-1zM26 36h1v1h-1zM28 36h1v1h-1zM30 36h1v1h-1zM32 36h2v1h-2zM37 36h2v1h-2zM40 36h1v1h-1zM10 37h3v1h-3zM18 37h1v1h-1zM32 37h1v1h-1zM37 37h1v1h-1zM40 37h1v1h-1zM18 38h1v1h-1zM20 38h1v1h-1zM22 38h1v1h-1zM24 38h1v1h-1zM26 38h1v1h-1zM28 38h1v1h-1zM30 38h1v1h-1zM32 38h1v1h-1zM37 38h2v1h-2zM40 38h1v1h-1zM19 39h1v1h-1zM31 39h1v1h-1zM36 39h1v1h-1zM39 39h1v1h-1zM20 40h1v1h-1zM22 40h1v1h-1zM24 40h1v1h-1zM26 40h1v1h-1zM28 40h1v1h-1zM30 40h1v1h-1zM36 40h1v1h-1zM38 40h2v1h-2zM20 41h1v1h-1zM23 41h2v1h-2zM26 41h2v1h-2zM30 41h1v1h-1zM36 41h1v1h-1zM39 41h1v1h-1zM20 42h1v1h-1zM22 42h1v1h-1zM25 42h1v1h-1zM28 42h1v1h-1zM30 42h1v1h-1zM36 42h1v1h-1zM38 42h2v1h-2zM20 43h1v1h-1zM22 43h1v1h-1zM28 43h1v1h-1zM30 43h1v1h-1zM35 43h1v1h-1zM39 43h1v1h-1zM20 44h1v1h-1zM22 44h1v1h-1zM28 44h1v1h-1zM30 44h1v1h-1zM36 44h1v1h-1zM38 44h1v1h-1zM20 45h1v1h-1zM22 45h1v1h-1zM28 45h1v1h-1zM30 45h1v1h-1zM37 45h1v1h-1zM16 46h5v1h-5zM22 46h1v1h-1zM28 46h1v1h-1zM30 46h5v1h-5zM15 47h1v1h-1zM23 47h1v1h-1zM27 47h1v1h-1zM35 47h1v1h-1zM14 48h1v1h-1zM16 48h1v1h-1zM18 48h1v1h-1zM20 48h1v1h-1zM22 48h1v1h-1zM24 48h1v1h-1zM26 48h1v1h-1zM28 48h1v1h-1zM30 48h1v1h-1zM32 48h1v1h-1zM34 48h1v1h-1zM36 48h1v1h-1zM15 49h1v1h-1zM23 49h1v1h-1zM27 49h1v1h-1zM35 49h1v1h-1zM16 50h7v1h-7zM28 50h7v1h-7z"/></svg>`;
+
   // Ordered: active work first, then projects that are no longer being maintained
   // (those carry "inactive" in their `info` line so it shows in the window header).
   const projects = [
     {
       id: "cs2-quant", name: "CS2 Quant", icon: "g-doc",
-      blurb: "A quantitative trading system for CS2 weapon skins on the BUFF163 market, running two independent agents over one shared data layer, indicator library, and signal bus. System A is event-driven — it trades the repricings that follow game updates and balance changes. System B is positional — it accumulates undervalued items on structural factors and holds. Includes a walk-forward backtester that models BUFF's T+7 settlement and seller-fund timing, JSONL provenance logging for every decision, a paper-trading mode, a key-less synthetic market for offline development, and a read-only Streamlit research dashboard for market health, spreads, and rule performance.",
+      blurb: "Two trading agents on the CS2 skin market sharing one data layer and signal bus: one trades the repricings that follow game updates, the other accumulates undervalued items on structural factors. Behind them sits a walk-forward backtester that models BUFF's T+7 settlement, provenance logging on every decision, and a Streamlit research dashboard.",
       stack: ["Python", "Pandas", "NumPy", "scikit-learn", "SQLite", "Streamlit"],
       info: "Quant · 2026",
       links: [{ label: "GitHub", href: "https://github.com/ggttlplp201/cs666" }],
       shots: [],
     },
     {
-      id: "ui-library", name: "Component Style Studio", icon: "g-doc",
-      blurb: "A local-first visual page builder for React. Point it at a project folder and every component inside becomes a live, draggable block — rendered with its real CSS, Tailwind config, and dependencies, so what you preview is what you export. Compose multi-page sites across a browser-style tab strip wired together by a node graph, attach animations with real triggers, then export a self-contained HTML file or a zip of the edited source. Visual edits are written back into the component's actual source by an AST engine that touches style, text, and animation but never your logic. Ships with 240+ working components across 11 design kits and five complete sample builds.",
+      id: "ui-library", name: "UI Library", icon: "g-doc",
+      blurb: "A local-first visual page builder for React: point it at a project folder and every component becomes a live, draggable block, rendered with its real CSS and dependencies, so what you preview is what you export. Visual edits are written back into the component's actual source by an AST engine that never touches your logic. Ships with 240+ working components across 11 design kits.",
       stack: ["TypeScript", "React", "Vite", "Tailwind v4", "AST tooling"],
       info: "Tooling · live",
       links: [
@@ -31,7 +35,7 @@
     },
     {
       id: "garderobe", name: "GARDEROBE", icon: "g-doc",
-      blurb: "A personal wardrobe manager and living archive for your clothes — catalog what you own, log wears and spend, build outfits on a visual mannequin, and keep a wishlist with live price tracking scraped from Grailed, SSENSE, and more. Upload a photo and Claude auto-tags the item while an in-browser ML model removes the background; an interactive 3D globe lets you explore other users' collections. Fully functional and running in production.",
+      blurb: "A wardrobe manager and living archive for your clothes: catalog what you own, log wears and spend, build outfits on a visual mannequin, and track wishlist prices scraped from Grailed and SSENSE. Upload a photo and Claude auto-tags the item while an in-browser model cuts the background. Running in production.",
       stack: ["React", "Supabase", "FastAPI", "Claude API"],
       info: "Web · live",
       links: [
@@ -42,7 +46,7 @@
     },
     {
       id: "domusmat", name: "DoMusMat", icon: "g-doc",
-      blurb: "A B2B digital product library for a Portuguese building-materials manufacturer, replacing a physical catalog with a structured online one — 47 products across LED lighting, flooring, doors, drainage, metalwork, custom carpentry, and smart mirrors. Architects and designers can filter the catalogue, compare products side by side, build materials lists, request quotes, and pull 239 downloadable BIM/CAD files across 9 formats. Also includes a 3D showroom configurator and a virtual tour built on React Three Fiber and Photo Sphere Viewer.",
+      blurb: "A B2B product library for a Portuguese building-materials manufacturer, turning a physical catalog into 47 filterable products with side-by-side comparison, materials lists, quote carts, and 239 downloadable BIM/CAD files. Includes a 3D showroom configurator and a virtual tour.",
       stack: ["Next.js", "TypeScript", "React Three Fiber", "Supabase", "GSAP"],
       info: "Web · live",
       links: [
@@ -53,7 +57,7 @@
     },
     {
       id: "pdf-translator", name: "pdfTranslator", icon: "g-doc",
-      blurb: "A format-preserving PDF translator for Chinese, Portuguese, and English. Rather than dumping plain text, it rewrites translated copy back into the original layout with PyMuPDF — real fonts embedded and subset into the output so the document still looks like the document. Scanned pages fall back to OCR via Tesseract, translation runs through the Anthropic or OpenAI APIs, and it ships as both a CLI and a FastAPI web app, containerized for deployment on Render.",
+      blurb: "A format-preserving PDF translator for Chinese, Portuguese, and English: translated copy is rewritten back into the original layout with real fonts embedded, so the document still looks like the document. Scanned pages fall back to OCR, and it ships as both a CLI and a FastAPI web app.",
       stack: ["Python", "PyMuPDF", "FastAPI", "Tesseract OCR", "Docker"],
       info: "Tooling · 2026",
       links: [{ label: "GitHub", href: "https://github.com/ggttlplp201/pdfTranslator" }],
@@ -61,7 +65,7 @@
     },
     {
       id: "drop-tracker", name: "Drop Tracker", icon: "g-doc",
-      blurb: "An automated drop monitor built around Chrome Hearts and Anti Promo, extended to storefronts like Luke's NYC and 2nd Street. It polls Shopify for newly listed products and fires a Discord message — title, price, and image — the moment something drops, running as a scheduled worker on Railway. In progress: automated purchasing, so anything with enough margin gets bought before it's gone. That's gated behind a model I'm building to decide what's actually worth buying, scoring an item's expected resale against market history rather than treating every drop as equal.",
+      blurb: "An automated drop monitor built around Chrome Hearts and Anti Promo, extended to storefronts like Luke's NYC and 2nd Street. It polls Shopify and fires a Discord message with title, price, and image the moment something drops. In progress: automated purchasing, gated behind a model that scores an item's expected resale against market history so only real margin gets bought.",
       stack: ["Python", "BeautifulSoup", "Discord", "Railway"],
       info: "Automation · 2026",
       links: [{ label: "GitHub", href: "https://github.com/ggttlplp201/Drop-Tracker" }],
@@ -69,7 +73,7 @@
     },
     {
       id: "buglens", name: "BugLens", icon: "g-doc",
-      blurb: "A VS Code extension that explains the logic behind a highlighted bug — what the code actually does, what you probably intended, and the concept underneath — without handing back a rewritten fix, so you still have to make the change yourself. Streams LLM output from either OpenAI or Anthropic into a WebView side panel, bundled with esbuild.",
+      blurb: "A VS Code extension that explains the logic behind a highlighted bug: what the code does, what you probably intended, and the concept underneath, without handing back a rewritten fix. Streams from either OpenAI or Anthropic into a WebView side panel.",
       stack: ["TypeScript", "VS Code API", "OpenAI", "Anthropic"],
       info: "Extension · 2026",
       links: [{ label: "GitHub", href: "https://github.com/ggttlplp201/BugLens" }],
@@ -79,33 +83,37 @@
     /* ---- no longer maintained ---- */
     {
       id: "drafted", name: "Drafted", icon: "g-doc",
-      blurb: "A real-time champion-select overlay for League of Legends. It hooks into the local League client (LCU API) to auto-read picks, bans, and your role the moment draft starts, then surfaces data-driven recommendations — meta strength, counters, synergies, builds, runes, and win-rate-by-game-length — scraped live from Lolalytics, all in a floating Electron window that stays on top during champion select.",
+      blurb: "A champion-select overlay for League of Legends that reads picks, bans, and your role straight from the local client the moment draft starts, then surfaces counters, synergies, builds, and win rates scraped from Lolalytics in a floating window that stays on top.",
       stack: ["Python", "Flask", "Electron", "SSE"],
       info: "Desktop · inactive",
+      inactive: true,
       links: [{ label: "GitHub", href: "https://github.com/ggttlplp201/Drafted" }],
       shots: [],
     },
     {
       id: "lineups-cs2", name: "CS2 Lineup Overlay", icon: "g-doc",
-      blurb: "A transparent, always-on-top lineup overlay for Counter-Strike 2 that surfaces the right smoke, flash, or molly for wherever you're standing. It stays VAC-safe by design — no memory reading and no injection, ever — reading state only from Valve's official Game State Integration feed and filtering lineups by map, position, and proximity.",
+      blurb: "A transparent, always-on-top lineup overlay for Counter-Strike 2 that surfaces the right smoke, flash, or molly for wherever you're standing. VAC-safe by design: it reads only Valve's official Game State Integration feed, with no memory reading and no injection.",
       stack: ["JavaScript", "Electron", "Game State Integration"],
       info: "Desktop · inactive",
+      inactive: true,
       links: [{ label: "GitHub", href: "https://github.com/ggttlplp201/lineups_cs2" }],
       shots: [],
     },
     {
       id: "better-cli", name: "Better CLI", icon: "g-doc",
-      blurb: "A native macOS desktop app that wraps the Claude Code CLI in a real GUI. The chat tab runs Claude in streaming JSON mode and renders the events as proper Markdown UI; the terminal tab runs it inside a real PTY so TTY-dependent flows like login and permission prompts still work. Multiple named sessions with their own working directories, slash-command autocomplete, and permission-mode controls.",
+      blurb: "A native macOS app that wraps the Claude Code CLI in a real GUI: a chat tab that renders streamed JSON as proper Markdown, and a terminal tab running inside a real PTY so login and permission prompts still work. Multiple named sessions, each with its own working directory.",
       stack: ["Electron", "React", "TypeScript", "node-pty", "xterm.js"],
       info: "Desktop · inactive",
+      inactive: true,
       links: [{ label: "GitHub", href: "https://github.com/ggttlplp201/Better-CLI" }],
       shots: [],
     },
     {
       id: "mylisp", name: "mylisp", icon: "g-doc",
-      blurb: "A tree-walking interpreter for a Scheme-flavored Lisp, written in Python with no runtime dependencies — special forms, arbitrary-precision integers, a Lisp-defined prelude (map/filter/fold), file loading, and a REPL with persistent history. Built as an experiment in autonomous-agent harness engineering: the source was written end-to-end by AI coding agents with no human edits.",
+      blurb: "A tree-walking interpreter for a Scheme-flavored Lisp in dependency-free Python: special forms, arbitrary-precision integers, a Lisp-defined prelude, and a REPL with persistent history. Built as an experiment in agent harness engineering, written end to end by AI coding agents with no human edits.",
       stack: ["Python", "Scheme", "Interpreter"],
       info: "Languages · inactive",
+      inactive: true,
       links: [{ label: "GitHub", href: "https://github.com/ggttlplp201/mylisp" }],
       shots: [],
     },
@@ -113,12 +121,16 @@
 
   function about(P, O) {
     return `
-      <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;">
-        <div class="photo-dither"><div class="cap">[ leon ]</div></div>
-        <div style="flex:1 1 180px;min-width:170px;">
+      <div class="peter-row">
+        <div class="peter-wrap">
+          ${PETER}
+          <span class="peter-zot">zot zot zot!</span>
+        </div>
+        <div class="peter-bio">
           <h2>${P.fullName}</h2>
-          <p class="meta">${P.tagline}</p>
-          <p>Part-time ski instructor, also building stuff.</p>
+          <p class="meta">Sophomore CSE student at UCI</p>
+          <p>Part-time ski instructor, also building stuff...</p>
+          <p class="meta">Irvine | Lisbon | Beijing</p>
         </div>
       </div>
       <hr class="dotrule">
@@ -233,7 +245,7 @@
     { id: "harddrive", kind: "harddrive", label: "Leon's Device", glyph: "g-hd", corner: "tr",
       title: "Leon's Device", info: "5 items · 512K in disk · 480K available", size: { w: 360, h: 270 } },
     { id: "about", doc: "about", label: "About Me", glyph: "g-doc", x: 24, y: 14,
-      title: "About Me", info: "About · 2K", size: { w: 440, h: 240 } },
+      title: "About Me", info: "About · 2K", size: { w: 460, h: 280 } },
     { id: "projects", kind: "folder", label: "Projects", glyph: "g-folder", x: 24, y: 120,
       title: "Projects", info: "11 items · 264K in folder", size: { w: 380, h: 340 } },
     { id: "garderobe-site", kind: "link", href: "https://the-garderobe.com/", label: "GARDEROBE",
@@ -291,7 +303,6 @@
     id: "leon",
     name: "Leon",
     fullName: "Leon Meng",
-    tagline: "Building things",
     domain: "leonmeng.xyz",
     email: "leonm6@uci.edu",
     machineName: "Leon's Device",
