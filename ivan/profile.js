@@ -97,16 +97,21 @@
         → Retro computing enthusiast
       </p>
       <hr class="dotrule">
-      <p>Open to internship opportunities — reach out at <a href="mailto:${P.email}">${P.email}</a>.</p>`;
+      <p>Looking for Winter 2027 and Summer 2027 internships — reach out at <a href="mailto:${P.email}">${P.email}</a>.</p>`;
   }
 
   function experience(P, O) {
     return `
       <h2>Experience</h2>
       <hr class="rule">
-      <h3>Ruboss — Full-Stack Software Engineer</h3>
+      <h3>Apera AI — Software Developer</h3>
+      <p class="meta">Fall 2026 · Vancouver, BC</p>
+      <p>On the C++ software team building 4D vision software for industrial robotics — helping robots see and handle parts on real factory floors.</p>
+      <hr class="dotrule">
+      <h3>Ruboss — Software Engineer Intern</h3>
       <p class="meta">Summer 2026 · Vancouver, BC</p>
-      <p>Building Leanpub's iOS v3 in SwiftUI against a GraphQL API on a Ruby on Rails backend — a better tool for readers and authors to write and publish books.</p>
+      <p>Shipped Leanpub's first native iOS app to the App Store in 7 weeks as one of two engineers — 105 screens covering reading, publishing, pricing, and sales in SwiftUI over a GraphQL API, plus real-time collaborative editing with CRDTs (Yjs) synced live across web and iOS.</p>
+      <p><a href="https://apps.apple.com/ca/app/leanpub/id913517110" target="_blank" rel="noopener">App Store →</a></p>
       ${galleryHTML(P.leanpubShots, "Leanpub iOS v3")}
       <hr class="dotrule">
       <h3>UBC Rocket — Embedded Software Engineer</h3>
@@ -116,7 +121,7 @@
       ${galleryHTML(P.rocketShots, "Ground Control Station")}
       <hr class="dotrule">
       <h3>Education</h3>
-      <p class="meta">B.A.Sc. Computer Engineering — University of British Columbia · GPA 86% · Class of 2028</p>`;
+      <p class="meta">B.A.Sc. Computer Engineering — University of British Columbia · GPA 87% · Class of 2028</p>`;
   }
 
   function resume(P, O) {
@@ -127,7 +132,7 @@
       <p class="meta">Vancouver, BC · ${P.domain}<br>${P.email} · 778-228-6477</p>
       <hr class="dotrule">
       <h3>Experience</h3>
-      <p>• Ruboss Technology — Full-Stack Software Engineer (2026)<br>• UBC Rocket — Embedded Software Engineer (2025–present)</p>
+      <p>• Apera AI — Software Developer (Fall 2026)<br>• Ruboss (Leanpub) — Software Engineer Intern (Summer 2026)<br>• UBC Rocket — Embedded Software Engineer (2025–present)</p>
       <h3>Projects</h3>
       <p>• Rate My Dish UBC · CS2 Tactics · GravitySandbox<br>• Unix Shell (C) · Virtual Memory System (C)</p>
       <h3>Skills</h3>
