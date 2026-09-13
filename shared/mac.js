@@ -129,6 +129,9 @@
         return s(`<path d="M4 10 H12 L15 13 H28 V26 H4 Z" fill="#fff"/>${L(4,16,28,16)}`);
       case "g-hd":
         return s(`<rect x="3" y="10" width="26" height="13" rx="2" fill="#fff"/><rect x="18" y="18" width="8" height="2.5" fill="#000" stroke="none"/><circle cx="8" cy="20" r="1.4" fill="#000" stroke="none"/>`);
+      case "g-term":
+        // CRT screen with a shell prompt — the Terminal app
+        return s(`<rect x="3" y="4" width="26" height="20" rx="2" fill="#fff"/><rect x="13" y="24" width="6" height="4" fill="#000" stroke="none"/><rect x="8" y="28" width="16" height="2" fill="#000" stroke="none"/><path d="M8 10 L12 14 L8 18"/>${L(15,18,23,18)}`);
       case "g-mail":
         return s(`<rect x="3" y="8" width="26" height="17" fill="#fff"/><path d="M3 9 L16 18 L29 9"/>`);
       case "g-trash":
@@ -463,12 +466,19 @@
     const origin = node ? node.getBoundingClientRect() : null;
     if (ic.kind === "link" && ic.href) { window.open(ic.href, "_blank", "noopener"); return; }
     let body;
+    // Apps mount their own interactive DOM; everything else renders static HTML.
+    let mountApp = null;
     if (ic.kind === "harddrive") body = harddriveBody();
     else if (ic.kind === "folder") body = folderBody(ic);
     else if (ic.kind === "trash") body = htmlBody(trashContent());
+    else if (ic.kind === "app" && typeof ic.mount === "function") { body = el("div"); mountApp = ic.mount; }
     else if (ic.doc && typeof ACTIVE[ic.doc] === "function") body = htmlBody(ACTIVE[ic.doc](ACTIVE, OTHER));
     else body = htmlBody("");
-    openWindow(id, ic.title || ic.label, body, ic.info, ic.size, origin);
+    const win = openWindow(id, ic.title || ic.label, body, ic.info, ic.size, origin);
+    // Mount only on a fresh open (openWindow returns nothing when it just
+    // refocuses an already-open window), and only once the node is in the
+    // document so the app can focus inputs and measure layout.
+    if (win && mountApp) mountApp(body, ACTIVE, OTHER);
   }
 
   function openWindow(id, title, bodyNode, info, size, originRect) {
@@ -544,6 +554,7 @@
 
     // zoom-rectangle open animation
     if (originRect) zoomOpen(originRect, win);
+    return win;
   }
 
   function formatInfo(info) {

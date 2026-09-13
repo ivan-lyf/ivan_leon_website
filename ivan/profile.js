@@ -240,11 +240,434 @@
     { title: "不該 (with 張惠妹)", artist: "周杰倫 (Jay Chou)", art: "https://image-cdn-ak.spotifycdn.com/image/ab67616d00001e02db1172ca038c6818b6ae8bf2", url: "https://open.spotify.com/track/5miH0BWhRVTvHAwmnoeyXH" },
   ];
 
+  /* ---------- Terminal ----------
+     A small read-only shell over a virtual filesystem. The projects/ and
+     side-hustle/ directories are generated from the same arrays the windows
+     use, so the files can never drift from the rest of the desktop.
+     Directories are plain objects; files are strings. */
+
+  const TERM_HOME = ["home", "ivan"];
+
+  const slug = (s) =>
+    s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+
+  function underline(s) { return s + "\n" + "=".repeat(s.length); }
+
+  function projectFile(p) {
+    const lines = [underline(p.name), "", p.info, "", p.blurb, "", "Stack: " + p.stack.join(", ")];
+    if (p.links && p.links.length) {
+      lines.push("");
+      p.links.forEach((l) => lines.push(l.label + ": " + l.href));
+    }
+    return lines.join("\n");
+  }
+
+  function projectsDir() {
+    const d = {};
+    projects.forEach((p) => { d[slug(p.name) + ".txt"] = projectFile(p); });
+    return d;
+  }
+
+  /* Side Hustle windows are HTML builders; the terminal keeps its own plain
+     one-liners rather than stripping tags out of markup. */
+  const sideHustleText = {
+    "gaming.txt": "CS2 and League. Hit me up if you want me to carry you.\nCarry success rate: not legally guaranteed.\n\nRiot ID  Floral Sea #000",
+    "cat.txt": "Jupiter — my cat, and lead QA engineer.\n\nTests every build by sitting on the keyboard and knocking\nunfinished features off the desk. Has never filed a ticket.",
+    "gym.txt": "No picture until I bench two plates. :))\n\nCheck back in a few months. Maybe a few more.",
+    "photography.txt": "Digital and film. I like chasing light on both, and\noccasionally a shot even comes out in focus.\n\nInstagram  @ivan_photo_studio",
+    "snowboarding.txt": "CASI Level 2 and Park Level 1 instructor.\n\nCatch me at Whistler all winter. Come say hi, or book a\nlesson and let me talk your ear off about edge control.",
+  };
+
+  const FS = {
+    home: {
+      ivan: {
+        "README": [
+          underline("Hello from a Macintosh that never existed"),
+          "",
+          "You are in a small read-only filesystem. Everything in here is",
+          "also somewhere on the desktop behind this window — this is just",
+          "a faster way through it if you already think in shells.",
+          "",
+          "Try:  ls           see what is here",
+          "      cd projects   move around",
+          "      cat about.txt  read something",
+          "      help          the full list",
+        ].join("\n"),
+        "about.txt": [
+          underline("Yingfan (Ivan) Luo"),
+          "",
+          "3rd-year Computer Engineering (CPEN) at UBC, in Vancouver.",
+          "",
+          "I build software across the stack — from embedded firmware where",
+          "code meets hardware, to modern web and mobile apps.",
+          "",
+          "  - Real-time and embedded systems (STM32)",
+          "  - Flight-control and sensor pipelines",
+          "  - Full-stack web and mobile applications",
+          "  - Retro computing enthusiast",
+          "",
+          "Open to internship opportunities.",
+        ].join("\n"),
+        "skills.txt": [
+          underline("Technical skills"),
+          "",
+          "Languages   C, C++, Java, JavaScript, TypeScript, Python, Ruby,",
+          "            Swift, SystemVerilog, ARM Assembly",
+          "Frameworks  React, Next.js, Remix, Node.js, SwiftUI,",
+          "            Ruby on Rails, GraphQL, Qt, Protobuf",
+          "Tools       Git/GitHub, Claude Code, Xcode, Linux, CTest",
+        ].join("\n"),
+        "contact.txt": [
+          underline("Get in touch"),
+          "",
+          "Email     yingfanluo@gmail.com",
+          "Phone     778-228-6477",
+          "GitHub    github.com/ivan-lyf",
+          "LinkedIn  linkedin.com/in/ivan-yingfan-luo",
+          "Site      ivanluo.xyz",
+        ].join("\n"),
+        experience: {
+          "apera-ai.txt": [
+            underline("Apera AI Inc. — Software Engineer Intern"),
+            "",
+            "Sept 2026 – present · Vancouver, BC",
+            "",
+            "On the C++ team building 4D vision software for industrial",
+            "robotics — helping robots see and handle parts on real factory",
+            "floors.",
+            "",
+            "  - Built cell localization for shipped robotic work cells:",
+            "    computed a rigid-body transform between reference and",
+            "    measured planes defined by three calibration boards,",
+            "    restoring arm-to-cell calibration after transport to",
+            "    0.01 mm / 0.1 degree accuracy.",
+            "  - Fixed inaccurate calibration progress reporting in the",
+            "    cell's HMI by refactoring legacy code to weight progress",
+            "    by per-task step counts rather than assuming uniform",
+            "    task durations.",
+          ].join("\n"),
+          "ruboss-leanpub.txt": [
+            underline("Ruboss Technology Corporation (Leanpub)"),
+            "",
+            "Software Engineer Intern · May 2026 – Aug 2026 · Vancouver, BC",
+            "",
+            "  - Shipped Leanpub's first native iOS app to the App Store in",
+            "    7 weeks as one of two engineers: 105 screens covering",
+            "    reading, book publishing, pricing, and sales, built in",
+            "    SwiftUI over a GraphQL API. 1,000+ downloads.",
+            "  - Built real-time collaborative editing so co-authors can",
+            "    write a book together with live sync across web and iOS,",
+            "    using CRDTs (Yjs) over Rails ActionCable; ported Yjs's",
+            "    binary sync protocol to Swift.",
+            "  - Built an AI catalog assistant for leanpub.com that answers",
+            "    natural-language requests like \"find me a book on X\",",
+            "    powered by a tool-calling LLM pipeline over the live catalog.",
+            "  - Launched GitHub-backed books: authors connect a repository",
+            "    and Leanpub publishes from it, with automated repo",
+            "    provisioning, ownership transfer, and hardened,",
+            "    injection-safe input validation.",
+          ].join("\n"),
+          "ubc-rocket.txt": [
+            underline("UBC Rocket — Thrust Vector Control"),
+            "",
+            "Embedded Software Engineer · Sept 2025 – present · Vancouver, BC",
+            "",
+            "  - Built the flight team's ground control station in C++ and",
+            "    Qt, rendering 100+ Hz telemetry with live 3D attitude",
+            "    visualization and a satellite-view map.",
+            "  - Designed non-blocking STM32 firmware (SPI) delivering a",
+            "    jitter-free 1 kHz IMU data pipeline, meeting the timing",
+            "    budget the attitude-control loop depended on.",
+            "  - Built a bidirectional radio link with COBS-encoded message",
+            "    framing and an updated Protobuf schema, plus CSV packet",
+            "    logging that enabled post-flight analysis of command and",
+            "    telemetry data.",
+            "  - Implemented the controls team's PID flight-control law from",
+            "    spec and built a ground-station tuning page with saved gain",
+            "    presets, guarded by a 30-test CTest regression harness.",
+            "  - Developed and tuned ESC/motor-control firmware and built a",
+            "    Python data-collection pipeline measuring force/torque vs.",
+            "    thrust %, enabling thrust-performance validation and tuning.",
+          ].join("\n"),
+          "education.txt": [
+            underline("Education"),
+            "",
+            "University of British Columbia — Vancouver, BC",
+            "B.A.Sc. Computer Engineering",
+            "GPA 3.9/4.0 (87%)",
+            "Expected December 2028",
+            "",
+            "Relevant coursework: Computing Systems, Software Construction,",
+            "Data Structures and Algorithms, Computer Architecture,",
+            "Operating Systems.",
+          ].join("\n"),
+        },
+        projects: projectsDir(),
+        "side-hustle": sideHustleText,
+        ".secret": [
+          "You found it.",
+          "",
+          "There is no easter egg here, only the quiet satisfaction of",
+          "someone who reads the man page. That is a real skill. Use it.",
+          "",
+          "  -- ivan",
+        ].join("\n"),
+      },
+    },
+  };
+
+  const isDir = (n) => n !== null && typeof n === "object";
+
+  /* Resolve a user-typed path against cwd. Returns an array of segments. */
+  function resolvePath(cwd, raw) {
+    let parts;
+    if (!raw || raw === "~") parts = TERM_HOME.slice();
+    else if (raw === "/") parts = [];
+    else if (raw.charAt(0) === "/") parts = raw.split("/");
+    else if (raw === "~/" || raw.slice(0, 2) === "~/") parts = TERM_HOME.concat(raw.slice(2).split("/"));
+    else parts = cwd.concat(raw.split("/"));
+    const out = [];
+    parts.forEach((seg) => {
+      if (seg === "" || seg === ".") return;
+      if (seg === "..") { out.pop(); return; }
+      out.push(seg);
+    });
+    return out;
+  }
+
+  function nodeAt(parts) {
+    let node = FS;
+    for (let i = 0; i < parts.length; i++) {
+      if (!isDir(node)) return undefined;
+      if (!Object.prototype.hasOwnProperty.call(node, parts[i])) return undefined;
+      node = node[parts[i]];
+    }
+    return node;
+  }
+
+  function displayPath(parts) {
+    const abs = "/" + parts.join("/");
+    const home = "/" + TERM_HOME.join("/");
+    if (abs === home) return "~";
+    if (abs.indexOf(home + "/") === 0) return "~" + abs.slice(home.length);
+    return abs === "/" ? "/" : abs;
+  }
+
+  const HELP = [
+    "Available commands:",
+    "",
+    "  ls [-al] [path]   list directory contents",
+    "  cd [path]         change directory",
+    "  cat <file>        print a file",
+    "  pwd               print the working directory",
+    "  clear             clear the screen",
+    "  help              this list",
+    "",
+    "  -a  include hidden files      -l  one entry per line",
+    "",
+    "Paths work as you expect: . .. ~ / and relative.",
+    "Up and Down arrows walk through command history.",
+    "Run `cat README` for the tour.",
+  ].join("\n");
+
+  /* Run one command line. Returns { text, cls } lines to print, and may
+     mutate state.cwd. Kept free of DOM so it stays easy to reason about. */
+  function runCommand(raw, state) {
+    const line = raw.trim();
+    if (!line) return [];
+    const argv = line.split(/\s+/);
+    const cmd = argv[0];
+    const args = argv.slice(1);
+    const err = (t) => [{ text: t, cls: "err" }];
+
+    if (cmd === "help") return [{ text: HELP }];
+
+    if (cmd === "pwd") return [{ text: "/" + state.cwd.join("/") || "/" }];
+
+    if (cmd === "clear") return "CLEAR";
+
+    if (cmd === "ls") {
+      const flags = args.filter((a) => a.charAt(0) === "-");
+      const rest = args.filter((a) => a.charAt(0) !== "-");
+      const all = flags.some((f) => f.indexOf("a") > 0);
+      const long = flags.some((f) => f.indexOf("l") > 0);
+      const bad = flags.find((f) => !/^-[al]+$/.test(f));
+      if (bad) return err("ls: invalid option: " + bad);
+      if (rest.length > 1) return err("ls: too many arguments");
+      const target = rest.length ? rest[0] : null;
+      const parts = target === null ? state.cwd : resolvePath(state.cwd, target);
+      const node = nodeAt(parts);
+      if (node === undefined) return err("ls: " + (target || ".") + ": No such file or directory");
+      if (!isDir(node)) return [{ text: target }];
+      let names = Object.keys(node);
+      if (!all) names = names.filter((n) => n.charAt(0) !== ".");
+      if (!names.length) return [];
+      names.sort((a, b) => a.localeCompare(b));
+      const shown = names.map((n) => (isDir(node[n]) ? n + "/" : n));
+      return [{ text: shown.join(long ? "\n" : "  ") }];
+    }
+
+    if (cmd === "cd") {
+      if (args.length > 1) return err("cd: too many arguments");
+      const target = args.length ? args[0] : "~";
+      const parts = resolvePath(state.cwd, target);
+      const node = nodeAt(parts);
+      if (node === undefined) return err("cd: " + target + ": No such file or directory");
+      if (!isDir(node)) return err("cd: " + target + ": Not a directory");
+      state.cwd = parts;
+      return [];
+    }
+
+    if (cmd === "cat") {
+      if (!args.length) return err("cat: missing operand");
+      const out = [];
+      args.forEach((a) => {
+        const node = nodeAt(resolvePath(state.cwd, a));
+        if (node === undefined) out.push({ text: "cat: " + a + ": No such file or directory", cls: "err" });
+        else if (isDir(node)) out.push({ text: "cat: " + a + ": Is a directory", cls: "err" });
+        else out.push({ text: node });
+      });
+      return out;
+    }
+
+    return err("sh: command not found: " + cmd);
+  }
+
+  /* Mount the interactive terminal into a freshly opened window body. */
+  function mountTerminal(root, P) {
+    const doc = root.ownerDocument;
+    root.className = "term";
+    root.innerHTML = "";
+
+    const out = doc.createElement("div");
+    out.className = "term-out";
+    const lineEl = doc.createElement("div");
+    lineEl.className = "term-inputline";
+    const promptEl = doc.createElement("span");
+    promptEl.className = "term-prompt";
+    const typedEl = doc.createElement("span");
+    typedEl.className = "term-typed";
+    const input = doc.createElement("input");
+    input.className = "term-hidden-input";
+    input.type = "text";
+    input.setAttribute("autocomplete", "off");
+    input.setAttribute("autocorrect", "off");
+    input.setAttribute("autocapitalize", "off");
+    input.setAttribute("spellcheck", "false");
+    input.setAttribute("aria-label", "Terminal input");
+
+    lineEl.appendChild(promptEl);
+    lineEl.appendChild(typedEl);
+    root.appendChild(out);
+    root.appendChild(lineEl);
+    root.appendChild(input);
+
+    const state = { cwd: TERM_HOME.slice() };
+    const history = [];
+    let histPos = 0;
+
+    const promptText = () => "ivan@" + (P.domain || "mac") + ":" + displayPath(state.cwd) + "$ ";
+
+    function print(text, cls) {
+      const d = doc.createElement("div");
+      d.className = "term-line" + (cls ? " " + cls : "");
+      d.textContent = text;
+      out.appendChild(d);
+    }
+
+    function scrollToBottom() {
+      const pane = root.closest ? root.closest(".content") : null;
+      if (pane) pane.scrollTop = pane.scrollHeight;
+    }
+
+    function renderLine() {
+      promptEl.textContent = promptText();
+      const v = input.value;
+      let i = input.selectionStart;
+      if (i === null || i === undefined || i > v.length) i = v.length;
+      typedEl.textContent = "";
+      typedEl.appendChild(doc.createTextNode(v.slice(0, i)));
+      const caret = doc.createElement("span");
+      caret.className = "term-caret";
+      if (i < v.length) {
+        caret.classList.add("on-char");
+        caret.textContent = v.charAt(i);
+      }
+      typedEl.appendChild(caret);
+      if (i < v.length) typedEl.appendChild(doc.createTextNode(v.slice(i + 1)));
+    }
+
+    function submit() {
+      const raw = input.value;
+      print(promptText() + raw);
+      const result = runCommand(raw, state);
+      if (result === "CLEAR") out.innerHTML = "";
+      else result.forEach((r) => print(r.text, r.cls));
+      if (raw.trim()) {
+        history.push(raw);
+        if (history.length > 100) history.shift();
+      }
+      histPos = history.length;
+      input.value = "";
+      renderLine();
+      scrollToBottom();
+    }
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); submit(); return; }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (histPos > 0) { histPos--; input.value = history[histPos]; }
+        renderLine();
+        return;
+      }
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (histPos < history.length - 1) { histPos++; input.value = history[histPos]; }
+        else { histPos = history.length; input.value = ""; }
+        renderLine();
+        return;
+      }
+      if (e.key === "l" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); out.innerHTML = ""; renderLine(); return; }
+      if (e.key === "c" && e.ctrlKey) {
+        e.preventDefault();
+        print(promptText() + input.value + "^C");
+        input.value = "";
+        renderLine();
+        scrollToBottom();
+        return;
+      }
+      // let the browser move the caret first, then redraw it
+      setTimeout(renderLine, 0);
+    });
+    input.addEventListener("input", renderLine);
+    input.addEventListener("focus", () => root.classList.remove("blurred"));
+    input.addEventListener("blur", () => root.classList.add("blurred"));
+
+    // clicking anywhere in the pane types into the shell, unless the user is
+    // selecting text to copy
+    root.addEventListener("mousedown", (e) => {
+      if (e.target === input) return;
+      const sel = doc.defaultView.getSelection && doc.defaultView.getSelection().toString();
+      if (sel && sel.trim()) return;
+      e.preventDefault();
+      input.focus();
+    });
+
+    print("Macintosh Terminal 1.0");
+    print("Type `help` for the list of commands, `cat README` for the tour.", "term-dim");
+    print("");
+    renderLine();
+    input.focus();
+    // the window animates open; grab focus again once it has settled
+    setTimeout(() => input.focus(), 260);
+  }
+
   /* ---------- desktop layout ----------
-     kind: "harddrive" | "folder" | "trash" | undefined (document via `doc`) */
+     kind: "harddrive" | "folder" | "trash" | "app" | undefined (document via `doc`) */
   const icons = [
     { id: "harddrive", kind: "harddrive", label: "Ivan's Mac", glyph: "g-hd", corner: "tr",
-      title: "Ivan's Mac", info: "5 items · 512K in disk · 256K available", size: { w: 320, h: 230 } },
+      title: "Ivan's Mac", info: "7 items · 512K in disk · 256K available", size: { w: 320, h: 230 } },
     { id: "about", doc: "about", label: "About Me", glyph: "g-doc", x: 24, y: 14,
       title: "About Me", info: "About · 24K", size: { w: 360, h: 300 } },
     { id: "projects", kind: "folder", label: "Projects", glyph: "g-folder", x: 24, y: 120,
@@ -253,6 +676,8 @@
       title: "Experience", info: "Experience · 24K", size: { w: 380, h: 360 } },
     { id: "sidehustle", kind: "folder", items: sideHustle, label: "Side Hustle", glyph: "g-folder", x: 24, y: 332,
       title: "Side Hustle", info: "5 items · 64K in folder", size: { w: 340, h: 250 } },
+    { id: "terminal", kind: "app", mount: mountTerminal, label: "Terminal", glyph: "g-term", x: 120, y: 14,
+      title: "Terminal", info: "Application · 12K", size: { w: 520, h: 330 } },
     { id: "resume", doc: "resume", label: "Résumé", glyph: "g-resume", corner: "tr2",
       title: "Résumé", info: "Résumé · 32K", size: { w: 340, h: 360 } },
     { id: "contact", doc: "contact", label: "Contact", glyph: "g-mail", corner: "tr3",
