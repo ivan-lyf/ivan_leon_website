@@ -45,6 +45,14 @@
       ],
     },
     {
+      id: "fpga-market-data", name: "Live Market Data FPGA", icon: "g-doc",
+      blurb: "A real-time market-data pipeline running on a DE10-Lite FPGA. A Python WebSocket client streams live binary packets over UART into a SystemVerilog parser FSM, which decodes them on the board for low-latency processing.",
+      stack: ["SystemVerilog", "Python", "UART", "DE10-Lite"],
+      info: "Hardware · 2026",
+      links: [],
+      shots: [],
+    },
+    {
       id: "unix-shell", name: "Unix Shell (crash)", icon: "g-doc",
       blurb: "A Unix shell written from scratch in C with a REPL supporting foreground/background job execution via fork/execve and process groups. Implements job control (fg, bg, kill, jobs) and POSIX signal handlers (SIGINT, SIGTSTP, SIGCHLD), eliminating zombie processes.",
       stack: ["C", "Linux", "POSIX", "Signals"],
@@ -66,7 +74,7 @@
   const rocketShots = [
     { src: "ivan/assets/rocket/gcs-flight.png", cap: "Flight view — 3D attitude" },
     { src: "ivan/assets/rocket/gcs-tuning.png", cap: "PID tuning presets" },
-    { src: "ivan/assets/rocket/gcs-map.png", cap: "UWB satellite map" },
+    { src: "ivan/assets/rocket/gcs-map.png", cap: "Satellite-view map" },
   ];
 
   /* Leanpub iOS v3 screenshots — Ruboss work (shown in Experience) */
@@ -104,24 +112,24 @@
     return `
       <h2>Experience</h2>
       <hr class="rule">
-      <h3>Apera AI — Software Developer</h3>
-      <p class="meta">Fall 2026 · Vancouver, BC</p>
-      <p>On the C++ software team building 4D vision software for industrial robotics — helping robots see and handle parts on real factory floors.</p>
+      <h3>Apera AI — Software Engineer Intern</h3>
+      <p class="meta">Sept 2026 – present · Vancouver, BC</p>
+      <p>On the C++ team building 4D vision software for industrial robotics — helping robots see and handle parts on real factory floors. Built cell localization for shipped work cells, solving a rigid-body transform between reference and measured planes so arm-to-cell calibration survives transport to 0.01 mm / 0.1°.</p>
       <hr class="dotrule">
       <h3>Ruboss — Software Engineer Intern</h3>
       <p class="meta">Summer 2026 · Vancouver, BC</p>
-      <p>Shipped Leanpub's first native iOS app to the App Store in 7 weeks as one of two engineers — 105 screens covering reading, publishing, pricing, and sales in SwiftUI over a GraphQL API, plus real-time collaborative editing with CRDTs (Yjs) synced live across web and iOS.</p>
+      <p>Shipped Leanpub's first native iOS app to the App Store in 7 weeks as one of two engineers — 105 screens covering reading, publishing, pricing, and sales in SwiftUI over a GraphQL API, plus real-time collaborative editing with CRDTs (Yjs) synced live across web and iOS. Also built an LLM catalog assistant that answers “find me a book on X” over the live catalog, and GitHub-backed books that publish straight from a repo.</p>
       <p><a href="https://apps.apple.com/ca/app/leanpub/id913517110" target="_blank" rel="noopener">App Store →</a></p>
       ${galleryHTML(P.leanpubShots, "Leanpub iOS v3")}
       <hr class="dotrule">
       <h3>UBC Rocket — Embedded Software Engineer</h3>
-      <p class="meta">TVR Team · 2025–present · Vancouver, BC</p>
-      <p>Building the ground control station in C++/Qt, plus the firmware and drivers (STM32, IMU, UWB ranging) for the self-landing thrust-vectoring rocket.</p>
+      <p class="meta">Thrust Vector Control · 2025–present · Vancouver, BC</p>
+      <p>Built the flight team's ground control station in C++/Qt, rendering 100+ Hz telemetry with live 3D attitude and a satellite map. On the firmware side: non-blocking STM32 drivers delivering a jitter-free 1 kHz IMU pipeline, a COBS-framed Protobuf radio link, and the controls team's PID flight-control law guarded by a 30-test CTest harness.</p>
       <p><a href="https://github.com/UBC-Rocket/thrust_vectoring_consolidated" target="_blank" rel="noopener">GitHub →</a></p>
       ${galleryHTML(P.rocketShots, "Ground Control Station")}
       <hr class="dotrule">
       <h3>Education</h3>
-      <p class="meta">B.A.Sc. Computer Engineering — University of British Columbia · GPA 87% · Class of 2028</p>`;
+      <p class="meta">B.A.Sc. Computer Engineering — University of British Columbia · GPA 3.9/4.0 (87%) · Expected December 2028</p>`;
   }
 
   function resume(P, O) {
@@ -132,15 +140,16 @@
       <p class="meta">Vancouver, BC · ${P.domain}<br>${P.email} · 778-228-6477</p>
       <hr class="dotrule">
       <h3>Experience</h3>
-      <p>• Apera AI — Software Developer (Fall 2026)<br>• Ruboss (Leanpub) — Software Engineer Intern (Summer 2026)<br>• UBC Rocket — Embedded Software Engineer (2025–present)</p>
+      <p>• Apera AI — Software Engineer Intern (2026–present)<br>• Ruboss (Leanpub) — Software Engineer Intern (Summer 2026)<br>• UBC Rocket — Embedded Software Engineer (2025–present)</p>
       <h3>Projects</h3>
-      <p>• Rate My Dish UBC · CS2 Tactics · GravitySandbox<br>• Unix Shell (C) · Virtual Memory System (C)</p>
+      <p>• Rate My Dish UBC · CS2 Tactics · GravitySandbox<br>• Live Market Data FPGA · Unix Shell (C) · Virtual Memory System (C)</p>
       <h3>Skills</h3>
       <p>
         <span class="tag">C</span><span class="tag">C++</span><span class="tag">Python</span>
-        <span class="tag">Java</span><span class="tag">TypeScript</span><span class="tag">Swift</span>
-        <span class="tag">Ruby</span><span class="tag">SystemVerilog</span><span class="tag">ARM Asm</span>
-        <span class="tag">React</span><span class="tag">Next.js</span><span class="tag">SwiftUI</span>
+        <span class="tag">Java</span><span class="tag">JavaScript</span><span class="tag">TypeScript</span>
+        <span class="tag">Swift</span><span class="tag">Ruby</span><span class="tag">SystemVerilog</span>
+        <span class="tag">ARM Asm</span><span class="tag">React</span><span class="tag">Next.js</span>
+        <span class="tag">Remix</span><span class="tag">Node.js</span><span class="tag">SwiftUI</span>
         <span class="tag">Rails</span><span class="tag">GraphQL</span><span class="tag">Qt</span>
         <span class="tag">STM32</span><span class="tag">Protobuf</span><span class="tag">Git</span>
       </p>
@@ -239,13 +248,13 @@
     { id: "about", doc: "about", label: "About Me", glyph: "g-doc", x: 24, y: 14,
       title: "About Me", info: "About · 24K", size: { w: 360, h: 300 } },
     { id: "projects", kind: "folder", label: "Projects", glyph: "g-folder", x: 24, y: 120,
-      title: "Projects", info: "5 items · 128K in folder", size: { w: 330, h: 250 } },
+      title: "Projects", info: "6 items · 144K in folder", size: { w: 330, h: 280 } },
     { id: "experience", doc: "experience", label: "Experience", glyph: "g-doc", x: 24, y: 226,
-      title: "Experience", info: "Experience · 18K", size: { w: 370, h: 300 } },
+      title: "Experience", info: "Experience · 24K", size: { w: 380, h: 360 } },
     { id: "sidehustle", kind: "folder", items: sideHustle, label: "Side Hustle", glyph: "g-folder", x: 24, y: 332,
       title: "Side Hustle", info: "5 items · 64K in folder", size: { w: 340, h: 250 } },
     { id: "resume", doc: "resume", label: "Résumé", glyph: "g-resume", corner: "tr2",
-      title: "Résumé", info: "Résumé · 32K", size: { w: 340, h: 320 } },
+      title: "Résumé", info: "Résumé · 32K", size: { w: 340, h: 360 } },
     { id: "contact", doc: "contact", label: "Contact", glyph: "g-mail", corner: "tr3",
       title: "Contact", info: "Contact · 8K", size: { w: 300, h: 270 } },
     { id: "trash", kind: "trash", label: "Trash", glyph: "g-trash", corner: "br",
