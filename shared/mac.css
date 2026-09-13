@@ -1649,3 +1649,75 @@ img { image-rendering: pixelated; }
   -moz-osx-font-smoothing: auto;
   font-smooth: auto;
 }
+
+/* ============================================================
+   Terminal app
+   Inverse-video pane inside a normal window. Colors come from the
+   theme vars, so the green-phosphor mode inverts along with it.
+   The real <input> is invisible and offscreen-safe; the caret you
+   see is a rendered block so it reads as a 1984 terminal.
+   ============================================================ */
+.term {
+  /* cancel .content padding so the dark pane bleeds to the window edge */
+  margin: -14px -16px;
+  padding: 12px 14px;
+  min-height: calc(100% + 28px);
+  box-sizing: border-box;
+  background: var(--ink);
+  color: var(--paper);
+  /* A terminal has to be truly monospaced: the bundled 'Monaco' face in this
+     stylesheet is proportional despite its name, so columns in `ls` and `help`
+     would not line up. Use the system monospace instead. */
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  cursor: text;
+  overflow-wrap: break-word;
+  font-variant-ligatures: none;
+}
+.term .term-out { margin: 0; white-space: pre-wrap; }
+.term .term-line { margin: 0; white-space: pre-wrap; }
+.term .term-line.err { font-weight: bold; }
+.term .term-dim { opacity: 0.65; }
+/* a run of output the user can scan: keep columns honest */
+.term .term-cols { margin: 0; white-space: pre-wrap; }
+
+.term .term-prompt { white-space: pre; }
+.term .term-user { font-weight: bold; }
+
+.term .term-inputline {
+  display: flex;
+  align-items: flex-start;
+  margin: 0;
+}
+.term .term-typed { white-space: pre-wrap; flex: 0 1 auto; }
+.term .term-caret {
+  display: inline-block;
+  width: 1ch;
+  min-width: 1ch;
+  height: 1.2em;
+  vertical-align: bottom;
+  background: var(--paper);
+  animation: term-blink 1.06s steps(1, end) infinite;
+}
+/* caret sitting on top of an existing character: punch the glyph out */
+.term .term-caret.on-char {
+  color: var(--ink);
+  width: auto;
+  min-width: 1ch;
+  text-align: center;
+}
+@keyframes term-blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
+.term.blurred .term-caret { animation: none; opacity: 0.35; }
+
+/* the real input: present for keyboard/IME, never seen */
+.term .term-hidden-input {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  border: 0;
+  padding: 0;
+}

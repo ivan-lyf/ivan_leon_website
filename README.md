@@ -14,6 +14,13 @@ To add a window, add an icon entry (`doc:` for a document, or `kind: "folder" |
 a person's side means editing their profile file. `shared/mac.js` and `shared/mac.css`
 stay the same.
 
+For something interactive, use `kind: "app"` with a `mount(root, profile, other)`
+function. The engine opens the window, then calls `mount` with an empty body node
+already in the document, so the app can focus inputs and measure layout. Ivan's
+Terminal is the first one: a small read-only shell (`ls`, `cd`, `cat`, `pwd`,
+`clear`, `help`) over a virtual filesystem whose `projects/` directory is generated
+from the same `projects` array the windows use, so the two cannot drift apart.
+
 ## The 3D front end
 
 `index.html` renders the live site onto a 3D Macintosh built in `shared/mac-scene.js`
