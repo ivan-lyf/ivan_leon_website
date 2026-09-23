@@ -210,21 +210,19 @@
       <hr class="dotrule">
 
       <h3>Technical Skills</h3>
-      <p><strong>Programming Languages</strong><br>Python, Java, JavaScript, TypeScript, HTML, CSS, SQL</p>
-      <p><strong>Web &amp; Backend</strong><br>React, Vite, Tailwind, FastAPI, Supabase, PostgreSQL, Vercel serverless functions, REST APIs</p>
-      <p><strong>AI &amp; Automation</strong><br>Anthropic Claude &amp; OpenAI APIs, image processing pipelines, LLM tooling, workflow automation</p>
-      <p><strong>Data &amp; Quantitative</strong><br>pandas, NumPy, scikit-learn, SciPy, SQLite, Streamlit, backtesting &amp; walk-forward validation</p>
+      <p><strong>Languages</strong><br>Java, Python, TypeScript, JavaScript, SQL, HTML, CSS</p>
+      <p><strong>Web &amp; Backend</strong><br>React, Vite, Tailwind, FastAPI, Supabase, PostgreSQL, REST APIs, Vercel serverless functions</p>
       <p><strong>Robotics &amp; Vision</strong><br>Odometry &amp; localization, path planning (Roadrunner), finite state machines, OpenCV, Limelight 3A vision, CAD (Fusion 360), photogrammetry (RealityScan), 3D printing</p>
-      <p><strong>Developer Tools</strong><br>Git, GitHub, Docker, Linux, CI/CD pipelines, pytest, vitest</p>
+      <p><strong>Data &amp; Tooling</strong><br>pandas, NumPy, SQLite, Streamlit, Git, Linux</p>
       <hr class="dotrule">
 
       <h3>Experience</h3>
-      <p><strong>SomaFuture</strong> — Software Engineer</p>
+      <p><strong>SomaFuture</strong> — Software Engineer/Consultant</p>
       <p class="meta">Jun 2026 – Aug 2026 · Oeiras, Portugal</p>
-      <p>• Designed and built a completely new company website (<a href="https://do-mus-mat-v2.vercel.app" target="_blank" rel="noopener">live demo</a>) that redefined SomaFuture's strategic direction toward standardizing and digitalizing its product line, translating a physical catalog into a structured digital experience<br>
-         • Built internal mini-apps and automation programs — including file translators that preserve the original document formatting — eliminating manual reformatting and accelerating office workflows<br>
-         • Prototyped a mock-up 3D room configurator and evaluated competing methods for reconstructing product geometry, comparing photogrammetry (RealityScan) against CAD-authored models to determine a viable digitalization pipeline<br>
-         • Defined the company's roadmap for incorporating AI into its products and initiated outreach to potential collaborators, including AiHouse, on tooling for floor-plan-to-3D generation and custom home configuration in 3D space</p>
+      <p>• Built a functional Next.js/Supabase prototype of the company's B2B materials platform to define product scope and technical requirements, directly informing a formal vendor RFP for the platform's outsourced development<br>
+         • Built a Python document-translation pipeline that OCRs scanned Portuguese technical PDFs, machine-translates the extracted text to Simplified Chinese, and reassembles it into the original layout with embedded CJK fonts — eliminating manual reformatting for the team<br>
+         • Evaluated three approaches for digitizing the product catalog into 3D — photogrammetry scanning (RealityScan), CAD-authored modeling, and an AI photo-to-3D tool — weighing render quality against BIM-readiness to define the platform's 3D-asset requirements<br>
+         • Led research, outreach, and contract negotiation with vendor finalists — BiMaYun (BIM/3D software) and Stardecerp (website and backend development) — coordinating with the company's product, BIM engineering, and legal teams through final contract signing</p>
       <p><strong>First Tech Challenge</strong> — Teams 16031 &amp; 16205, Autonomous &amp; Mechanical Engineer</p>
       <p class="meta">Oct 2021 – Jun 2025 · Vancouver, BC</p>
       <p>• Implemented an odometry system using encoders; computed horizontal/vertical displacement per time step, corrected for rotational drift, and converted to field coordinates via trigonometric transforms for sub-centimeter localization accuracy<br>
@@ -237,18 +235,17 @@
       <p><strong>GARDEROBE</strong> — <a href="https://the-garderobe.com/" target="_blank" rel="noopener">the-garderobe.com</a></p>
       <p class="meta">Full-Stack Wardrobe Manager — React, Supabase, FastAPI, Claude API</p>
       <p>• Built and shipped to production a full-stack wardrobe management app with AI auto-tagging that extracts item name, brand, color, and type from an uploaded photo via the Anthropic Claude API<br>
-         • Implemented in-browser ML background removal, a drag-and-drop outfit builder, and a live price-tracking wishlist backed by scheduled FastAPI scraping jobs (Grailed, SSENSE) refreshed every 6 hours<br>
+         • Built a walkable 3D gallery to showcase the wardrobe using only CSS, with hand-built perspective, textures, and performance tuning for smooth navigation<br>
          • Built a full social layer on Supabase realtime — profiles, publishing, an Explore page, a people directory, friends, and likes — plus a feed aggregating fashion and culture articles from multiple third-party news APIs</p>
-      <p><strong>Component Style Studio</strong> — <a href="https://github.com/ggttlplp201/UI-Library" target="_blank" rel="noopener">github.com/ggttlplp201/UI-Library</a></p>
-      <p class="meta">Visual Page Builder for React Codebases — TypeScript, React, Vite, Tailwind, AST tooling</p>
-      <p>• Built a local-first visual page builder in which every block is a live React component: scans any React project folder in place, extracts props via react-docgen-typescript, and renders each component in a per-project child dev server so previews use its real CSS, Tailwind config, and dependencies<br>
-         • Wrote an AST edit engine that writes visual changes (style, text, animation) back into the component's actual source without touching program logic, and exports either a self-contained single-file HTML site or a diffable zip of the edited source<br>
-         • Designed a multi-page authoring model with a node-graph root connecting pages, per-page loading screens and cursor effects, and a live preview mode; ships a bundled library of 130+ components across three design themes</p>
-      <p><strong>CS2 Quant — Skin Trading Agents</strong> — <a href="https://github.com/ggttlplp201/cs666" target="_blank" rel="noopener">github.com/ggttlplp201/cs666</a></p>
-      <p class="meta">Quantitative Research System — Python, pandas, scikit-learn, SQLite, Streamlit</p>
-      <p>• Built two independent paper-trading agents on the CS2 skin market — one event-driven (trading update-induced repricings), one positional value/trend — over a shared data layer, indicator library, signal bus, and provenance-logged ledger<br>
-         • Implemented a T+7-aware settlement model, market regime classifier, risk gate, and honest walk-forward backtester that quarantines in-sample results from out-of-sample scoring; covered by a 186-test suite<br>
-         • Shipped a read-only Streamlit research dashboard surfacing poller data-health gaps, spread-vs-liquidity trading costs, per-rule out-of-sample scorecards, and a browsable decision log tracing why each signal fired</p>
+      <p><strong>DoMusMat</strong> — <a href="https://do-mus-mat-v2.vercel.app" target="_blank" rel="noopener">do-mus-mat-v2.vercel.app</a></p>
+      <p class="meta">Full-Stack B2B Materials Platform — Next.js, Supabase, PostgreSQL, WebGL</p>
+      <p>• Built the full-stack web app end-to-end with Next.js and Supabase, standing up a PostgreSQL schema and API layer to drive dynamic product pages, syncing the live catalog across lighting, flooring, doors, and other categories from the company's existing WordPress site<br>
+         • Built a WebGL-based 3D room configurator for real-time in-browser product placement, with a "render in HD" step that ships the configured scene to Modal serverless GPUs for photorealistic rendering via Blender Cycles</p>
+      <p><strong>EquityEval — Equity Valuation Workbench</strong> — <a href="https://github.com/ggttlplp201/EquityEval" target="_blank" rel="noopener">github.com/ggttlplp201/EquityEval</a></p>
+      <p class="meta">Financial Research System — Python, FastAPI, PostgreSQL/TimescaleDB, Redis, Next.js, TypeScript</p>
+      <p>• Built a local-first equity research platform that ingests SEC XBRL filings and market data into point-in-time financial histories, keeping a full trail of restatements, sources, and data quality for every value<br>
+         • Built a Python valuation engine that works backward from a company's market price to the operating performance it implies, with versioned assumptions, scenario/sensitivity analysis, and 3/5/10-year historical comparisons<br>
+         • Built a Next.js research workbench with company analysis, filing monitoring, and a graph-based Sector Explorer, backed by PostgreSQL-orchestrated workflows and a generated FastAPI layer</p>
       <hr class="dotrule">
 
       <h3>Awards &amp; Achievements</h3>
