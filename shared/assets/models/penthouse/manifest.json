@@ -1,0 +1,170 @@
+{
+  "scene": "Leon | Sky residence",
+  "units": "metres",
+  "webScale": 4,
+  "objects": 253,
+  "desk": {
+    "width": 1.8,
+    "depth": 0.8,
+    "top": 0.75
+  },
+  "chair": {
+    "seatHeight": 0.46,
+    "overallHeight": 1.055
+  },
+  "computer": {
+    "width": 0.3,
+    "height": 0.355,
+    "depth": 0.31
+  },
+  "room": {
+    "width": 7,
+    "depth": 7.5,
+    "height": 3.2
+  },
+  "ceilingPanels": 4,
+  "bakedAO": true,
+  "deskMat": {
+    "width": 0.9,
+    "depth": 0.4,
+    "thickness": 0.003,
+    "center": [
+      -0.9,
+      0.752,
+      0.18
+    ],
+    "frontEdgeClearance": 0.02
+  },
+  "ceilingPanelLayout": {
+    "shape": "square",
+    "coordinateSystem": "web X,Y-up,Z in metres",
+    "installation": "flush recessed with real ceiling openings",
+    "ceilingFinishY": 3.2,
+    "openingSize": [
+      1.208,
+      1.208
+    ],
+    "housingSize": [
+      1.242,
+      0.045,
+      1.242
+    ],
+    "housingCenterY": 3.26,
+    "diffuserSize": [
+      1.2,
+      0.008,
+      1.2
+    ],
+    "trimOuterSize": 1.228,
+    "trimInnerSize": 1.196,
+    "trimProjection": 0.002,
+    "diffuserCenters": [
+      [
+        -1.55,
+        3.204,
+        -0.5
+      ],
+      [
+        1.55,
+        3.204,
+        -0.5
+      ],
+      [
+        -1.55,
+        3.204,
+        2.6
+      ],
+      [
+        1.55,
+        3.204,
+        2.6
+      ]
+    ],
+    "areaLights": [
+      {
+        "position": [
+          -1.55,
+          3.1940000000000004,
+          -0.5
+        ],
+        "size": [
+          1.2,
+          1.2
+        ],
+        "watts": 160
+      },
+      {
+        "position": [
+          1.55,
+          3.1940000000000004,
+          -0.5
+        ],
+        "size": [
+          1.2,
+          1.2
+        ],
+        "watts": 160
+      },
+      {
+        "position": [
+          -1.55,
+          3.1940000000000004,
+          2.6
+        ],
+        "size": [
+          1.2,
+          1.2
+        ],
+        "watts": 160
+      },
+      {
+        "position": [
+          1.55,
+          3.1940000000000004,
+          2.6
+        ],
+        "size": [
+          1.2,
+          1.2
+        ],
+        "watts": 160
+      }
+    ],
+    "visualReference": {
+      "title": "Philips CoreLine Panel gen6 600x600 mm",
+      "url": "https://www.lighting.philips.com/content/signify-multibrand/aa/en/product/product-detail-page.911401800887_EU.html",
+      "adaptation": "Flush office-panel installation with shallow ceiling-colored trim, enlarged to custom 1.20 m diffusers; not a dimensional product replica."
+    }
+  },
+  "floorFinish": {
+    "roughness": 0.19,
+    "normalStrength": 0.065,
+    "finish": "polished charcoal stone"
+  },
+  "exportMeshes": 32,
+  "aoRadiusMeters": 0.3,
+  "bakedIndirect": true,
+  "indirectBake": {
+    "engine": "Cycles",
+    "samples": 24,
+    "device": "CPU",
+    "pass": "DIFFUSE_INDIRECT",
+    "encoding": "linear",
+    "bitDepth": 8,
+    "uv": "OcclusionUV",
+    "windowLight": false,
+    "worldStrength": 0.04,
+    "ceilingPanelWatts": [
+      160.0,
+      160.0,
+      160.0,
+      160.0
+    ],
+    "textures": {
+      "room": "indirect-room.png",
+      "furniture": "indirect-furniture.png"
+    },
+    "denoiser": "Blender compositor OpenImageDenoise",
+    "denoiseQuality": "High"
+  }
+}

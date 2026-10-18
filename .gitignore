@@ -8,3 +8,6 @@
 *.swp
 *~
 .superpowers/
+
+# Retired local experiment; the penthouse keyboard is silent.
+/shared/penthouse-keyboard-audio.js

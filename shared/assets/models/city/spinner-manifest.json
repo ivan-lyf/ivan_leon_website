@@ -1,0 +1,23 @@
+{
+  "asset": "LM27 skyline spinner",
+  "units": "metres",
+  "frontAxis": "+X",
+  "upAxis": "+Y",
+  "dimensions": [
+    4.975000381469727,
+    1.715000033378601,
+    2.6089999675750732
+  ],
+  "sourceObjects": 157,
+  "exportMeshes": 9,
+  "sourceTriangles": 17338,
+  "triangles": 12149,
+  "visualReferences": [
+    {
+      "creator": "George Hull",
+      "url": "https://www.ghull.com/_page-template",
+      "work": "Blade Runner 2049 vehicle concept illustrations",
+      "adaptation": "Original unarmed graphite LM27 design informed by the wrap windshield, split forward pods, cooling vents and armoured silhouette."
+    }
+  ]
+}

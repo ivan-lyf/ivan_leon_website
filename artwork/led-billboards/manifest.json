@@ -1,0 +1,59 @@
+{
+  "title": "Tokyo Signals",
+  "loop": {
+    "fps": 24,
+    "frames": 192,
+    "seconds": 8,
+    "seam": "Frame 193 equals frame 1"
+  },
+  "source": "tokyo-signals.blend",
+  "preview": "previews/tokyo-signals-loop.mp4",
+  "families": [
+    "KAO / Japanese face",
+    "TATE / diamond facade",
+    "EN / optical rings",
+    "DENSHI / stacked advertisements",
+    "HIKARI / vertical LED strips"
+  ],
+  "artwork": "Two original built-in imagegen illustrations; procedural Blender animation and supporting graphics",
+  "face_pixel_grid": [
+    144,
+    216
+  ],
+  "face_size_m": [
+    5.6,
+    8.4
+  ],
+  "verified": {
+    "all_eight_drivers_valid": true,
+    "all_seven_animated_materials_loop": true,
+    "bitmap_textures_packed": true,
+    "existing_penthouse_scene_preserved": true
+  },
+  "files": {
+    "tokyo-signals.blend": {
+      "bytes": 4522448,
+      "sha256": "370b27e5ac6530955f05987ac76e76cd3dc7701f1527aa7ae4290982f26dffd5"
+    },
+    "assets/ad-plate-1.png": {
+      "bytes": 126727,
+      "sha256": "7af55758d8a3be2756ec7b37a2be43b9e1ef580879b5e95968aefff7414f37ce"
+    },
+    "assets/ad-plate-2.png": {
+      "bytes": 73551,
+      "sha256": "ae0a2fd72266a2b4d09e1240411fd63e77d63fc1fdc5d1bda3256093f56bac8c"
+    },
+    "assets/ad-plate-3.png": {
+      "bytes": 75983,
+      "sha256": "bb8a249097ab1eb40d796fb9d525c422469ebc293c4f55f3358be3fb50331a27"
+    },
+    "assets/anime-transmission.png": {
+      "bytes": 1600116,
+      "sha256": "5e4fb849c7be3139c9e6931de63b9fc479e6fea795bcab7d15609934c0096253"
+    },
+    "assets/kabuki-signal.png": {
+      "bytes": 2399722,
+      "sha256": "cd0ae9c139da8a8b3a644cacb99253b867cd9f1bc0f13352aee91da5230eee8c"
+    }
+  }
+}

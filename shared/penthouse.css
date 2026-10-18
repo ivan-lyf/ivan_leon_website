@@ -1,0 +1,70 @@
+/* Room UI is intentionally separate from the existing Macintosh desktop. */
+.room-ui { display: none; }
+html.penthouse { color-scheme: dark; }
+.penthouse body { background: #201c19; color: #eee9df; font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; }
+.penthouse #gl { touch-action: none; outline: none; }
+.penthouse #hud, .penthouse #vignette, .penthouse #audio-toggle { display: none; }
+.penthouse .room-ui { display: block; }
+/* Layers: canvas 1, atmosphere 2, room UI 5, desktop 45, desktop close 46, dialogs 60. */
+.penthouse .room-shade { position: fixed; inset: 0; z-index: 2; pointer-events: none; background: linear-gradient(180deg, rgba(10,13,15,.45), transparent 22%, transparent 68%, rgba(10,13,15,.58)); }
+.penthouse #room-header { position: fixed; z-index: 5; top: 34px; right: 40px; display: flex; align-items: center; justify-content: flex-end; gap: 24px; transition: opacity .3s; }
+.penthouse .room-nav { display: flex; gap: 8px; }
+.penthouse button { -webkit-tap-highlight-color: transparent; }
+.penthouse .room-button { appearance: none; background: transparent; color: #e8e3da; border: 1px solid transparent; border-radius: 3px; padding: 11px 15px; font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; transition: background .2s, border-color .2s, color .2s; }
+.penthouse .room-button:hover { background: #15191c80; border-color: #eee5d333; color: #fffaf1; }
+.penthouse .room-button[aria-pressed="true"] { background: #181b1b75; border-color: #eee5d344; }
+.penthouse :is(button, a):focus-visible { outline: 2px solid #ffe0ab; outline-offset: 4px; }
+.penthouse #room-footer { position: fixed; z-index: 5; right: 40px; bottom: 32px; display: flex; justify-content: flex-end; align-items: flex-end; gap: 24px; transition: opacity .3s; pointer-events: none; }
+.penthouse #room-footer > * { pointer-events: auto; }
+.penthouse .room-tools { display: flex; align-items: center; gap: 6px; }
+.penthouse .room-tools .room-button { font-size: 11px; padding: 10px 12px; background: #12171960; border-color: #eee5d329; }
+.penthouse .room-tools .room-button[aria-pressed="true"] { color: #ffdcaa; background: #45362670; border-color: #ffdcaa55; }
+.penthouse #room-tooltip { position: fixed; z-index: 5; top: 0; left: 0; pointer-events: none; padding: 8px 12px; background: #171c1fe8; border: 1px solid #d7caba44; border-radius: 3px; color: #eee9df; font-size: 11px; opacity: 0; }
+.penthouse #room-tooltip.visible { opacity: 1; }
+.penthouse #room-back { position: fixed; z-index: 46; top: 16px; left: 16px; background: #171a1ef2; border: 1px solid #eee5d350; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 180ms ease-out; }
+.penthouse:is(.in-computer,.computer-transition) #room-back { opacity: 1; visibility: visible; pointer-events: auto; }
+.penthouse:is(.in-computer,.computer-transition) :is(#room-header,#room-footer) { opacity: 0; pointer-events: none; }
+.penthouse:is(.in-computer,.computer-transition) #room-footer * { pointer-events: none; }
+.penthouse #screen-host { pointer-events: none; transform-origin: top left; }
+.penthouse:is(.in-computer,.computer-transition) #screen-host { z-index: 45; }
+.penthouse.computer-transition #screen-host { will-change: transform, opacity; }
+.penthouse #screen-host.is-open { pointer-events: auto; }
+.penthouse #computer-backdrop { position: fixed; inset: 0; z-index: 40; background: #080c0e; opacity: 0; pointer-events: none; }
+.penthouse:is(.in-computer,.computer-transition) #computer-backdrop { pointer-events: auto; }
+.penthouse .room-dialog { background: #1b2023; color: #eee9df; border: 1px solid #626765; border-radius: 5px; padding: 28px; width: min(420px, calc(100vw - 32px)); box-shadow: 0 18px 80px #0007; }
+.penthouse .room-dialog::backdrop { background: #080b0d88; backdrop-filter: blur(8px); }
+.penthouse .room-dialog h2 { margin: 0 0 8px; font-size: 24px; font-weight: 400; letter-spacing: -.6px; }
+.penthouse .room-dialog p { font-size: 13px; line-height: 1.6; color: #c4c7c5; }
+.penthouse .room-dialog dl { margin: 24px 0; display: grid; grid-template-columns: 1fr auto; gap: 16px; font-size: 13px; }
+.penthouse .room-dialog dd { margin: 0; color: #e4c7a3; }
+.penthouse .room-dialog .room-button { border-color: #eee5d344; width: 100%; }
+.penthouse #loading { background: #14191c; }
+.penthouse #loading .term { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; font-size: 15px; color: #e2d5c0; line-height: 1.8; text-shadow: none; }
+.penthouse #loading .dim { color: #979f9f; }
+.penthouse .error-actions a { color: #ffe1b3; }
+@media (max-width: 700px) {
+  .penthouse #room-header { top: 20px; left: 20px; right: 20px; align-items: flex-start; }
+  .penthouse .room-nav { gap: 0; }
+  .penthouse .room-nav .room-button { font-size: 11px; padding: 10px; }
+  .penthouse #room-footer { left: 20px; right: 20px; bottom: 22px; align-items: flex-end; }
+  .penthouse .room-tools { gap: 4px; }
+  .penthouse .room-tools .room-button { padding: 10px 11px; min-height: 42px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .penthouse *, .penthouse *::before, .penthouse *::after { transition-duration: .01ms !important; animation: none !important; }
+}
+
+.penthouse .room-ui, .penthouse .room-ui *, .penthouse .room-dialog, .penthouse .room-dialog * { -webkit-font-smoothing: antialiased; font-smooth: auto; cursor: auto; }
+.penthouse .room-ui button { cursor: pointer; }
+.penthouse #screen-host { font-family: 'Chicago', 'Geneva', system-ui, sans-serif; }
+.penthouse .room-ui.room-shade { background: linear-gradient(180deg, rgba(10,13,15,.7), rgba(10,13,15,.2) 14%, transparent 28%, transparent 68%, rgba(10,13,15,.48)), radial-gradient(ellipse at 50% 45%, transparent 45%, #0b101326); }
+
+.penthouse #loading .term { height: auto; min-height: 0; max-height: none; overflow: visible; padding: 0; background: transparent; -webkit-font-smoothing: antialiased; }
+.penthouse #screen-host .screen { width: 640px; height: 469px; }
+.penthouse #screen-host { color: var(--ink); }
+.penthouse #screen-host .screen { transform: none !important; filter: none !important; }
+.penthouse #screen-host .crt-scanlines { opacity: .12; }
+@media (max-width: 700px) {
+  .penthouse .room-nav { flex-wrap: wrap; justify-content: flex-end; }
+  .penthouse .room-nav .room-button { min-height: 42px; font-size: 10.5px; padding: 10px 8px; }
+}

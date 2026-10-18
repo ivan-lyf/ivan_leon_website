@@ -1,9 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <link rel="icon" href="data:,">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Device Portfolio</title>
+  <meta name="description" content="Personal websites of Ivan Luo and Leon Meng. Explore their projects and shared Macintosh desktop." />
+  <script>
+    (function () {
+      var q = new URLSearchParams(location.search);
+      var leon = q.get('as') === 'leon' || (!q.has('as') && location.hostname.includes('leonmeng.xyz'));
+      window.ROOM_MODE = q.get('scene') === 'desktop' ? 'desktop' : leon && q.get('scene') !== 'classic' ? 'penthouse' : 'classic';
+      if (window.ROOM_MODE === 'penthouse') document.documentElement.classList.add('penthouse');
+      if (leon) {
+        document.title = 'Leon Meng | A room above the city';
+        document.querySelector('meta[name=description]').content = 'A personal space for Leon Meng, above a city of tomorrow. Explore the room and the projects on the computer.';
+      }
+    })();
+  </script>
   <!-- 1-bit Mac OS styling (Chicago font, CRT) — unchanged engine stylesheet -->
   <link rel="stylesheet" href="shared/mac.css" />
   <style>
@@ -71,6 +85,7 @@
     #loading .term .blink { animation: term-blink 1s steps(1) infinite; }
     @keyframes term-blink { 50% { opacity: 0; } }
   </style>
+  <link rel="stylesheet" href="shared/penthouse.css?v=20261018-computer-transition2" />
 </head>
 <body>
   <div id="loading"><pre class="term"><span class="dim">Device</span>
@@ -85,6 +100,31 @@ Initializing 3D environment ...
     <span><b>Esc</b> to exit</span>
   </div>
   <div id="vignette"></div>
+  <div class="room-ui room-shade" aria-hidden="true"></div>
+  <header id="room-header" class="room-ui">
+    <nav class="room-nav" aria-label="Explore the room">
+      <button class="room-button" id="view-room" data-view="room" aria-pressed="true">The room</button>
+      <button class="room-button" data-view="desk" aria-pressed="false">At the desk</button>
+      <button class="room-button" data-view="city" aria-pressed="false">City view</button>
+      <button class="room-button" id="enter-computer">Use computer ↗</button>
+    </nav>
+  </header>
+  <footer id="room-footer" class="room-ui">
+    <div class="room-tools" aria-label="Room atmosphere">
+      <button class="room-button" id="ceiling-toggle" aria-pressed="true">Ceiling on</button>
+      <button class="room-button" id="motion-toggle" aria-pressed="true">Motion on</button>
+      <button class="room-button" id="help-toggle" aria-label="Room controls and keyboard shortcuts">Controls</button>
+    </div>
+  </footer>
+  <div id="room-tooltip" class="room-ui" aria-hidden="true"></div>
+  <div id="computer-backdrop" class="room-ui"></div>
+  <button id="room-back" class="room-ui room-button">← Back to the room <span aria-hidden="true"> · Esc</span></button>
+  <dialog id="room-help" class="room-dialog" aria-labelledby="help-title">
+    <h2 id="help-title">Make yourself at home.</h2>
+    <p>Look around, sit at the desk, or take in the city. There is room for more, in time.</p>
+    <dl><dt>Look around</dt><dd>Drag / Arrow keys</dd><dt>Move closer</dt><dd>Scroll / Pinch</dd><dt>Room / Desk / City</dt><dd>1 / 2 / 3</dd><dt>Use the computer</dt><dd>C</dd><dt>Try the keyboard</dt><dd>K</dd><dt>Ceiling LEDs</dt><dd>L</dd><dt>Return to the room</dt><dd>Esc / R</dd></dl>
+    <button class="room-button" id="help-close">Back to exploring</button>
+  </dialog>
 
   <!-- ============================================================
        Live Mac OS engine markup (IDENTICAL to the original index.html
@@ -135,15 +175,35 @@ Initializing 3D environment ...
   </div>
 
   <!-- Three.js (UMD r128) + DOM-to-texture -->
-  <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
-  <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-  <script src="https://unpkg.com/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-  <script src="https://unpkg.com/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
-  <script src="https://unpkg.com/html-to-image@1.11.11/dist/html-to-image.js"></script>
+  <script src="shared/vendor/three.min.js"></script>
+  <script src="shared/vendor/OrbitControls.js"></script>
+  <script src="shared/vendor/GLTFLoader.js"></script>
+  <script src="shared/vendor/DRACOLoader.js"></script>
+  <script src="shared/vendor/html-to-image.js"></script>
 
   <!-- 3D Macintosh shell -->
   <script src="shared/mac-scene.js"></script>
-  <script src="shared/scene-audio.js"></script>
+  <script src="shared/vendor/Reflector.js"></script>
+  <script src="shared/vendor/RectAreaLightUniformsLib.js"></script>
+  <script src="shared/vendor/CopyShader.js"></script>
+  <script src="shared/vendor/LuminosityHighPassShader.js"></script>
+  <script src="shared/vendor/EffectComposer.js"></script>
+  <script src="shared/vendor/RenderPass.js"></script>
+  <script src="shared/vendor/ShaderPass.js"></script>
+  <script src="shared/vendor/MaskPass.js"></script>
+  <script src="shared/vendor/UnrealBloomPass.js"></script>
+  <script src="shared/vendor/FXAAShader.js"></script>
+  <script src="shared/penthouse-traffic.js"></script>
+  <script src="shared/penthouse-architecture.js?v=20261018-night-city"></script>
+  <script src="shared/penthouse-city-shadow.js"></script>
+  <script src="shared/penthouse-city-lighting.js"></script>
+  <script src="shared/penthouse-whale.js?v=20261018-night-city"></script>
+  <script src="shared/penthouse-signage.js?v=20261018-night-city"></script>
+  <script src="shared/penthouse-corporate.js?v=20261018-night-city"></script>
+  <script src="shared/penthouse-city.js?v=20261018-night-city"></script>
+  <script src="shared/penthouse-weather.js?v=20261018-night-city"></script>
+  <script src="shared/penthouse-workstation.js?v=20261018-workstation-r2"></script>
+  <script src="shared/penthouse-scene.js?v=20261018-workstation-r2"></script>
 
   <!-- Per-person content + domain-agnostic engine (UNCHANGED) -->
   <script src="ivan/profile.js"></script>
@@ -152,23 +212,38 @@ Initializing 3D environment ...
 
   <script>
     (function () {
-      window.MacScene.init();
       var ld = document.getElementById('loading');
-      var hud = document.getElementById('hud');
-      var t0 = Date.now();
-      var iv = setInterval(function () {
-        // wait for the ENTIRE scene (textures + skis) to load; 30s safety fallback
-        if (window.__sceneLoaded || Date.now() - t0 > 30000) {
-          clearInterval(iv);
-          // let "Ready." sit for a beat, then reveal the scene
-          setTimeout(function () {
-            ld.style.opacity = '0';
-            setTimeout(function () { ld.remove(); }, 500);
-            // fade the controls hint out after a few seconds
-            setTimeout(function () { if (hud) hud.style.opacity = '0'; }, 6000);
-          }, 450);
+      if (window.ROOM_MODE === 'penthouse') {
+        ld.querySelector('.term').innerHTML = '<span class="dim">LEON MENG</span>\n\nPreparing your space.\n<span id="boot-status">Opening the view…</span>';
+        if (window.THREE && window.THREE.OrbitControls && window.PenthouseCity && window.PenthouseScene) {
+          window.PenthouseScene.init();
+        } else {
+          ld.querySelector('.term').innerHTML = 'The 3D room could not load.<br><a href="?as=leon&amp;scene=desktop" style="color:#ffe1b3">Open the desktop</a>';
         }
-      }, 120);
+      } else if (window.ROOM_MODE === 'desktop') {
+        ld.remove();
+        document.getElementById('hud').remove();
+        document.getElementById('vignette').remove();
+        var host = document.getElementById('screen-host');
+        function fitDesktop() {
+          var s = Math.min(innerWidth / 640, innerHeight / 469);
+          host.style.cssText = 'opacity:1;z-index:10;transform-origin:top left;transform:translate(' + ((innerWidth - 640*s)/2) + 'px,' + ((innerHeight - 469*s)/2) + 'px) scale(' + s + ')';
+        }
+        fitDesktop(); window.addEventListener('resize', fitDesktop);
+      } else {
+        var audio = document.createElement('script'); audio.src = 'shared/scene-audio.js'; document.body.appendChild(audio);
+        window.MacScene.init();
+        var hud = document.getElementById('hud'), t0 = Date.now();
+        var iv = setInterval(function () {
+          if (window.__sceneLoaded || Date.now() - t0 > 30000) {
+            clearInterval(iv);
+            setTimeout(function () {
+              ld.style.opacity = '0'; setTimeout(function () { ld.remove(); }, 500);
+              setTimeout(function () { if (hud) hud.style.opacity = '0'; }, 6000);
+            }, 450);
+          }
+        }, 120);
+      }
     })();
   </script>
 </body>
