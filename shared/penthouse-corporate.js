@@ -99,7 +99,8 @@
           'uniform sampler2D uAtlas;uniform float uTime,uGain;varying vec2 vLocal;varying vec4 vMeta;varying vec3 vTint;',
           'float h2(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}',
           'void main(){',
-          ' float slot=vMeta.x,seed=vMeta.y,gain=vMeta.z,worn=vMeta.w;',
+          // Keep constant instance seeds stable through fragment interpolation.
+          ' float slot=vMeta.x,seed=floor(vMeta.y*4096.+.5)/4096.,gain=vMeta.z,worn=vMeta.w;',
           ' vec2 uv=vec2(vLocal.x,1.-(slot+1.-vLocal.y)/' + SLOTS + '.);',
           ' vec4 tex=texture2D(uAtlas,uv);if(tex.a<.03)discard;',
           ' vec3 c=pow(tex.rgb,vec3(2.2))*vTint;',

@@ -179,7 +179,9 @@ vec3 cityFogMix(vec3 c,vec3 p){
             if(vUseClass<.5){bayTarget=2.8;opening=vec4(.12,.56,.88,.77);reflectivity*=.72;}
             else if(vUseClass<1.5){bayTarget=2.5;opening=vec4(.16,.20,.79,.81);}
             if(vSkin>1.5&&vSkin<2.5){bayTarget=1.9;opening=vec4(.30,.15,.69,.84);}
-            float bays=max(2.,floor(width/bayTarget)),bayWidth=width/bays;
+            // Stabilize only the integer bay choice; retain the authored width for UV spacing.
+            float stableWidth=floor(width*4096.+.5)/4096.;
+            float bays=max(2.,floor(stableWidth/bayTarget)),bayWidth=width/bays;
             vec2 grid=vec2((along-origin+width*.5)/bayWidth,(wall.y+112.)/3.2);
             vec2 cell=floor(grid),part=fract(grid),aa=max(fwidth(grid),vec2(.001));
             // Constant instance varyings can differ by a few interpolation ULPs.

@@ -4,7 +4,8 @@
   const T = window.THREE;
   const reducedQuery = matchMedia('(prefers-reduced-motion: reduce)');
   let reduced = reducedQuery.matches;
-  const lite = innerWidth < 700 || (navigator.hardwareConcurrency || 8) <= 4;
+  // Keep desktop quality stable across window sizes and reported CPU counts.
+  const lite = matchMedia('(pointer: coarse) and (hover: none)').matches;
   let scene, camera, renderer, controls, city, weather, composer, bloomPass, outputPass, fxaaPass, floorReflection, screenTexture;
   let roomModel, workstation, probeTarget, probeCamera, probeMap, probeDirty=false, hdrEnabled=false;
   let frame = 0, lastFrame = 0, flight = null, inComputer = false, ready = false;
@@ -197,11 +198,20 @@
     lights.sun=new T.DirectionalLight(0xffc894,.68);lights.sun.position.set(35,20,-65);lights.sun.castShadow=!lite;lights.sun.shadow.mapSize.set(2048,2048);Object.assign(lights.sun.shadow.camera,{left:-24,right:24,top:20,bottom:-20,near:1,far:150});lights.sun.shadow.bias=-.0003;lights.sun.shadow.normalBias=.04;scene.add(lights.sun);
     lights.fill=new T.DirectionalLight(0xa9c9d2,.3);lights.fill.position.set(5,7,15);scene.add(lights.fill);
   }
+  function renderPixelRatio() {
+    const native=Math.min(devicePixelRatio||1,lite?1.25:1.6);
+    if(lite||native>=1.5)return native;
+    // Standard-density desktops need extra samples for fine windows and edges.
+    // Preserve the Retina path and bound only the additional work to six megapixels.
+    const budgeted=Math.sqrt(6000000/(innerWidth*innerHeight));
+    return Math.max(native,Math.min(1.5,budgeted));
+  }
   function resizePostprocessing() {
     if(!composer)return;
-    const ratio=Math.min(devicePixelRatio,lite?1.25:1.6);
+    const ratio=renderPixelRatio();
     composer.setPixelRatio(ratio);composer.setSize(innerWidth,innerHeight);
-    fxaaPass?.uniforms.resolution.value.set(1/(innerWidth*ratio),1/(innerHeight*ratio));
+    const width=Math.floor(composer.renderTarget1.width),height=Math.floor(composer.renderTarget1.height);
+    fxaaPass?.uniforms.resolution.value.set(1/width,1/height);
   }
   function buildPostprocessing() {
     if(!T.EffectComposer||!T.UnrealBloomPass)return;
@@ -456,7 +466,7 @@
     });
     const observer=new MutationObserver(()=>{screenDirty=true;});observer.observe(screenElement,{childList:true,subtree:true,attributes:true,characterData:true});cleanups.push(()=>observer.disconnect());
     textureTimer=setInterval(refreshScreen,1800);
-    on(window,'resize',()=>{clearKeyboardFeedback();keyboardOutline?.material.uniforms.viewport.value.set(innerWidth,innerHeight);weather?.resize(innerWidth,innerHeight);resizePostprocessing();camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,lite?1.3:1.6));if(inComputer)layoutComputer();else if(flight?.computer==='enter'){const p=computerPose();flight.to=p.position;flight.target=p.target;}});
+    on(window,'resize',()=>{clearKeyboardFeedback();keyboardOutline?.material.uniforms.viewport.value.set(innerWidth,innerHeight);weather?.resize(innerWidth,innerHeight);resizePostprocessing();camera.fov=innerWidth<700?58:52;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(renderPixelRatio());if(inComputer)layoutComputer();else if(flight?.computer==='enter'){const p=computerPose();flight.to=p.position;flight.target=p.target;}});
     on(reducedQuery,'change',e=>{reduced=e.matches;if(reduced&&moving)toggleMotion();if(reduced)finishFlight();});
     on(document,'visibilitychange',()=>{clearKeyboardFeedback();clock.getDelta();if(!document.hidden)lastFrame=0;});
     on(canvas,'webglcontextlost',e=>{e.preventDefault();showError('The graphics connection paused. Reload to return to the room.');});
@@ -488,7 +498,7 @@
   async function init() {
     try {
       scene=new T.Scene();scene.fog=new T.FogExp2(0x9b7150,.0042);
-      renderer=new T.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,lite?1.3:1.6));hdrEnabled=!!(T.EffectComposer&&T.RenderPass&&T.UnrealBloomPass&&T.ShaderPass&&T.CopyShader&&renderer.capabilities.isWebGL2&&renderer.extensions.has('EXT_color_buffer_float'));
+      renderer=new T.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(renderPixelRatio());hdrEnabled=!!(T.EffectComposer&&T.RenderPass&&T.UnrealBloomPass&&T.ShaderPass&&T.CopyShader&&renderer.capabilities.isWebGL2&&renderer.extensions.has('EXT_color_buffer_float'));
       // Keep this stable before any material compiles: Three r128 does not always
       // invalidate its program cache when only the renderer tone-mapping mode changes.
       renderer.outputEncoding=hdrEnabled?T.LinearEncoding:T.sRGBEncoding;renderer.toneMapping=hdrEnabled?T.NoToneMapping:T.ACESFilmicToneMapping;renderer.toneMappingExposure=.97;renderer.shadowMap.enabled=!lite;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.domElement.id='gl';renderer.domElement.setAttribute('aria-label','Leon’s penthouse overlooking a futuristic city. Use the room controls or keyboard shortcuts to explore.');renderer.domElement.setAttribute('role','img');document.body.append(renderer.domElement);
@@ -519,5 +529,5 @@
     controls?.dispose();city?.dispose();weather?.dispose();bloomPass?.dispose();outputPass?.material.dispose();fxaaPass?.material.dispose();composer?.renderTarget1.dispose();composer?.renderTarget2.dispose();probeTarget?.dispose();probeMap?.dispose();floorReflection?.getRenderTarget().dispose();
     const geometries=new Set(),materials=new Set(),textures=new Set();scene?.traverse(o=>{if(o.geometry)geometries.add(o.geometry);[].concat(o.material||[]).forEach(m=>{materials.add(m);for(const value of Object.values(m)){if(value?.isTexture)textures.add(value);}});});geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());renderer?.dispose();
   }
-  window.PenthouseScene={init,enterComputer,exitComputer,goTo,setMood,dispose,getStatus:()=>({ready,modelLoaded,modelMetrics,workstation:workstation?.getStats(),city:city?.getStats?.(),weather:!!weather,mood,lightOn,moving,view:currentView,inComputer,transition:flight?.computer||null,lite,drawCalls:renderer?.info.render.calls})};
+  window.PenthouseScene={init,enterComputer,exitComputer,goTo,setMood,dispose,getStatus:()=>({ready,modelLoaded,modelMetrics,workstation:workstation?.getStats(),city:city?.getStats?.(),weather:!!weather,mood,lightOn,moving,view:currentView,inComputer,transition:flight?.computer||null,lite,rendering:{pixelRatio:renderer?.getPixelRatio(),hdr:hdrEnabled},drawCalls:renderer?.info.render.calls})};
 })();
