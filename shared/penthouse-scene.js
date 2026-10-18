@@ -180,7 +180,7 @@
     presets.computer={position:[center.x,center.y,center.z+3.8],target:center.toArray()};
     modelMetrics={meshes,triangles:Math.round(triangles),dimensionsMeters:{}};
     for(const [kind,bounds] of Object.entries(measured))if(!bounds.isEmpty())modelMetrics.dimensionsMeters[kind]=bounds.getSize(new T.Vector3()).multiplyScalar(.25).toArray().map(v=>Math.round(v*1000)/1000);
-    modelLoaded=true;buildKeyboardOutline();buildFloorReflection();buildCeilingLights();
+    modelLoaded=true;buildFloorReflection();buildCeilingLights();
     const glow=new T.PointLight(0xb9d8c3,.07,2.5);glow.position.copy(center).add(new T.Vector3(0,0,.3));scene.add(glow);
   }
 
