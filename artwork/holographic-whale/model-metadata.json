@@ -1,0 +1,11 @@
+{
+  "lengthMetres": 29.2,
+  "anatomicalMeshes": 8,
+  "estimatedTriangles": 42284,
+  "headAxis": "+X",
+  "upAxis": "glTF +Y / Blender +Z",
+  "source": "NOAA Fisheries humpback whale plate, recreating silhouette and anatomy",
+  "webAnimation": "shared/penthouse-whale.js",
+  "nativeAnimationFrames": 288,
+  "frameRate": 24
+}

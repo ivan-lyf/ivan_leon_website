@@ -802,7 +802,7 @@
     function go(d) { i = (i + d + shots.length) % shots.length; render(); }
     const close = () => { lb.remove(); document.removeEventListener("keydown", onKey); };
     const onKey = (e) => {
-      if (e.key === "Escape") close();
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); }
       else if (e.key === "+" || e.key === "=") zoom(1);
       else if (e.key === "-" || e.key === "_") zoom(-1);
       else if (multi && e.key === "ArrowRight") go(1);

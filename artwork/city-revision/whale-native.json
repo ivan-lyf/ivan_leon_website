@@ -1,0 +1,47 @@
+{
+  "blend": "artwork/holographic-whale/holographic-whale.blend",
+  "collection": "Whale | Editable anatomical surfaces",
+  "position": [
+    -3,
+    9,
+    -108
+  ],
+  "lights": [
+    {
+      "id": "body scattered cyan",
+      "position": [
+        -5,
+        9,
+        -104
+      ],
+      "color": [
+        0.12,
+        0.55,
+        0.76
+      ],
+      "power": 2200,
+      "radius": 7
+    },
+    {
+      "id": "forward reflected blue",
+      "position": [
+        11,
+        10,
+        -107
+      ],
+      "color": [
+        0.12,
+        0.26,
+        0.65
+      ],
+      "power": 900,
+      "radius": 4
+    }
+  ],
+  "rotationQuaternion": [
+    0.9708379354618848,
+    0.19395115700021676,
+    0.008309134690427718,
+    -0.14066844012456636
+  ]
+}

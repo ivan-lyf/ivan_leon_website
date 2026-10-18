@@ -1,0 +1,171 @@
+{
+  "version": 2,
+  "units": "metres",
+  "coordinateSystem": "three-y-up",
+  "reference": {
+    "camera": "city",
+    "position": [
+      0.75,
+      1.35,
+      -1.075
+    ],
+    "target": [
+      0,
+      1.45,
+      -8.25
+    ],
+    "fov": 52,
+    "frame": 1,
+    "resolution": [
+      1280,
+      720
+    ],
+    "runtimeExposure": 1.08
+  },
+  "panels": [],
+  "lights": [
+    {
+      "id": "Maintenance 01",
+      "type": "point",
+      "position": [
+        -34.4,
+        35.9,
+        -87.35
+      ],
+      "target": [
+        -34.4,
+        33.9,
+        -88.05
+      ],
+      "color": "#f6bd72",
+      "power": 18,
+      "size": [
+        0.5,
+        0.14
+      ],
+      "radius": 3.8,
+      "intensity": 0.23,
+      "fixture": true
+    },
+    {
+      "id": "Maintenance 02",
+      "type": "point",
+      "position": [
+        -25.6,
+        35.9,
+        -87.35
+      ],
+      "target": [
+        -25.6,
+        33.9,
+        -88.05
+      ],
+      "color": "#f6bd72",
+      "power": 18,
+      "size": [
+        0.5,
+        0.14
+      ],
+      "radius": 3.8,
+      "intensity": 0.23,
+      "fixture": true
+    },
+    {
+      "id": "Maintenance 03",
+      "type": "point",
+      "position": [
+        14.2,
+        54.5,
+        -79.2
+      ],
+      "target": [
+        14.2,
+        52.5,
+        -79.9
+      ],
+      "color": "#9cc7cd",
+      "power": 18,
+      "size": [
+        0.5,
+        0.14
+      ],
+      "radius": 3.2,
+      "intensity": 0.23,
+      "fixture": true
+    },
+    {
+      "id": "Maintenance 04",
+      "type": "point",
+      "position": [
+        28.7,
+        42.9,
+        -79.6
+      ],
+      "target": [
+        28.7,
+        40.9,
+        -80.3
+      ],
+      "color": "#efbc7d",
+      "power": 18,
+      "size": [
+        0.5,
+        0.14
+      ],
+      "radius": 3.4,
+      "intensity": 0.23,
+      "fixture": true
+    },
+    {
+      "id": "Maintenance 05",
+      "type": "point",
+      "position": [
+        -39,
+        -22.6,
+        -83.5
+      ],
+      "target": [
+        -39,
+        -24.6,
+        -84.2
+      ],
+      "color": "#d9d5be",
+      "power": 18,
+      "size": [
+        0.5,
+        0.14
+      ],
+      "radius": 3.1,
+      "intensity": 0.23,
+      "fixture": true
+    },
+    {
+      "id": "Maintenance 06",
+      "type": "point",
+      "position": [
+        30.7,
+        -19.5,
+        -79.0
+      ],
+      "target": [
+        30.7,
+        -21.5,
+        -79.7
+      ],
+      "color": "#d9bc8e",
+      "power": 18,
+      "size": [
+        0.5,
+        0.14
+      ],
+      "radius": 3.8,
+      "intensity": 0.23,
+      "fixture": true
+    }
+  ],
+  "ambient": {
+    "color": "#21313d",
+    "strength": 0.17
+  },
+  "notes": "Small maintenance fixtures retained. Holographic whale supplies a moving bounded runtime light field; native Blender uses matching localized lights. Archived billboard images are not loaded."
+}

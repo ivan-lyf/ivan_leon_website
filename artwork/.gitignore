@@ -1,0 +1,26 @@
+# Preserve local source files; omit intermediate exports and review artifacts.
+*.blend1
+*.blend2
+*.log
+**/__pycache__/
+city-stages/city-00-baseline.blend
+city-stages/city-01-lighting.blend
+city-stages/city-current.json
+city-stages/audit-*.json
+city-stages/runtime-review.json
+city-stages/verification.json
+city-stages/preview.html
+city-stages/web-review.html
+city-stages/renders/
+city-stages/web-renders/
+city-revision/city-01-architecture-materials.blend
+city-revision/verification.json
+city-revision/preview.html
+city-revision/web-review.html
+city-revision/renders/
+city-revision/web/
+holographic-whale/references/
+holographic-whale/whale-*.png
+led-billboards/preview.html
+led-billboards/previews/
+spinner/spinner-preview.png
