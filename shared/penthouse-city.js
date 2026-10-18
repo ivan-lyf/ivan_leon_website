@@ -153,7 +153,8 @@ vec3 cityFogMix(vec3 c,vec3 p){
             float cabinet=step(hit.y,-.34)*step(abs(hit.x+extent.x*.22),extent.x*.46)*back;
             float partitionMask=(1.-smoothstep(.025,.09,abs(hit.x-extent.x*.31)))*back;
             float door=pane(vec2(hit.x/extent.x*.5+.5,hit.y/extent.y*.5+.5),vec2(.71,.06),vec2(.9,.84),vec2(.01))*back;
-            illumination*=1.-cabinet*.80-partitionMask*.40-door*.28;
+            // Independent occluders multiply transmittance; their overlap cannot create negative light.
+            illumination*=(1.-cabinet*.80)*(1.-partitionMask*.40)*(1.-door*.28);
             vec3 room=tint*illumination*(back+side*.52+ceiling*.38);
             float panel=(1.-smoothstep(.18,.25,abs((hit.x-lightX)/extent.x)))*(1.-smoothstep(.20,.28,abs(hit.z/extent.z+.49)))*ceiling;
             float monitor=pane(vec2(hit.x/extent.x*.5+.5,hit.y/extent.y*.5+.5),vec2(.28,.27),vec2(.45,.38),vec2(.012))*back*step(.89,hash(vec2(identity,91.)));
@@ -180,7 +181,10 @@ vec3 cityFogMix(vec3 c,vec3 p){
             if(vSkin>1.5&&vSkin<2.5){bayTarget=1.9;opening=vec4(.30,.15,.69,.84);}
             float bays=max(2.,floor(width/bayTarget)),bayWidth=width/bays;
             vec2 grid=vec2((along-origin+width*.5)/bayWidth,(wall.y+112.)/3.2);
-            vec2 cell=floor(grid),part=fract(grid),aa=max(fwidth(grid),vec2(.001));float id=vSeed*97.;
+            vec2 cell=floor(grid),part=fract(grid),aa=max(fwidth(grid),vec2(.001));
+            // Constant instance varyings can differ by a few interpolation ULPs.
+            // Never feed those differences into the high-gain occupancy hash.
+            float stableSeed=floor(vSeed*4096.+.5)/4096.;float id=stableSeed*97.;
             float serviceFloor=1.-step(.80,hash(vec2(floor(cell.y/2.),id+18.)));
             float glazingZone=mix(1.,serviceFloor,1.-step(.5,vUseClass));
             float glass=pane(part,opening.xy,opening.zw,aa)*(1.-cornerFace)*glazingZone;
@@ -205,7 +209,7 @@ vec3 cityFogMix(vec3 c,vec3 p){
             float glow=streetGlow(vWorldPosition.y);vec3 glowColor=streetGlowColor(vWorldPosition);
             float skyView=.5+.5*n.y;
             vec3 facadeLight=vec3(key)+glowColor*glow*(.20+.18*(1.-skyView))+vec3(.03,.044,.06)*skyView*uNight*mix(.6,1.,visibility);
-            vec3 cladding=stone*mix(.76,1.12,hash(vec2(vSeed,2.)));
+            vec3 cladding=stone*mix(.76,1.12,hash(vec2(stableSeed,2.)));
             float materialGrain=vFamily>3.5||abs(vFamily-1.)<.4?.18:.06;
             // Long vertical grime runoff below sills and from roof edges.
             float grime=fbm(vec2(wall.x*.55+id,wall.y*.035))*.7+fbm(wall*vec2(.18,.02)+id*2.)*.3;
@@ -239,7 +243,7 @@ vec3 cityFogMix(vec3 c,vec3 p){
               reflected=env*.55*(.08+fresnel*.72)*reflectivity*glassTint*(.90+.18*hash(cell+id+5.));
             }
             // Downward reflections pick up the glowing haze between the towers.
-            float below=smoothstep(.0,-.55,reflectedDirection.y);
+            float below=1.-smoothstep(-.55,0.,reflectedDirection.y);
             reflected+=streetGlowColor(vWorldPosition+vec3(0.,0.,9.))*streetGlow(vWorldPosition.y-38.)*below*(.05+fresnel*.5)*reflectivity;
             reflected*=mix(1.,.62,dirt)*(1.+rivulet*.6);
             vec3 glassColor=vec3(.0012,.0018,.0022)+dirt*vec3(.004,.0042,.0040)*(.5+glow)+reflected*(.48+.35*streak)+hologramReflection(vWorldPosition,reflectedDirection,paneRoughness)*(.24+fresnel*.65)+localIrradiance*(.035+fresnel*.14);
@@ -265,12 +269,14 @@ vec3 cityFogMix(vec3 c,vec3 p){
             float blindCover=step(.70,hash(cell+vec2(id,41.+id)));float openAmount=.42+.56*hash(cell+vec2(9.+id,id));
             float blind=(1.-smoothstep(.04-aa.y,.09+aa.y,abs(fract(part.y*11.)-.5)))*blindCover;
             float blindMask=step(openAmount,part.y)*blindCover;
+            blind*=1.-smoothstep(.15,.7,aa.y*11.);
             room*=1.-blind*.22-blindMask*.53;
             // The glazing sits in front of a deep reveal; upper and side jambs
             // occlude a small portion of the lit room even when its blinds are open.
             float jambOcclusion=(1.-smoothstep(.0,.10,paneUV.x))+(1.-smoothstep(.0,.07,1.-paneUV.y));
             room*=1.-clamp(jambOcclusion,0.,1.)*.32;
-            float unresolved=smoothstep(.55,1.3,max(aa.x,aa.y));room=mix(room,roomTint*level*.11,unresolved);
+            // Average interior details before they shrink below a few screen pixels.
+            float unresolved=smoothstep(.08,.40,max(aa.x,aa.y));room=mix(room,roomTint*level*.11,unresolved);
             room*=1.-dirt*.32;
             vec3 color=mix(cladding,glassColor,glass);
             color+=room*occupied*inner*(1.5+uNight*.7)*(.75+.55*hash(vec2(floor(cell.x/3.),tenantFloor+id+4.)))*(1.-fresnel*.65)*(1.-cornerFace);

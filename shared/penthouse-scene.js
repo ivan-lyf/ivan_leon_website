@@ -103,7 +103,9 @@
           gl_FragColor=vec4(reflected*color,reflectionOpacity);
         }`
     };
-    floorReflection=new T.Reflector(new T.PlaneGeometry(27.8,29.8),{clipBias:.003,textureWidth:lite?512:1024,textureHeight:lite?512:1024,color:0xc9d3db,shader});
+    // The plane already sits above the stone; clip bias would admit the floor
+    // into its own reflection at elevated camera angles.
+    floorReflection=new T.Reflector(new T.PlaneGeometry(27.8,29.8),{clipBias:0,textureWidth:lite?512:1024,textureHeight:lite?512:1024,color:0xc9d3db,shader});
     // Reflector r128 defaults to RGB byte storage; configure before its first render.
     const reflectionTarget=floorReflection.getRenderTarget();
     reflectionTarget.texture.format=T.RGBAFormat;
