@@ -188,7 +188,8 @@
           'float h1(float n){return fract(sin(n*91.7)*43758.5453);}',
           'float h2(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}',
           'void main(){',
-          ' float seed=vMeta.x,gain=vMeta.y,anim=vMeta.z,backed=vMeta.w;',
+          // Prevent interpolation noise from changing the aged-tube masks.
+          ' float seed=floor(vMeta.x*4096.+.5)/4096.,gain=vMeta.y,anim=vMeta.z,backed=vMeta.w;',
           ' float frame=0.;',
           ' if(anim>.5&&anim<1.5){float ph=fract(uTime*(.45+seed*.5)+seed*5.);frame=step(.62+seed*.2,ph);}',
           ' vec4 tex=texture2D(uAtlas,vCell.xy+vec2((vLocal.x+frame)*vCell.z,vLocal.y*vCell.w));',

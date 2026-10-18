@@ -5,7 +5,9 @@
   'use strict';
   window.PenthouseArchitecture = {
     populate: function (options) {
-      var T=options.THREE,lite=options.lite,random=options.random,range=options.range,block=options.block;
+      // Display quality must not change addresses, occluders, sign placement or
+      // the shared random stream. Sampling and tessellation scale in city.js.
+      var T=options.THREE,random=options.random,range=options.range,block=options.block;
       var towers=options.towers,structure=options.structure,ribs=options.ribs;
       var cyan=options.cyan,magenta=options.magenta,beacons=options.beacons;
       var base=-112,buildings=[],familyCounts=[0,0,0,0,0],shapeCounts={};
@@ -32,7 +34,7 @@
         add(structure,b,x-w/2,y,z,.25,.55,d);add(structure,b,x+w/2,y,z,.25,.55,d);
       }
       function machinery(b,x,z,w,d,y) {
-        var units=lite?2:3;
+        var units=3;
         for(var i=0;i<units;i++)add(structure,b,x+(i-(units-1)/2)*w*.22,y+.55,z,w*.14,1.1,d*.28);
       }
       function mast(b,x,z,y,height) {
@@ -128,7 +130,7 @@
       }
       var shapes=[ziggurat,split,staggered,industrial,slender,oval];
       var heroFootprints=[[-30,-93,21,21],[22,-88,26,21],[-82,-165,30,26],[100,-190,29,25],[7,-216,28,24],[68,-133,17,17]];
-      var rows=lite?6:8;
+      var rows=8;
       for(var layer=0;layer<rows;layer++) {
         var pz=-49-layer*32,spacing=layer<2?26:25,extent=145+layer*25;
         for(var px=-extent;px<=extent;px+=spacing) {
@@ -267,7 +269,7 @@
             detail(ribs,b,t.x,yy-beltHeight*.43,outer+1.13,t.w+.8,.19,.38,4);
             // Shuttered ventilation clusters are physically recessed between
             // coarse ribs; subordinate slits are occasional maintenance lights.
-            var count=lite?2:3;
+            var count=3;
             for(var q=0;q<count;q++){
               var px=t.x-t.w*.36+q*t.w*.72/Math.max(1,count-1);
               detail(ribs,b,px,yy+.10,outer+1.11,t.w*.085,beltHeight*.54,.16,4);
@@ -323,7 +325,7 @@
         if(!ts.length||b.z< -190||Math.abs(b.x)>160)return;
         var top=ts.reduce(function(a,v){return v.y+v.h/2>a.y+a.h/2?v:a;},ts[0]);
         var yy=top.y+top.h/2;if(top.w<4)return;
-        for(var k=0;k<(lite?2:3);k++){
+        for(var k=0;k<3;k++){
           var xx=top.x+(k-1)*Math.min(top.w*.23,2.4),zz=top.z-top.d*.13;
           detail(structure,b,xx,yy+.85,zz,Math.min(1.6,top.w*.17),1.7,Math.min(2.8,top.d*.32),4,null,true);
           detail(ribs,b,xx,yy+1.8,zz,Math.min(1.8,top.w*.19),.18,Math.min(3,top.d*.34),4);
@@ -333,7 +335,7 @@
       // canyons between near towers. Everything sits below the traffic lanes
       // (tops < -26 m) so route clearance is unchanged.
       var spanCandidates=originalVolumes.filter(function(v){return v.z>-210&&v.z<-40&&Math.abs(v.x)<150&&v.h>30&&v.shape!=='round';});
-      var spans=0,maxSpans=lite?8:20;
+      var spans=0,maxSpans=20;
       spanCandidates.forEach(function(a,i){spanCandidates.forEach(function(c,j){
         if(j<=i||spans>=maxSpans||a.buildingId===c.buildingId)return;
         var left=a.x<c.x?a:c,right=a.x<c.x?c:a,gap=(right.x-right.w/2)-(left.x+left.w/2);
