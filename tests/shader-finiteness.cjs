@@ -10,20 +10,28 @@ const { spawn } = require('node:child_process');
 const options = {};
 for (let i = 2; i < process.argv.length; i += 2) {
   const key = process.argv[i], value = process.argv[i + 1];
-  if (!['--rea', '--browser', '--source-root'].includes(key) || !value) throw Error('Usage: node tests/shader-finiteness.cjs --rea /path/to/rea.mjs --browser /path/to/chrome [--source-root /path/to/checkout]');
+  if (!['--rea', '--browser', '--source-root', '--suite'].includes(key) || !value) throw Error('Usage: node tests/shader-finiteness.cjs --rea /path/to/rea.mjs --browser /path/to/chrome [--source-root /path/to/checkout] [--suite rain-glass|lighting-optimization]');
   options[key] = value;
 }
 const rea = options['--rea'] || process.env.REA_CLI;
 const browser = options['--browser'] || process.env.CHROME_EXECUTABLE;
 if (!rea || !browser) throw Error('Provide --rea and --browser (or REA_CLI and CHROME_EXECUTABLE).');
 const sourceRoot = path.resolve(options['--source-root'] || path.join(__dirname, '..'));
+const suite = options['--suite'] || 'shaders';
+if (!['shaders', 'rain-glass', 'lighting-optimization'].includes(suite)) throw Error('Unknown GPU regression suite: ' + suite);
+const browserSuites = { shaders: 'shader-finiteness-browser.js', 'rain-glass': 'rain-glass-browser.js', 'lighting-optimization': 'lighting-optimization-browser.js' };
 const routes = {
   '/': path.join(__dirname, 'shader-finiteness.html'),
-  '/test.js': path.join(__dirname, 'shader-finiteness-browser.js'),
+  '/test.js': path.join(__dirname, browserSuites[suite]),
   '/shared/vendor/three.min.js': path.join(sourceRoot, 'shared/vendor/three.min.js'),
   '/shared/penthouse-traffic.js': path.join(sourceRoot, 'shared/penthouse-traffic.js'),
-  '/shared/penthouse-whale.js': path.join(sourceRoot, 'shared/penthouse-whale.js')
+  '/shared/penthouse-whale.js': path.join(sourceRoot, 'shared/penthouse-whale.js'),
+  '/shared/penthouse-weather.js': path.join(sourceRoot, 'shared/penthouse-weather.js')
 };
+if (suite === 'lighting-optimization') {
+  routes['/shared/vendor/RectAreaLightUniformsLib.js'] = path.join(sourceRoot, 'shared/vendor/RectAreaLightUniformsLib.js');
+  routes['/shared/penthouse-lighting-optimization.js'] = path.join(sourceRoot, 'shared/penthouse-lighting-optimization.js');
+}
 for (const file of Object.values(routes)) fs.accessSync(file, fs.constants.R_OK);
 const server = http.createServer((request, response) => {
   const file = routes[new URL(request.url, 'http://127.0.0.1').pathname];

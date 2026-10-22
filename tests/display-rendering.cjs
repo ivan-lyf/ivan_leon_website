@@ -46,18 +46,19 @@ function make({ width = 2550, height = 1440, dpr = 1, coarse = false, cores = 8 
     getPixelRatio() { return this.ratio; }
   };
   const sandbox = vm.createContext({
-    T, console, innerWidth: width, innerHeight: height, devicePixelRatio: dpr,
+    T, console, window: {}, innerWidth: width, innerHeight: height, devicePixelRatio: dpr,
     navigator: { hardwareConcurrency: cores },
     matchMedia: query => {
       assert.equal(query, '(pointer: coarse) and (hover: none)');
       return { matches: coarse };
     },
     renderer, scene: new T.Scene(), camera: null,
-    composer: null, bloomPass: null, outputPass: null, fxaaPass: null,
+    composer: null, bloomPass: null, outputPass: null, fxaaPass: null, bloomComposite: null,
     hdrEnabled: true, keyboardOutline: null, inComputer: false, flight: null,
     clearKeyboardFeedback() {},
     weather: { resize(w, h) { this.lastSize = [w, h]; } }
   });
+  vm.runInContext(fs.readFileSync(path.join(repo, 'shared/penthouse-bloom-composite.js'), 'utf8'), sandbox);
   vm.runInContext('const lite=' + liteExpression + ';const presets=' + presets + ';\n' + funcs, sandbox);
   vm.runInContext(rendererInitialSize + '\n' + cameraInitialization + '\nbuildPostprocessing();', sandbox);
   return {
@@ -70,7 +71,8 @@ function make({ width = 2550, height = 1440, dpr = 1, coarse = false, cores = 8 
       vm.runInContext(resizeBody, sandbox);
     },
     dispose() {
-      const { composer, bloomPass, outputPass, fxaaPass } = sandbox;
+      const { composer, bloomPass, outputPass, fxaaPass, bloomComposite } = sandbox;
+      bloomComposite?.dispose();
       composer.renderTarget1.dispose(); composer.renderTarget2.dispose();
       composer.copyPass.material.dispose(); bloomPass.dispose();
       outputPass?.material.dispose(); fxaaPass?.material.dispose();
@@ -88,6 +90,32 @@ function aligned(instance, label) {
   assert.equal(target.isWebGLMultisampleRenderTarget, undefined, label + ' uses the stable ordinary HDR target');
   assert.equal(target.texture.type, T.HalfFloatType, label + ' preserves HDR');
   assert.equal(target.texture.encoding, T.LinearEncoding, label + ' preserves linear scene rendering');
+  const bloomTargets = [s.bloomPass.renderTargetBright, ...s.bloomPass.renderTargetsHorizontal, ...s.bloomPass.renderTargetsVertical];
+  assert.equal(bloomTargets.length, 11, label + ' retains every bloom level');
+  for (const buffer of bloomTargets) {
+    assert.equal(buffer.depthBuffer, false, label + ' bloom does not allocate unused depth storage');
+    assert.equal(buffer.texture.type, T.HalfFloatType, label + ' bloom preserves HDR');
+  }
+  for (const material of [s.bloomPass.materialHighPassFilter, ...s.bloomPass.separableBlurMaterials,
+    s.bloomPass.compositeMaterial, s.bloomPass.materialCopy, s.bloomPass.basic,
+    s.outputPass.material, s.fxaaPass.material]) {
+    assert.equal(material.depthTest, false, label + ' screen effects do not test depth');
+    assert.equal(material.depthWrite, false, label + ' screen effects do not write depth');
+  }
+  assert.equal(target.depthBuffer, true, label + ' scene rendering retains depth for occlusion');
+  assert.equal(s.bloomComposite.enabled, true, label + ' fuses the bloom/output composition');
+  assert.equal(s.outputPass.uniforms.tPenthouseBloom.value, s.bloomPass.renderTargetsHorizontal[0].texture, label + ' output uses the live bloom texture');
+
+}
+
+// Keep native edge antialiasing for a direct-render fallback, but do not
+// multisample the final fullscreen quad when FXAA already covers scene edges.
+const postFXAAExpression = match(/const hasPostFXAA=([^;]+);/, 'native AA fallback');
+const requiredEffects = ['EffectComposer', 'RenderPass', 'UnrealBloomPass', 'ShaderPass', 'CopyShader', 'FXAAShader'];
+assert.equal(vm.runInNewContext(postFXAAExpression, { T }), true);
+for (const missing of requiredEffects) {
+  assert.equal(vm.runInNewContext(postFXAAExpression, { T: { ...T, [missing]: undefined } }), false,
+    missing + ' absent retains native antialiasing');
 }
 
 const cases = [

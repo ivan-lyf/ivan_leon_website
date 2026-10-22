@@ -140,6 +140,65 @@
       const m = new T.BufferGeometry(); m.setAttribute('position', new T.Float32BufferAttribute(out.position, 3)); m.setAttribute('normal', new T.Float32BufferAttribute(out.normal, 3)); m.setAttribute('uv', new T.Float32BufferAttribute(out.uv, 2));
       return G(m);
     }
+    // Static pieces sharing a material can use one draw inside each interaction
+    // root. Keep the screen/case objects and transparent overlays independent;
+    // LED materials remain shared with their animation state. The fine heatsink
+    // slats retain instancing to preserve their existing subpixel shadow edges.
+    function batchStaticParts(roots) {
+      const schema = g => Object.keys(g.attributes).sort().map(key => {
+        const a = g.attributes[key]; return key + ':' + a.itemSize + ':' + a.normalized + ':' + a.array.constructor.name;
+      }).join('|');
+      for (const root of roots) {
+        root.updateWorldMatrix(true, true);
+        const inverse = new T.Matrix4().copy(root.matrixWorld).invert(), groups = new Map();
+        root.traverse(node => {
+          if (!node.isMesh || node.isSkinnedMesh || !node.visible || node.children.length ||
+              node.name === 'COMPUTER_heatsink-fins' || node.name === 'KEYBOARD_case' || node.name === 'SCREEN_SURFACE' ||
+              Array.isArray(node.material) || node.material.transparent || node.instanceColor ||
+              node.geometry.morphAttributes.position || node.geometry.morphAttributes.normal ||
+              node.customDepthMaterial || node.customDistanceMaterial || node.layers.mask !== 1 ||
+              node.geometry.drawRange.start !== 0 || Number.isFinite(node.geometry.drawRange.count) ||
+              node.matrixWorld.determinant() <= 0) return;
+          const key = node.material.uuid + '|' + node.castShadow + '|' + node.receiveShadow + '|' + node.renderOrder + '|' + schema(node.geometry);
+          const nodes = groups.get(key) || []; nodes.push(node); groups.set(key, nodes);
+        });
+        for (const nodes of groups.values()) {
+          if (nodes.length < 2) continue;
+          const baked = [], instance = new T.Matrix4();
+          for (const node of nodes) {
+            const relative = new T.Matrix4().multiplyMatrices(inverse, node.matrixWorld);
+            for (let i = 0; i < (node.isInstancedMesh ? node.count : 1); i++) {
+              let matrix = relative;
+              if (node.isInstancedMesh) { node.getMatrixAt(i, instance); matrix = relative.clone().multiply(instance); }
+              const geometry = node.geometry.clone(); geometry.applyMatrix4(matrix); baked.push(geometry);
+            }
+          }
+          const geometry = G(new T.BufferGeometry()), keys = Object.keys(baked[0].attributes);
+          let vertexCount = 0, indexCount = 0;
+          for (const g of baked) { vertexCount += g.attributes.position.count; indexCount += g.index ? g.index.count : g.attributes.position.count; }
+          for (const key of keys) {
+            const first = baked[0].attributes[key], array = new first.array.constructor(vertexCount * first.itemSize);
+            let offset = 0;
+            for (const g of baked) { array.set(g.attributes[key].array, offset); offset += g.attributes[key].array.length; }
+            geometry.setAttribute(key, new T.BufferAttribute(array, first.itemSize, first.normalized));
+          }
+          const indices = new (vertexCount > 65535 ? Uint32Array : Uint16Array)(indexCount);
+          let vertexOffset = 0, indexOffset = 0;
+          for (const g of baked) {
+            const count = g.index ? g.index.count : g.attributes.position.count;
+            for (let i = 0; i < count; i++) indices[indexOffset++] = vertexOffset + (g.index ? g.index.getX(i) : i);
+            vertexOffset += g.attributes.position.count; g.dispose();
+          }
+          geometry.setIndex(new T.BufferAttribute(indices, 1)); geometry.computeBoundingSphere(); geometry.computeBoundingBox();
+          const first = nodes[0], batch = new T.Mesh(geometry, first.material);
+          batch.name = first.name.split('_')[0] + '_batch_' + first.material.name.replace(/\s+/g, '-');
+          batch.castShadow = first.castShadow; batch.receiveShadow = first.receiveShadow; batch.renderOrder = first.renderOrder;
+          batch.userData.sourceNames = nodes.map(node => node.name);
+          for (const node of nodes) node.parent.remove(node);
+          root.add(batch);
+        }
+      }
+    }
     function tube(points, radius, name, mat, parent, seg = 120) { const c = new T.CatmullRomCurve3(points.map(p => new T.Vector3(...p)), false, 'centripetal'); return add(parent, G(new T.TubeGeometry(c, seg, radius, 8, false)), mat, name); }
 
     // ==================================================================
@@ -482,6 +541,8 @@
       });
     }
     update(0);
+    // Retain an unbatched control for differential rendering/performance checks.
+    if (options.batchStatic !== false) batchStaticParts([computer, keyboard, mouse, floorBox]);
     return {
       group, computer, keyboard, mouse, screen, floorBox, rebuildCables, setCableRoute, adoptScreen, update,
       getStats() { let tris = 0; group.traverse(o => { if (o.isMesh) tris += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3 * (o.isInstancedMesh ? o.count : 1); }); return { meshes: (() => { let n = 0; group.traverse(o => { if (o.isMesh) n++; }); return n; })(), triangles: Math.round(tris), keys: keys.length }; },

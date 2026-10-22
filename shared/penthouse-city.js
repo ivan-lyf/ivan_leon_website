@@ -92,7 +92,10 @@ vec3 cityFogMix(vec3 c,vec3 p){
         ].join('\n')
       }));
       var sky = new THREE.Mesh(geometry(new THREE.SphereGeometry(650, 32, 20)), skyMaterial);
-      sky.name = 'Low storm ceiling'; sky.renderOrder = -10; sky.frustumCulled = false; group.add(sky);
+      // Render the opaque background after buildings establish depth, avoiding
+      // expensive cloud shading behind solid geometry. Transparent weather and
+      // signage still composite afterward; the sky never writes depth itself.
+      sky.name = 'Low storm ceiling'; sky.renderOrder = 1000; sky.frustumCulled = false; group.add(sky);
 
       // One moving capsule field follows the actual whale mesh in city metres.
       // This bounded approximation supplies diffuse spill and rough reflections,
@@ -396,7 +399,6 @@ vec3 cityFogMix(vec3 c,vec3 p){
           shader.fragmentShader=shader.fragmentShader.replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\ntotalEmissiveRadiance+=diffuseColor.rgb*vec3(.48,.55,.68)*stormLight(vStructurePosition,normalize(vStructureNormal));totalEmissiveRadiance+=(hologramSpill(vStructurePosition,normalize(vStructureNormal))*1.3+logoSpill(vStructurePosition,normalize(vStructureNormal))*2.2+practicalSpill(vStructurePosition,normalize(vStructureNormal))*2.4)*diffuseColor.rgb*.8;totalEmissiveRadiance+=diffuseColor.rgb*((.004+.08*max(dot(normalize(vStructureNormal),normalize(vec3(-.6,.75,.4))),0.))*vMaterialShade+streetGlowColor(sp)*streetGlow(sp.y)*(.16+.14*max(-vStructureNormal.y,0.)));');
         };
       });
-      instances(structure,structureMaterial,'Stone, bronze, ceramic and industrial setbacks',null,true);
       instances(ribs,ribMaterial,'Wet anodized structural piers',null,true);
       instances(reveals,ribMaterial,'Raised mullions, recessed glazing and projecting floor reveals',null,true);
       instances(roundBelts,ribMaterial,'Curved metal floor bands',geometry(new THREE.CylinderGeometry(.5,.5,1,32,1,true)),true);
@@ -408,7 +410,7 @@ vec3 cityFogMix(vec3 c,vec3 p){
       // library is preserved in artwork/, but is no longer the city's spectacle.
       var cityLighting=window.PenthouseCityLighting?window.PenthouseCityLighting.create(THREE,options.lighting):null;
       if(cityLighting)group.add(cityLighting.group);
-      function loadLighting(){return Promise.all([cityLighting?cityLighting.ready:null,corporate?corporate.ready:null]);}
+      function loadLighting(){return Promise.all([cityLighting?cityLighting.ready:null,corporate?corporate.ready:null,signage?signage.ready:null]);}
 
       var hazeMaterial=material(new THREE.ShaderMaterial({
         uniforms:Object.assign({uHazeColor:{value:linear('#4b6a85')},uTime:{value:0},uDensity:{value:1}},hologramUniforms,atmosUniforms,stormUniforms),transparent:true,depthWrite:false,depthTest:true,fog:false,
@@ -432,7 +434,10 @@ vec3 cityFogMix(vec3 c,vec3 p){
       var localMistMaterial=material(new THREE.ShaderMaterial({transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,uniforms:Object.assign({uTime:{value:0}},hologramUniforms),
         vertexShader:'varying vec3 vCityPosition;void main(){vCityPosition=(modelMatrix*vec4(position,1.)).xyz*.25;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
         fragmentShader:`varying vec3 vCityPosition;uniform float uTime;${noiseFunctions}${practicalGLSL}${hologramGLSL}
-          void main(){vec3 light=hologramGlow(vCityPosition)*.38;float mist=.45+.55*fbm(vCityPosition.xy*.13+vec2(uTime*.009,0.));
+          void main(){vec3 light=hologramGlow(vCityPosition)*.38;
+            // Keep the additive alpha, but avoid noise where the bounded light is zero.
+            float mist=0.;
+            if(any(notEqual(light,vec3(0.))))mist=.45+.55*fbm(vCityPosition.xy*.13+vec2(uTime*.009,0.));
             gl_FragColor=vec4(light*mist,.12);
             #include <tonemapping_fragment>
             #include <encodings_fragment>
@@ -523,8 +528,11 @@ vec3 cityFogMix(vec3 c,vec3 p){
       var chosen=[];crowns.forEach(function(t){if(chosen.length<6&&chosen.every(function(o){return Math.abs(o.x-t.x)>20||Math.abs(o.z-t.z)>20;}))chosen.push(t);});
       [2,3,4,5,0,1].forEach(function(logo,i){var t=chosen[i];if(!t)return;logoPlacements.push({logo:logo,x:t.x,y:t.logoY,z0:t.z,w:t.logoW,rooftop:!!t.rooftop,worn:i>3?1:0,gain:i>3?.8:1});});
       logoPlacements.forEach(function(p){if(p.rooftop){p.z=p.z0;return;}var f=frontAt(p.x,p.y,p.z0,p.w/2);p.z=(f>-1e8?f:p.z0+8)+.9+(p.push||0);});
-      var signage=window.PenthouseSignage?window.PenthouseSignage.create(THREE,{towers:towers,lite:lite,exclusions:logoPlacements}):null;
+      var signage=window.PenthouseSignage?window.PenthouseSignage.create(THREE,{towers:towers,structure:structure,ribs:ribs,mountTarget:structure,lite:lite,exclusions:logoPlacements}):null;
       if(signage)group.add(signage.group);
+      // Sign cabinets and brackets join the existing architectural draw after
+      // corporate anchors and traffic clearance have used the original facade.
+      instances(structure,structureMaterial,'Stone, bronze, ceramic and industrial setbacks',null,true);
       var corporate=window.PenthouseCorporate?window.PenthouseCorporate.create(THREE,{placements:logoPlacements,lite:lite}):null;
       if(corporate){group.add(corporate.group);logoUniforms.uLogoPos.value=corporate.uniforms.uLogoPos.value;logoUniforms.uLogoColor.value=corporate.uniforms.uLogoColor.value;}
 
