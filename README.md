@@ -70,7 +70,7 @@ Open http://localhost:8000/?as=leon. No build or package installation is require
 - `C`: use the computer; `Esc`: return to the room.
 - `L`: ceiling LEDs. `R`: reset view. The scene stays at night.
 - The glass, computer, mouse, and ceiling diffusers can also be clicked.
-- Hover the keyboard for a white outline; click or tap it (or press `K`) for silent visual feedback. The penthouse keyboard plays no clicking sound.
+- Click or tap the keyboard (or press `K`) for silent key movement. Keyboard hover has no white outline or clicking sound.
 - Motion can be paused; reduced-motion preferences are respected.
 - Plain desktop fallback: `?as=leon&scene=desktop`.
 - Original room comparison: `?as=leon&scene=classic`.
@@ -96,7 +96,7 @@ The Blender scene uses metres. Its exported GLB is scaled uniformly by four in t
 
 The model includes bevels, curved upholstery, glazing seals, floor joints, keyboard keys and small hardware details. Cycles bakes contact occlusion into separate room and furniture atlases using a second UV channel. A second bake captures indirect ceiling-light bounce as linear PNG lightmaps on the same UV channel, with the window light excluded. The browser combines this with square area lights, shadow sources and the live desktop texture on `SCREEN_SURFACE`. The polished stone floor uses a softened planar reflection with an unbiased clipping plane, so its physical slab cannot occlude the reflection at elevated camera angles; a local cubemap of the actual room is filtered with PMREM for coherent material reflections. A linear half-float render pipeline preserves light intensity through bloom, followed by ACES tone mapping and FXAA. All scene and reflection renders keep a stable linear, untone-mapped renderer state; only the final output pass applies ACES, avoiding Three.js r128 shader-cache reuse of a premature tone map. Floor and room reflection targets also retain half-float radiance on supported devices. Devices without a renderable half-float target use the byte-buffer fallback. The four ceiling panels occupy real openings in the slab; only a 2 mm trim edge sits below the finished ceiling. The ceiling-light control also adjusts the baked bounce; the city and window lighting keep their night settings.
 
-Rain streaks move on the GPU entirely outside the room, with antialiased subpixel widths, varied exposure lengths and gentle wind. Sparse wet-glass beads and runners refract the scene with displacement proportional to their projected size. Unresolved beads fade with distance, and mirrored views omit main-camera lens captures. Weather never intercepts scene clicks.
+Rain streaks move on the GPU entirely outside the room, with antialiased subpixel widths, varied exposure lengths and gentle wind. Wet-glass effects from the supplied `rain.zip` add downward arrivals, meandering runners, drying trails and residual beads. Larger droplets refract and invert city details with a dark meniscus, subtle color fringing and focused highlights; smaller droplets use simpler optics. Unresolved beads fade with distance, and mirrored views omit main-camera lens captures. Invisible trail regions and small-drop optics skip unnecessary calculations. Weather never intercepts scene clicks. Source provenance and validation commands are in `artwork/rain-glass/README.md`.
 
 The city now uses layered industrial architecture: asymmetric load paths, recessed occupied cores, deep service floors, docking decks, patched cladding, conduits and rooftop plant. Six seeded massing families preserve the established skyline and camera composition. Residential, office and industrial uses determine the window proportions and floor-level lighting logic. Ray-box interiors have dim warm-neutral light pools, partitions, blinds and occasional monitor glow; many floors remain dark. Wetness changes surface color and roughness, runoff collects under openings, and small normal variation breaks the clean surface response.
 
@@ -105,6 +105,14 @@ A separate Blender-authored 3D holographic humpback replaces the large billboard
 The exterior reflection cubemap is refreshed during scene setup; it is not a per-frame ray tracer. Moving whale reflections use a bounded shader approximation in the city glass, while the room floor uses its existing planar reflection. The static directional shadow atlas shades occupied city volumes; it does not model every tiny retrofit component. The native Blender checkpoint uses real lights and volumes, while the browser uses optimized GLSL approximations. Its materials and geometry document the earlier revision; the later ZIP exterior import has not been rebuilt in Blender.
 
 The separate Blender spinner interprets George Hull's K-spinner concepts. Seven curved aerial routes include landmark orbits and two police pursuits, with directional headlamp/tail-lamp halos, soft light scatter and roof beacons. Routes are cleared against building volumes; cars bank into turns and use shared lane speeds to avoid overtaking collisions. Motion controls and reduced-motion preferences freeze the simulation clock. See [the reference-to-element map](artwork/penthouse/REFERENCES.md) for sources and adaptations.
+
+### Rendering efficiency
+
+Opaque workstation parts sharing a material are combined within their computer, keyboard, mouse and floor-port interaction groups. The screen, transparent overlays, keyboard case, fine instanced heatsink fins and animated material references remain independent. The default model uses 53 meshes instead of 85 with the same 66,976 triangles; `batchStatic: false` in the workstation factory is an internal comparison option. `tests/workstation-batching.cjs` checks geometry, interactions, cables, animation and disposal against that control.
+
+The opaque sky runs after solid geometry to avoid shading obscured clouds. Fullscreen bloom filters omit unused depth buffers and depth operations, while scene targets retain depth. Canvas multisampling is disabled when the full FXAA postprocessing path is available; display resolution, HDR, bloom, shadows and reflection quality are unchanged. The loader stays visible through the first successful animated render and initial environment captures.
+
+The room now establishes opaque depth before city shading, and an exact floor/frustum check avoids offscreen planar-reflection captures. A guarded Three.js r128 shader patch skips physical-light work only for zero-contribution lights; unknown shader versions keep the original path. The bloom mip chain composites directly into ACES output, removing a full-resolution additive pass while preserving its source-alpha blend. Hologram mist skips procedural noise where its light contribution is zero. The 14 closed, beveled glass panes shade their entry surfaces once with the combined transmittance of the original two layers. Their geometry, tint, roughness and reflections remain; removing the second 8 mm-offset surface introduces a small shading approximation. Unknown replacement glass keeps the original two-sided path. These changes retain render resolution, camera framing, all models, full-rate animations and reflection quality. Regression checks are in `tests/reflection-visibility.cjs`, `tests/lighting-optimization.cjs`, `tests/bloom-composite.cjs`, `tests/glass-panels.cjs` and the `lighting-optimization` suite in `tests/shader-finiteness.cjs`.
 
 ### Editing and rebuilding the Blender scene
 
@@ -122,7 +130,7 @@ The separate Blender spinner interprets George Hull's K-spinner concepts. Seven 
 - Skyline, window interiors, wet materials and hologram illumination: `shared/penthouse-city.js`.
 - Curved traffic routes, vehicle instancing and navigation lights: `shared/penthouse-traffic.js`.
 - Exterior rain and refractive wet glazing: `shared/penthouse-weather.js`.
-- Corporate crown identities and tenant signs: `shared/penthouse-corporate.js`, `shared/penthouse-signage.js`, and `shared/assets/logos/`.
+- Corporate crown identities and tenant signs: `shared/penthouse-corporate.js`, `shared/penthouse-signage.js`, `shared/penthouse-signage-mounts.js`, and `shared/assets/logos/`.
 - Whale geometry, animation and projection: `shared/penthouse-whale.js` and `artwork/holographic-whale/`.
 - Revised native city and reproducible builder: `artwork/city-revision/city-revised.blend` and `artwork/city-revision/build_city_revision.py`.
 - Blender traffic model: `shared/assets/models/city/spinner.glb`.
@@ -191,3 +199,17 @@ node tests/floor-reflection.cjs
 ```
 
 The facade check exercises actual shader expressions with Float32 precision perturbations and overlapping interior shadows. Instance seeds are snapped to a stable value before occupancy hashing; interior attenuation stays nonnegative, while unresolved blinds and room detail are filtered in the shader. The floor check uses the actual room geometry and reflector implementation across 279 camera poses. Both tests include the original failing calculations as controls.
+
+
+### Arrival display and banner placement
+
+The penthouse opens with a minimal dark loading screen: a small loading label, genuine percentage, thin continuous progress line and desktop shortcut. Progress follows the room download, city assets, traffic and first rendered view; it never advances on a simulated timer. There is no minimum hold time, and reduced-motion mode skips the brief fade. The desktop link remains available during loading or errors. `shared/penthouse-arrival.js` owns this DOM-only display; classic and plain-desktop modes retain their existing flow. Run `node tests/arrival.cjs` for progress, failure and disposal checks.
+
+The current tenant-banner layout distributes 73 panels across 18 buildings visible from the starting room camera, with at most six panels on any building and four on the smaller unbranded tower left of KUJIRA. Twenty-six animated panels occupy nearer facades, including scrolling, flipping and pulsing art. All 53 supplied designs remain in the full-quality layout. Banners sit higher on the facades; company logos keep their original assets and positions. Repeated artwork is excluded from the same building, neighboring building footprints within 60 city metres, and nearby positions in the room composition. Each sign has a facade-fitted cabinet and two embedded brackets, combined into the existing architectural instance batch. The atlas and two instanced signage draws are unchanged. See `artwork/signage/README.md` for placement details and `tests/signage-layout.cjs` for visibility and clearance checks.
+
+
+### Building attachment correction
+
+Deck braces use a full 3D rotation and terminate inside their supporting wall and deck. Facade edge channels now extend back into the wall; roof plant and mast bases sit on their supporting surfaces, and antenna plates have small standoffs. The 507 occupied volumes, corporate-sign placements and architectural lighting coordinates remain unchanged. The correction adds 22 instanced mounting blocks (264 triangles), with no new material, texture or rendering pass.
+
+`node tests/building-attachments.cjs` checks actual transformed brace ends against supporting geometry, retains the old rotation as a failing control, and audits disconnected assemblies. Its bounding-box connectivity check is a broad-phase check; the dedicated brace test includes the real occupied-volume chamfer and rotated meshes.

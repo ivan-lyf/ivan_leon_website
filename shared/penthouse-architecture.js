@@ -58,7 +58,7 @@
           cap(b,xx,zz,w*scales[i],d*scales[i],base+height*levels[i+1]);
           if(i<3&&z>-175)parapet(b,xx,zz,w*scales[i],d*scales[i],base+height*levels[i+1]+.38);
         }
-        machinery(b,x,z-d*.10,w*.45,d*.48,top+.3);
+        machinery(b,x,z-d*.10,w*.45,d*.48,top+.21);
         if(b.seed>.63)accent(b,x-w*.035,z-d*.035,w*.81,d*.81,base+height*.73-.4);
         return b;
       }
@@ -87,7 +87,7 @@
           cap(b,xx,zz,w*widths[i],dd,base+height*bounds[i+1],.8);
         }
         if(b.seed>.48)accent(b,x+w*.08,z+d*.035,w*.86,d,base+height*.76-.55);
-        machinery(b,x-w*.13,z,w*.65,d*.78,top+.5);
+        machinery(b,x-w*.13,z,w*.65,d*.78,top+.4);
         return b;
       }
       function industrial(x,z,w,d,top,family) {
@@ -99,9 +99,9 @@
         // Detached service stacks and roof plant create an inhabited industrial
         // scale without another identically luminous office crown.
         add(structure,b,x+w*.35,base+height*.47,z-d*.26,w*.18,height*.94,d*.24);
-        machinery(b,x+w*.16,z+d*.13,w*.45,d*.56,low+.5);
-        machinery(b,x-w*.19,z-d*.13,w*.6,d*.65,high+.4);
-        if(z>-145)for(var i=0;i<3;i++)add(ribs,b,x-w*.28+i*w*.23,low+1.25,z+d*.33,w*.13,1.2,d*.24);
+        machinery(b,x+w*.16,z+d*.13,w*.45,d*.56,low+.45);
+        machinery(b,x-w*.19,z-d*.13,w*.6,d*.65,high+.35);
+        if(z>-145)for(var i=0;i<3;i++)add(ribs,b,x-w*.28+i*w*.23,low+1.05,z+d*.33,w*.13,1.2,d*.24);
         if(b.seed>.55)accent(b,x,z,w,d,low-.6);
         return b;
       }
@@ -124,8 +124,8 @@
           var item=volume(b,x,z,w*widths[i],d*depths[i],base+height*levels[i],base+height*levels[i+1]);
           item.shape='round';
         }
-        machinery(b,x,z,w*.42,d*.44,top+.1);
-        if(top>4)mast(b,x,z,top+1.3,range(4,8));
+        machinery(b,x,z,w*.42,d*.44,top);
+        if(top>4)mast(b,x,z,top+1.1,range(4,8)+.2);
         return b;
       }
       var shapes=[ziggurat,split,staggered,industrial,slender,oval];
@@ -189,7 +189,7 @@
       volume(east,100,-190,27.2,22.1,31.7,38.5);
       add(structure,east,100,44.6,-190,27.3,.8,22.6);
       var horizon=staggered(7,-216,27,23,72,4);
-      mast(horizon,4,-220,72.5,8.4);
+      mast(horizon,4,-220,72.4,8.5);
       // Base of the existing oval communications crown, rendered by city.js.
       var comm=identity(0,'communications service core',68,-133);
       var commShaft=volume(comm,68,-133,12,12,base,19);commShaft.shape='round';
@@ -208,8 +208,11 @@
       }
       function beam(b,ax,ay,az,bx,by,bz,width,depth){
         var dx=bx-ax,dy=by-ay,dz=bz-az,len=Math.sqrt(dx*dx+dy*dy+dz*dz);
-        // Every brace used here lies in a facade plane. Local Y is its axis.
-        return detail(ribs,b,(ax+bx)/2,(ay+by)/2,(az+bz)/2,width,len,depth,4,[0,0,-Math.atan2(dx,dy)]);
+        // Local Y is the beam axis. Deck struts also travel in depth, so a
+        // facade-only Z rotation leaves them detached from both mounts.
+        var axis=new T.Vector3(dx,dy,dz).normalize();
+        var rotation=new T.Euler().setFromQuaternion(new T.Quaternion().setFromUnitVectors(new T.Vector3(0,1,0),axis));
+        return detail(ribs,b,(ax+bx)/2,(ay+by)/2,(az+bz)/2,width,len,depth,4,[rotation.x,rotation.y,rotation.z]);
       }
       function serviceDeck(b,x,y,z,w,d,side){
         detail(structure,b,x,y,z,w,.85,d,4,null,true);
@@ -218,7 +221,9 @@
         var lighting=b.family===3?magenta:cyan;
         // Broken recessed docking markers, never an unbroken luxury edge.
         for(var q=0;q<3;q++)if(hash(b.id*31+q)>.22)detail(lighting,b,x-w*.34+q*w*.31,y-.23,z+d/2+.025,w*.12,.11,.09,4);
-        if(side)beam(b,x-w*.3,y-5,z-d*.24,x-w*.3,y-.6,z+d*.34,.45,.48);
+        // Seat the heel behind the slab rear edge, inside the occupied wall,
+        // and embed the head in the deck instead of ending below it.
+        if(side)beam(b,x-w*.3,y-4,z-d/2-.20,x-w*.3,y-.25,z+d*.34,.45,.48);
       }
       var originalVolumes=towers.slice(),industrialVolumes=0,residentialVolumes=0,officeVolumes=0;
       originalVolumes.forEach(function(t,index){
@@ -282,7 +287,9 @@
         // every window. Repeated blocks share a functional floor grouping.
         var patchY=low+t.h*(.3+hash(seed+10)*.42),patchH=Math.min(t.h*.25,12.4);
         detail(structure,b,t.x+t.w*(hash(seed+11)>.5?.26:-.28),patchY,outer+.25,t.w*.23,patchH,.7,(metal+3)%5);
-        detail(ribs,b,t.x-t.w*.48,t.y,outer+1.19,.24,t.h,.25,4);
+        // A wall-mounted edge channel: retain its outer silhouette but run
+        // the web back into the facade, including floors without a belt.
+        detail(ribs,b,t.x-t.w*.48,t.y,outer+.6175,.24,t.h,1.395,4);
         // External conduits form paired runs with visible junction boxes.
         var conduitX=t.x+t.w*.43;
         for(var c=0;c<(b.id%3===0?2:1);c++)detail(ribs,b,conduitX-c*.32,t.y,outer+.89,.18,t.h,.22,2);
@@ -297,7 +304,7 @@
           for(var seg=0;seg<2;seg++){
             var ay=low+t.h*(seg*.44+.04),by=low+t.h*(seg*.44+.43);
             var flip=seg%2?1:-1;
-            beam(b,t.x+flip*t.w*.43,ay,outer+1.35,t.x-flip*t.w*.43,by,outer+1.35,Math.max(.52,t.w*.044),.8);
+            beam(b,t.x+flip*t.w*.43,ay,outer+.25,t.x-flip*t.w*.43,by,outer+.25,Math.max(.52,t.w*.044),.8);
           }
         }
       });
@@ -315,9 +322,9 @@
       detail(structure,prism,30.2,18,-78.6,4.9,39,2.9,1,null,true);
       serviceDeck(prism,25.5,28,-75.8,15.7,5.9,true);
       detail(structure,prism,15.8,49.6,-77.4,13.3,4.4,3.8,4,null,true);
-      for(var k=0;k<4;k++)detail(structure,prism,12.2+k*2.2,53.1,-77.7,1.3,2.4,2.2,4,null,true);
+      for(var k=0;k<4;k++)detail(structure,prism,12.2+k*2.2,53.0,-77.7,1.3,2.4,2.2,4,null,true);
       detail(structure,prism,21.1,38,-83,8.7,2.4,4.0,4,null,true);
-      beam(prism,18,29,-80.4,24,37,-80.4,.9,1.1);
+      beam(prism,18,29,-80.4,24,37,-81.1,.9,1.1);
       // Street-level maintenance density supports the large shapes. Rooftop
       // clusters use existing caps so no new skyline-wide spire is introduced.
       buildings.forEach(function(b){
@@ -364,7 +371,11 @@
         var n=2+Math.floor(hash(b.id*3.1)*3);
         for(var k=0;k<n;k++){var mh=5+hash(b.id*11+k)*13,mx=top.x+(hash(b.id+k*5)-.5)*top.w*.6,mz=top.z+(hash(b.id*2+k)-.5)*top.d*.6;
           add(ribs,b,mx,yy+mh/2,mz,.16+mh*.008,mh,.16+mh*.008);if(k===0)beacons.push(new T.Vector3(mx,yy+mh,mz));
-          if(hash(b.id+k)>.6)add(structure,b,mx,yy+mh*.6,mz+.5,1.4,1.4,.25);}
+          if(hash(b.id+k)>.6){
+            add(structure,b,mx,yy+mh*.6,mz+.5,1.4,1.4,.25);
+            // Short relay-panel standoff joins the plate to its antenna mast.
+            add(ribs,b,mx,yy+mh*.6,mz+.22,.16,.16,.45);
+          }}
       });
       return {buildings:buildings.length,families:familyCounts,shapes:shapeCounts,
         useClasses:{industrial:industrialVolumes,residential:residentialVolumes,office:officeVolumes},

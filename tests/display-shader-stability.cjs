@@ -3,21 +3,9 @@
 // placements. This does not reproduce a particular GPU rasterizer or Windows.
 // No output files, browser, native modules, or third-party packages are required.
 'use strict';
-const fs=require('fs'),vm=require('vm'),assert=require('assert'),path=require('path');
-const root=path.resolve(__dirname,'..');
-const THREE=require(path.join(root,'shared/vendor/three.min.js'));
-const files=Object.fromEntries(['city','corporate','signage','architecture'].map(name=>[name,fs.readFileSync(path.join(root,`shared/penthouse-${name}.js`),'utf8')]));
-// Assemble the production seeded architecture and placement logic without a DOM,
-// renderer, or graphics-driver assumptions. Skip only atlas rasterization.
-const context={window:{},THREE,options:{lighting:JSON.parse(fs.readFileSync(path.join(root,'shared/assets/city-lighting.json'),'utf8'))}};
-vm.createContext(context);vm.runInContext(files.architecture,context);
-let seed=74192;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
-const towerOptions={THREE,lite:false,random,range:(a,b)=>a+random()*(b-a),block:(list,x,y,z,w,h,d,seed)=>list.push({x,y,z,w,h,d,seed:seed||random()}),towers:[],structure:[],ribs:[],cyan:[],magenta:[],beacons:[]};
-context.window.PenthouseArchitecture.populate(towerOptions);Object.assign(context,towerOptions);
-vm.runInContext(files.city.slice(files.city.indexOf('function frontAt('),files.city.indexOf('var signage=')),context);
-const signageFixture=files.signage.replace(/var atlas = new T.CanvasTexture\(drawAtlas\(designs\)\);[^\n]+/,'var atlas = null;').replace('var count = signs.length;','return { signs: signs };');
-vm.runInContext(signageFixture,context);
-const signs=context.window.PenthouseSignage.create(THREE,{towers:context.towers,lite:false,exclusions:context.logoPlacements}).signs;
+const assert=require('assert');
+const { createFixture }=require('./helpers/signage-fixture.cjs');
+const {files,context,signs}=createFixture(false);
 const f=Math.fround,add=(a,b)=>f(f(a)+f(b)),mul=(a,b)=>f(f(a)*f(b)),fract=n=>f(n-Math.floor(n));
 const bits=new DataView(new ArrayBuffer(4));
 function ulp(n,k){if(n===0)return n;bits.setFloat32(0,n);bits.setUint32(0,bits.getUint32(0)+k);return bits.getFloat32(0);}
@@ -46,20 +34,20 @@ for(let i=0;i<context.logoPlacements.length;i++){
   if(corporate(corporateSeed(s),x,y,worn)!==corporate(corporateSeed(p),x,y,worn))corporateQuantizedChanges++;
  }
 }
-function tenant(seed,x,y,time){
+function tenant(seed,x,y,time,opaque){
  const segment=add(Math.floor(add(mul(y,5),mul(seed,3))),mul(Math.floor(mul(x,3)),7));
- const failing=step(.64,h1(add(mul(seed,13),segment)));
+ const failing=step(.64,h1(add(mul(seed,13),segment)))*(1-opaque*.6);
  const stutter=step(.35,h1(add(add(Math.floor(mul(time,add(7,mul(seed,9)))),mul(segment,3.1)),seed)));
- const dead=step(.94,h1(add(mul(seed,7),mul(segment,1.7))));
- return (failing*step(.45,seed)?stutter:1)*(1-dead*.9);
+ const dead=step(.94,h1(add(mul(seed,7),mul(segment,1.7))))*(1-opaque);
+ return (1+(stutter-1)*failing*step(.45,seed))*(1-dead*.9);
 }
 let tenantSamples=0,tenantChanges=0,tenantQuantizedChanges=0,tenantExample=null;
 for(let i=0;i<signs.length;i++){
- const s=f(signs[i].seed);
+ const s=f(signs[i].seed),sample=(seed,x,y,time)=>tenant(seed,x,y,time,signs[i].d.opaque);
  for(let x=0;x<12;x++)for(let y=0;y<20;y++)for(const t of [0,2.1,9.7])for(const k of [-2,-1,1,2]){
-  tenantSamples++;const p=ulp(s,k),a=tenant(s,(x+.5)/12,(y+.5)/20,t),b=tenant(p,(x+.5)/12,(y+.5)/20,t);
+  tenantSamples++;const p=ulp(s,k),a=sample(s,(x+.5)/12,(y+.5)/20,t),b=sample(p,(x+.5)/12,(y+.5)/20,t);
   if(a!==b){tenantChanges++;if(!tenantExample)tenantExample={i,seed:s,perturbed:p,uv:[(x+.5)/12,(y+.5)/20],time:t,before:a,after:b};}
-  if(tenant(tenantSeed(s),(x+.5)/12,(y+.5)/20,t)!==tenant(tenantSeed(p),(x+.5)/12,(y+.5)/20,t))tenantQuantizedChanges++;
+  if(sample(tenantSeed(s),(x+.5)/12,(y+.5)/20,t)!==sample(tenantSeed(p),(x+.5)/12,(y+.5)/20,t))tenantQuantizedChanges++;
  }
 }
 

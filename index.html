@@ -85,7 +85,7 @@
     #loading .term .blink { animation: term-blink 1s steps(1) infinite; }
     @keyframes term-blink { 50% { opacity: 0; } }
   </style>
-  <link rel="stylesheet" href="shared/penthouse.css?v=20261018-computer-transition2" />
+  <link rel="stylesheet" href="shared/penthouse.css?v=20261022-minimal-arrival" />
 </head>
 <body>
   <div id="loading"><pre class="term"><span class="dim">Device</span>
@@ -93,7 +93,17 @@ System Software 1.0
 
 Initializing 3D environment ...
 <span id="boot-status">Loading assets ... 0/8</span>
-<span id="boot-bar-term">[······················]</span> <span class="blink">█</span></pre></div>
+<span id="boot-bar-term">[······················]</span> <span class="blink">█</span></pre>
+    <section class="arrival" id="arrival" aria-label="Loading Leon’s penthouse">
+      <div class="arrival-readout">
+        <p id="arrival-status" role="status" aria-live="polite">Loading…</p>
+        <span class="arrival-percent" aria-hidden="true"><span id="arrival-percent">0</span>%</span>
+      </div>
+      <div class="arrival-progress" id="arrival-progress" role="progressbar" aria-label="Loading the penthouse" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="arrival-fill" aria-hidden="true"></span></div>
+      <a class="arrival-fallback" href="?as=leon&amp;scene=desktop">Open desktop</a>
+    </section>
+  </div>
+  <script src="shared/penthouse-arrival.js?v=20261022-minimal-arrival"></script>
   <div id="hud">
     <span><b>Drag</b> to orbit</span><span class="sep">·</span>
     <span><b>Scroll in</b> to enter</span><span class="sep">·</span>
@@ -194,17 +204,22 @@ Initializing 3D environment ...
   <script src="shared/vendor/UnrealBloomPass.js"></script>
   <script src="shared/vendor/FXAAShader.js"></script>
   <script src="shared/penthouse-traffic.js?v=20261022-render-stability"></script>
-  <script src="shared/penthouse-architecture.js?v=20261018-display-consistency"></script>
+  <script src="shared/penthouse-architecture.js?v=20261022-mounted-signs"></script>
   <script src="shared/penthouse-city-shadow.js"></script>
   <script src="shared/penthouse-city-lighting.js"></script>
   <script src="shared/penthouse-whale.js?v=20261022-render-stability"></script>
-  <script src="shared/penthouse-signage.js?v=20261018-display-consistency"></script>
+  <script src="shared/assets/signage/banners-v2.js?v=20261022-banners"></script>
+  <script src="shared/penthouse-signage-mounts.js?v=20261022-mounted-signs"></script>
+  <script src="shared/penthouse-signage.js?v=20261022-mounted-signs"></script>
   <script src="shared/penthouse-corporate.js?v=20261018-display-consistency"></script>
   <script src="shared/penthouse-lightning.js?v=20261022-lightning"></script>
-  <script src="shared/penthouse-city.js?v=20261022-lightning"></script>
-  <script src="shared/penthouse-weather.js?v=20261022-lightning"></script>
-  <script src="shared/penthouse-workstation.js?v=20261018-workstation-r2"></script>
-  <script src="shared/penthouse-scene.js?v=20261022-lightning"></script>
+  <script src="shared/penthouse-city.js?v=20261022-frame-budget"></script>
+  <script src="shared/penthouse-weather.js?v=20261022-gravity-rain"></script>
+  <script src="shared/penthouse-workstation.js?v=20261022-render-efficiency"></script>
+  <script src="shared/penthouse-lighting-optimization.js?v=20261022-frame-budget"></script>
+  <script src="shared/penthouse-reflection-visibility.js?v=20261022-frame-budget"></script>
+  <script src="shared/penthouse-bloom-composite.js?v=20261022-frame-budget"></script>
+  <script src="shared/penthouse-scene.js?v=20261022-frame-budget"></script>
 
   <!-- Per-person content + domain-agnostic engine (UNCHANGED) -->
   <script src="ivan/profile.js"></script>
@@ -215,11 +230,11 @@ Initializing 3D environment ...
     (function () {
       var ld = document.getElementById('loading');
       if (window.ROOM_MODE === 'penthouse') {
-        ld.querySelector('.term').innerHTML = '<span class="dim">LEON MENG</span>\n\nPreparing your space.\n<span id="boot-status">Opening the view…</span>';
         if (window.THREE && window.THREE.OrbitControls && window.PenthouseCity && window.PenthouseScene) {
           window.PenthouseScene.init();
         } else {
-          ld.querySelector('.term').innerHTML = 'The 3D room could not load.<br><a href="?as=leon&amp;scene=desktop" style="color:#ffe1b3">Open the desktop</a>';
+          if(window.PenthouseArrival)window.PenthouseArrival.fail('The room could not open. Your desktop is still available.');
+          else { ld.querySelector('.arrival').style.display='none';ld.querySelector('.term').style.display='block';ld.querySelector('.term').innerHTML='The 3D room could not load.<br><a href="?as=leon&amp;scene=desktop">Open the desktop</a>'; }
         }
       } else if (window.ROOM_MODE === 'desktop') {
         ld.remove();

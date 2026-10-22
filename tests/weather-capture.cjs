@@ -16,6 +16,22 @@ const scene = new T.Scene();
 scene.add(weather.group);
 const panes = weather.group.children.filter(m => m.name.startsWith('Rain beads'));
 assert.equal(panes.length, 3);
+assert.equal(panes[0].material.uniforms.uRunRate.value, 1, 'Runner speed defaults to the authored rhythm');
+assert(panes.every(p => p.material.uniforms.uRunRate === panes[0].material.uniforms.uRunRate), 'All three panes share live runner-speed state');
+for (const lite of [false, true]) for (const rate of [0, .35, 2.5]) {
+  const configured = context.window.PenthouseWeather.create(T, { lite, quality: { runRate: rate } });
+  const glazing = configured.group.children.filter(m => m.name.startsWith('Rain beads'));
+  assert(glazing.every(p => p.material.uniforms.uRunRate.value === rate), 'quality.runRate must preserve zero and custom speeds in both quality modes');
+  configured.setGlassTest({ impactRate: .4 }); configured.update(12.7);
+  assert(glazing.every(p => p.material.uniforms.uRunRate.value === rate), 'Time and arrival-rate changes must not reset runner speed');
+  configured.setGlassTest({ runRate: 1.75 });
+  assert(glazing.every(p => p.material.uniforms.uRunRate.value === 1.75), 'The test hook updates every pane');
+  assert(glazing.every(p => p.material.uniforms.uImpactRate.value === .4), 'Runner speed is independent of arrival frequency');
+  const fallingRain = configured.group.children.find(m => m.name.startsWith('World-space'));
+  assert.equal(fallingRain.material.uniforms.uRunRate, undefined, 'Changing glass runners must not change exterior rainfall');
+  configured.dispose();
+}
+
 const excluded = new T.Mesh(new T.PlaneGeometry(), new T.MeshBasicMaterial());
 scene.add(excluded);
 const originalTarget = {};
@@ -100,6 +116,12 @@ weather.setGlassTest({ visible: false });
 assert.equal(capture(camera), 0, 'Hidden panes do not consume a background capture');
 weather.setGlassTest({ visible: true });
 assert.equal(capture(camera), 1);
+for (const runRate of [0, .5, 2.25]) {
+  weather.setGlassTest({ runRate }); weather.update(17.3);
+  assert.equal(capture(camera), 1, 'Static or fast runners retain close-up background refraction');
+  assert.equal(capture(cameraAt(...views.room)), 0, 'Runner speed must not disable the distant-pane capture optimization');
+}
+weather.setGlassTest({ runRate: 1 });
 for (const [position, target] of [
   [[-13, 6, 7], [-15, 6, 7]], [[13, 6, 7], [15, 6, 7]],
   [[0, 12, -6.7], [0, 12, -10]], [[0, 1.2, -6.7], [0, 1.2, -10]]
@@ -154,4 +176,4 @@ renderer.fail = true;
 assert.throws(() => capture(cameraAt(...views.city)), /capture test failure/);
 renderer.fail = false; checkRestore(); assert(panes.every(p => p.visible));
 weather.dispose(); excluded.geometry.dispose(); excluded.material.dispose();
-console.log('Weather capture: room/desk/city, reuse/resize/hide, boundary and custom range, ' + sampled + ' orbit/aspect cases (' + visible + ' independently visible), renderer restoration passed.');
+console.log('Weather capture: runner defaults/quality/live updates, room/desk/city, reuse/resize/hide, boundary and custom range, ' + sampled + ' orbit/aspect cases (' + visible + ' independently visible), renderer restoration passed.');

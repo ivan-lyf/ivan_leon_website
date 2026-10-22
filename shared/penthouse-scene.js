@@ -2,12 +2,14 @@
 (function () {
   'use strict';
   const T = window.THREE;
+  const arrival = window.PenthouseArrival;
   const reducedQuery = matchMedia('(prefers-reduced-motion: reduce)');
   let reduced = reducedQuery.matches;
   // Keep desktop quality stable across window sizes and reported CPU counts.
   const lite = matchMedia('(pointer: coarse) and (hover: none)').matches;
   let scene, camera, renderer, controls, city, weather, composer, bloomPass, outputPass, fxaaPass, floorReflection, screenTexture;
   let roomModel, workstation, probeTarget, probeCamera, probeMap, probeDirty=false, hdrEnabled=false;
+  let bloomComposite, reflectionVisibility;
   let frame = 0, lastFrame = 0, flight = null, inComputer = false, ready = false;
   let lightOn = true, mood = 'night', moving = !reduced, modelLoaded = false, modelMetrics = null;
   const ceilingLights = [], ceilingDiffusers = [], bounceMaterials = [], keyboardMeshes = [];
@@ -116,6 +118,7 @@
     floorReflection.name='Polished stone reflection';floorReflection.rotation.x=-Math.PI/2;floorReflection.position.set(0,.014,7);
     floorReflection.material.transparent=true;floorReflection.material.depthWrite=false;floorReflection.renderOrder=1;
     scene.add(floorReflection);
+    reflectionVisibility=window.PenthouseReflectionVisibility?.attach(T,floorReflection);
   }
   function buildCeilingLights() {
     T.RectAreaLightUniformsLib?.init();
@@ -136,15 +139,22 @@
   async function loadPenthouse() {
     const loader=new T.GLTFLoader();
     const gltf=await new Promise((resolve,reject)=>loader.load('shared/assets/models/penthouse/penthouse-v2.glb?v=20261021-chair',resolve,event=>{
-      const status=document.getElementById('boot-status');if(status)status.textContent=event.total?`Opening the room… ${Math.round(event.loaded/event.total*100)}%`:'Opening the room…';
+      if(event.total)arrival?.progress('room', .8*event.loaded/event.total);
     },reject));
     if(disposed)return;
+    arrival?.progress('room',.82);
     const textureLoader=new T.TextureLoader();
     const bounceMaps=await Promise.all(['room','furniture'].map(category=>new Promise((resolve,reject)=>textureLoader.load(`shared/assets/models/penthouse/indirect-${category}.png`,texture=>{texture.flipY=false;texture.encoding=T.LinearEncoding;texture.generateMipmaps=false;texture.minFilter=T.LinearFilter;resolve(texture);},undefined,reject))));
     const model=gltf.scene;roomModel=model;model.name='Blender penthouse';model.scale.setScalar(4);scene.add(model);model.updateMatrixWorld(true);
     workstation=window.PenthouseWorkstation.create(T,{anisotropy:Math.min(8,renderer.capabilities.getMaxAnisotropy())});
     window.PenthouseWorkstation.replaceIn(T,model,workstation);
     model.updateMatrixWorld(true);
+    // Establish room depth before shading the city hidden behind opaque floors,
+    // walls and furniture. Transparent surfaces retain their authored ordering.
+    model.traverse(node=>{if(node.isMesh){
+      const materials=Array.isArray(node.material)?node.material:[node.material];
+      if(materials.every(m=>m&&!m.transparent&&m.depthWrite&&m.depthTest))node.renderOrder=-2;
+    }});
     let screen=null,meshes=0,triangles=0;
     const measured={desk:new T.Box3(),chair:new T.Box3(),computer:new T.Box3()};
     model.traverse(node=>{
@@ -169,7 +179,12 @@
       const name=node.name;
       if(name.startsWith('GLASS_')) {
         node.castShadow=false;node.receiveShadow=false;
-        node.material=new T.MeshPhysicalMaterial({color:0xc0d2cf,roughness:.08,metalness:.08,transparent:true,opacity:.025,side:T.DoubleSide,depthWrite:false,envMapIntensity:.9});
+        // This export contains 14 closed, thin, convex panes. Shade their entry
+        // surface once with the transmittance of both original .025 layers.
+        // Keep bevels; the omitted surface is only 8 mm behind the first one.
+        // Unknown replacement glass keeps the original two-sided material.
+        const closedPanes=name==='GLASS_Export_7';
+        node.material=new T.MeshPhysicalMaterial({color:0xc0d2cf,roughness:.08,metalness:.08,transparent:true,opacity:closedPanes?1-(1-.025)**2:.025,side:closedPanes?T.FrontSide:T.DoubleSide,depthWrite:false,envMapIntensity:.9});
         hotspot(node,'Look out over the city',()=>goTo('city'));
       }
       if(name.startsWith('LED_DIFFUSER_')) {
@@ -219,7 +234,7 @@
     fxaaPass?.uniforms.resolution.value.set(1/width,1/height);
   }
   function buildPostprocessing() {
-    if(!T.EffectComposer||!T.UnrealBloomPass)return;
+    if(!T.EffectComposer||!T.RenderPass||!T.UnrealBloomPass||!T.ShaderPass||!T.CopyShader)return;
     const hdr=hdrEnabled;
     const target=new T.WebGLRenderTarget(innerWidth,innerHeight,{minFilter:T.LinearFilter,magFilter:T.LinearFilter,format:T.RGBAFormat,type:hdr?T.HalfFloatType:T.UnsignedByteType});
     target.texture.encoding=hdr?T.LinearEncoding:T.sRGBEncoding;
@@ -229,21 +244,31 @@
     // ACES exposure and display encoding are applied only by the output pass.
     composer.addPass(renderPass);
     bloomPass=new T.UnrealBloomPass(new T.Vector2(innerWidth,innerHeight),.22,.42,hdr?.75:.80);
-    if(hdr)[bloomPass.renderTargetBright,...bloomPass.renderTargetsHorizontal,...bloomPass.renderTargetsVertical].forEach(t=>{t.texture.type=T.HalfFloatType;});
+    // These targets contain only fullscreen image filters. Depth attachments
+    // and depth writes add bandwidth without contributing to their output.
+    [bloomPass.renderTargetBright,...bloomPass.renderTargetsHorizontal,...bloomPass.renderTargetsVertical].forEach(target=>{
+      target.depthBuffer=false;if(hdr)target.texture.type=T.HalfFloatType;
+    });
+    [bloomPass.materialHighPassFilter,...bloomPass.separableBlurMaterials,bloomPass.compositeMaterial,bloomPass.materialCopy,bloomPass.basic].forEach(material=>{
+      material.depthTest=false;material.depthWrite=false;
+    });
     composer.addPass(bloomPass);
     if(hdr){
+      bloomComposite=window.PenthouseBloomComposite?.create(T,bloomPass);
       outputPass=new T.ShaderPass({
         uniforms:{tDiffuse:{value:null},toneMappingExposure:{value:renderer.toneMappingExposure}},
         vertexShader:T.CopyShader.vertexShader,
         fragmentShader:`uniform sampler2D tDiffuse;varying vec2 vUv;
           ${T.ShaderChunk.tonemapping_pars_fragment}
-          void main(){vec3 c=ACESFilmicToneMapping(texture2D(tDiffuse,vUv).rgb);
+          ${bloomComposite?.fragmentShader||''}
+          void main(){vec3 c=ACESFilmicToneMapping(${bloomComposite?'penthouseApplyBloom(texture2D(tDiffuse,vUv).rgb,vUv)':'texture2D(tDiffuse,vUv).rgb'});
             vec3 display=mix(c*12.92,1.055*pow(max(c,0.),vec3(1./2.4))-.055,step(vec3(.0031308),c));
             gl_FragColor=vec4(display,1.);}`
       });
-      outputPass.material.toneMapped=false;composer.addPass(outputPass);
+      if(bloomComposite)Object.assign(outputPass.uniforms,bloomComposite.uniforms);
+      outputPass.material.toneMapped=false;outputPass.material.depthTest=false;outputPass.material.depthWrite=false;composer.addPass(outputPass);
     }
-    if(T.FXAAShader){fxaaPass=new T.ShaderPass(T.FXAAShader);fxaaPass.material.toneMapped=false;composer.addPass(fxaaPass);}
+    if(T.FXAAShader){fxaaPass=new T.ShaderPass(T.FXAAShader);fxaaPass.material.toneMapped=false;fxaaPass.material.depthTest=false;fxaaPass.material.depthWrite=false;composer.addPass(fxaaPass);}
     resizePostprocessing();
   }
   function refreshRoomProbe() {
@@ -479,7 +504,8 @@
     on(canvas,'webglcontextlost',e=>{e.preventDefault();showError('The graphics connection paused. Reload to return to the room.');});
   }
   function showError(message) {
-    const loading=document.getElementById('loading');loading.style.opacity='1';loading.style.display='flex';loading.innerHTML='';const panel=document.createElement('div');panel.className='term error-actions';const text=document.createElement('p');text.textContent=message;panel.append(text);const link=document.createElement('a');link.href='?as=leon&scene=desktop';link.textContent='Open the accessible desktop';panel.append(link);loading.append(panel);
+    if(arrival){arrival.fail(message);return;}
+    const loading=document.getElementById('loading');loading.style.opacity='1';loading.style.display='flex';loading.innerHTML='';const panel=document.createElement('div');panel.className='term error-actions';panel.style.display='block';const text=document.createElement('p');text.textContent=message;panel.append(text);const link=document.createElement('a');link.href='?as=leon&scene=desktop';link.textContent='Open the accessible desktop';panel.append(link);loading.append(panel);
   }
   function updateStormLighting(strength) {
     // Reuse the existing fixed-direction light and its cached shadows. The floor
@@ -514,42 +540,70 @@
       if(p===1)finishFlight();
     }
     if(!flight&&!inComputer){controls.update();camera.position.x=T.MathUtils.clamp(camera.position.x,-13.3,13.3);camera.position.y=T.MathUtils.clamp(camera.position.y,1.2,12.0);camera.position.z=T.MathUtils.clamp(camera.position.z,-6.8,20.5);}workstation?.update(elapsed);city.update(elapsed,moving&&!reduced);updateStormLighting(city.getLightningIntensity());const hologramLight=city.getHologramLight();weather?.setHologramLight(hologramLight?{...hologramLight,strength:hologramLight.intensity}:null);weather?.update(elapsed);if(probeDirty)refreshRoomProbe();weather?.capture(renderer,scene,camera,[floorReflection]);if(composer)composer.render(dt);else renderer.render(scene,camera);
+    return true;
   }
   async function init() {
     try {
+      window.PenthouseLightingOptimization?.install(T);
       scene=new T.Scene();scene.fog=new T.FogExp2(0x9b7150,.0042);
-      renderer=new T.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(renderPixelRatio());hdrEnabled=!!(T.EffectComposer&&T.RenderPass&&T.UnrealBloomPass&&T.ShaderPass&&T.CopyShader&&renderer.capabilities.isWebGL2&&renderer.extensions.has('EXT_color_buffer_float'));
+      // The composer renders scene edges into an ordinary HDR target and applies
+      // FXAA at the end. Canvas MSAA only resamples that fullscreen result.
+      // Retain native antialiasing when the postprocessing path is unavailable.
+      const hasPostFXAA=!!(T.EffectComposer&&T.RenderPass&&T.UnrealBloomPass&&T.ShaderPass&&T.CopyShader&&T.FXAAShader);
+      renderer=new T.WebGLRenderer({antialias:!hasPostFXAA,alpha:false,powerPreference:'high-performance'});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(renderPixelRatio());hdrEnabled=!!(T.EffectComposer&&T.RenderPass&&T.UnrealBloomPass&&T.ShaderPass&&T.CopyShader&&renderer.capabilities.isWebGL2&&renderer.extensions.has('EXT_color_buffer_float'));
       // Keep this stable before any material compiles: Three r128 does not always
       // invalidate its program cache when only the renderer tone-mapping mode changes.
       renderer.outputEncoding=hdrEnabled?T.LinearEncoding:T.sRGBEncoding;renderer.toneMapping=hdrEnabled?T.NoToneMapping:T.ACESFilmicToneMapping;renderer.toneMappingExposure=.97;renderer.shadowMap.enabled=!lite;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.domElement.id='gl';renderer.domElement.setAttribute('aria-label','Leon’s penthouse overlooking a futuristic city. Use the room controls or keyboard shortcuts to explore.');renderer.domElement.setAttribute('role','img');document.body.append(renderer.domElement);
       camera=new T.PerspectiveCamera(innerWidth<700?58:52,innerWidth/innerHeight,.1,4000);const start=pose('room');camera.position.copy(start.position);
       controls=new T.OrbitControls(camera,renderer.domElement);controls.target.copy(start.target);controls.enableDamping=true;controls.dampingFactor=.08;controls.enablePan=false;controls.minDistance=4;controls.maxDistance=32;controls.minPolarAngle=Math.PI*.34;controls.maxPolarAngle=Math.PI*.53;controls.minAzimuthAngle=-.65;controls.maxAzimuthAngle=.85;controls.rotateSpeed=.48;controls.zoomSpeed=.6;controls.update();
+      arrival?.stage('Opening the room and city…');arrival?.progress('city',.05);
       environment();const lighting=await fetch('shared/assets/city-lighting.json').then(r=>{if(!r.ok)throw new Error('City lighting could not load');return r.json();});
       city=window.PenthouseCity.create(T,{lite,reducedMotion:reduced,lighting});city.group.scale.setScalar(4);scene.add(city.group);
-      await Promise.all([loadPenthouse(),city.loadLighting()]);if(disposed)return;
+      await Promise.all([loadPenthouse().then(()=>arrival?.progress('room',1)),city.loadLighting().then(()=>arrival?.progress('city',1))]);if(disposed)return;
+      arrival?.stage('Bringing the streets to life…');arrival?.progress('traffic',.05);
       const [traffic,hologram]=await Promise.all(['spinner.glb','holographic-whale.glb'].map(name=>new Promise((resolve,reject)=>new T.GLTFLoader().load('shared/assets/models/city/'+name,resolve,undefined,reject))));
       if(disposed){[traffic,hologram].forEach(g=>g.scene.traverse(o=>{o.geometry?.dispose();if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose());}));return;}
       city.setCarModel(traffic.scene);city.setWhaleModel(hologram);
+      arrival?.progress('traffic',1);arrival?.stage('Opening the view…');arrival?.progress('view',.1);
       weather=window.PenthouseWeather?.create(T,{lite});if(weather){scene.add(weather.group);weather.resize(innerWidth,innerHeight);}
       buildPostprocessing();setMood();
       // Optional review view keeps exposure fixed while isolating aerial perspective.
       if(new URLSearchParams(location.search).get('review')==='clear'){scene.fog.density=0;city.setAtmosphere(false);}
       wire();
       screenHost.inert=true;screenHost.setAttribute('aria-hidden','true');document.getElementById('motion-toggle').textContent=moving?'Motion on':'Motion off';document.getElementById('motion-toggle').setAttribute('aria-pressed',String(moving));
-      ready=true;window.__sceneLoaded=true;document.getElementById('boot-status').textContent='Welcome home.';
+      ready=true;window.__sceneLoaded=true;
       if(composer)composer.render(0);else renderer.render(scene,camera);
       // The room/workstation are the only shadow casters; neither they nor the
       // two shadow-light transforms animate. Preserve these full-resolution maps.
       renderer.shadowMap.autoUpdate=false;
-      frame=requestAnimationFrame(animate);setTimeout(()=>{const loading=document.getElementById('loading');loading.style.opacity='0';setTimeout(()=>loading.style.display='none',460);},350);
+      // The first animation frame completes reflection captures with the same
+      // simulation/light state as normal rendering. Reveal only after that work,
+      // so the room does not pause for cube maps just as it becomes interactive.
+      function firstFrame(now) {
+        if(disposed)return;
+        try {
+          if(!animate(now)){
+            // animate already queued its successor. Keep exactly one retry
+            // while hidden or frame-gated, without revealing an unfinished view.
+            cancelAnimationFrame(frame);frame=requestAnimationFrame(firstFrame);return;
+          }
+          if(arrival)arrival.finish();else{const loading=document.getElementById('loading');loading.style.display='none';}
+        } catch(error) {
+          cancelAnimationFrame(frame);frame=0;
+          console.error('Penthouse scene failed',error);
+          showError('This browser could not open the 3D room. Your desktop is still available.');
+        }
+      }
+      frame=requestAnimationFrame(firstFrame);
       on(window,'pagehide',event=>{if(!event.persisted)dispose();});
     } catch(error) { console.error('Penthouse scene failed',error);showError('This browser could not open the 3D room. Your desktop is still available.'); }
   }
   function dispose() {
-    disposed=true;flight=null;clearComputer();cancelAnimationFrame(frame);clearInterval(textureTimer);cleanups.forEach(fn=>fn());
+    disposed=true;arrival?.dispose();flight=null;clearComputer();cancelAnimationFrame(frame);clearInterval(textureTimer);cleanups.forEach(fn=>fn());
     // The workstation owns its generated resources; the live desktop texture
     // and interaction outline belong to this scene. Remove those before cleanup.
     if(workstation){keyboardOutline?.material.dispose();keyboardOutline?.parent?.remove(keyboardOutline);workstation.dispose();screenTexture?.dispose();}
+    reflectionVisibility?.dispose();bloomComposite?.dispose();
     controls?.dispose();city?.dispose();weather?.dispose();bloomPass?.dispose();outputPass?.material.dispose();fxaaPass?.material.dispose();composer?.renderTarget1.dispose();composer?.renderTarget2.dispose();probeTarget?.dispose();probeMap?.dispose();floorReflection?.getRenderTarget().dispose();
     const geometries=new Set(),materials=new Set(),textures=new Set();scene?.traverse(o=>{if(o.geometry)geometries.add(o.geometry);[].concat(o.material||[]).forEach(m=>{materials.add(m);for(const value of Object.values(m)){if(value?.isTexture)textures.add(value);}});});geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());renderer?.dispose();
   }

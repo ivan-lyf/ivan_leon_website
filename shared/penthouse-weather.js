@@ -1,6 +1,6 @@
 /* Original rain for Leon's penthouse. Four world units represent one metre.
  * API: create(THREE,{lite,quality?}) -> {group,update,resize,setMood,setHologramLight,capture,dispose}.
- * quality accepts captureScale, captureMaxWidth, beadFadeStart and beadFadeEnd (metres).
+ * quality accepts captureScale, captureMaxWidth, beadFadeStart and beadFadeEnd (metres), runRate (runner speed multiplier).
  * Add group, then capture(renderer,scene,camera,[floorReflection]) before the main render.
  * Wet-glass lenses use only the matching camera capture; mirror/cube views omit them.
  */
@@ -15,7 +15,7 @@
     const viewport=new T.Vector2(1,1),captureSize=new T.Vector2(1,1);
     const target=new T.WebGLRenderTarget(1,1,{minFilter:T.LinearFilter,magFilter:T.LinearFilter,format:T.RGBAFormat,type:T.UnsignedByteType,depthBuffer:true,stencilBuffer:false});
     target.texture.encoding=T.LinearEncoding;target.texture.generateMipmaps=false;
-    const shared={uLightning:{value:0},uTime:{value:0},uScene:{value:target.texture},uViewport:{value:viewport},uCaptureSize:{value:captureSize},uCaptured:{value:0},uNight:{value:0},uViewValid:{value:1},uImpactRate:{value:1},uBeadDistance:{value:new T.Vector2(quality.beadFadeStart??2,quality.beadFadeEnd??4.1)}};
+    const shared={uLightning:{value:0},uTime:{value:0},uScene:{value:target.texture},uViewport:{value:viewport},uCaptureSize:{value:captureSize},uCaptured:{value:0},uNight:{value:0},uViewValid:{value:1},uImpactRate:{value:1},uRunRate:{value:quality.runRate??1},uBeadDistance:{value:new T.Vector2(quality.beadFadeStart??2,quality.beadFadeEnd??4.1)}};
     function renderSize(renderer){const current=renderer.getRenderTarget();if(current)viewport.set(current.width,current.height);else renderer.getDrawingBufferSize(viewport);}
 
     // Rain occupies three exterior volumes, in world units (four units/metre).
@@ -132,98 +132,180 @@
 
     const vertexShader=`uniform vec3 uTangent;varying vec3 vWorld;varying vec2 vAlong,vUp;
       void main(){vec4 w=modelMatrix*vec4(position,1.);vWorld=w.xyz;vAlong=(viewMatrix*vec4(uTangent,0.)).xy;vUp=(viewMatrix*vec4(0.,1.,0.,0.)).xy;gl_Position=projectionMatrix*viewMatrix*w;}`;
+    // Wet glass, pane metres (x along the pane, y up; panes span y 0..3.18).
+    // Rain falls from above, so water lands with a short downward smear,
+    // beads sag under gravity, grow by merging, and finally slide down
+    // leaving a long, tapering wet trail that breaks into residual beads and
+    // dries over ~15 s. Runners clear the beads in their path. Every feature
+    // fades out once narrower than a rendered pixel, so distant glass stays clean.
     const fragmentShader=`precision highp float;
-      uniform sampler2D uScene;uniform vec2 uViewport,uCaptureSize,uBeadDistance;uniform vec3 uTangent,uPaneNormal;uniform float uTime,uCaptured,uNight,uSeed,uViewValid,uImpactRate;
+      uniform sampler2D uScene;uniform vec2 uViewport,uCaptureSize,uBeadDistance;uniform vec3 uTangent,uPaneNormal;uniform float uTime,uCaptured,uNight,uSeed,uViewValid,uImpactRate,uRunRate;
       varying vec3 vWorld;varying vec2 vAlong,vUp;
       float hash(vec2 q){q=fract(q*vec2(123.34,456.21));q+=dot(q,q+45.32);return fract(q.x*q.y);}
       vec3 behind(vec2 uv){return mix(mix(vec3(.05,.07,.08),vec3(.035,.06,.09),uNight),texture2D(uScene,clamp(uv,vec2(.001),vec2(.999))).rgb,uCaptured);}
-      void lens(vec2 p,vec2 center,float radius,float pixel,float visibility,vec2 screenUV,inout vec4 accumulated){
-        float radiusPixels=radius/max(pixel,.00001);
-        // Unresolved droplets contribute no high-contrast circle or distant image sample.
+      // Meandering path a runner follows down the glass (metres). Same function
+      // drives head and trail, so they always line up.
+      float wob(float y,float id){return .0055*sin(y*6.1+id*17.)+.0028*sin(y*19.+id*5.3)+.0012*sin(y*53.+id*11.);}
+      void over(vec3 color,float alpha,inout vec4 acc){float c=alpha+acc.a*(1.-alpha);acc.rgb=(color*alpha+acc.rgb*acc.a*(1.-alpha))/max(c,.0001);acc.a=c;}
+      // A sessile drop on vertical glass. Large drops are pendant-shaped (flat
+      // crown, heavy rounded belly), with an irregular pinned contact line. The
+      // optics follow a plano-convex lens: the centre shows a small inverted,
+      // wide-angle image of the city; the steep margin is dark from total
+      // internal reflection; light focuses into a bright caustic crescent in
+      // the belly; a sharp specular point sits high on the dome. Small drops
+      // fall back to a simple refracting dot, and sub-pixel ones vanish.
+      // Keep GLSL operations defined on every GPU: ordered smoothstep edges,
+      // explicit squared distances, and a finite angle at the exact drop centre.
+      void lens(vec2 p,vec2 center,float radius,float stretch,float pixel,float visibility,vec2 screenUV,inout vec4 acc){
+        float radiusPixels=radius*max(1.,stretch*.85)/max(pixel,.00001);
         float resolved=smoothstep(.95,2.5,radiusPixels)*visibility;
         if(resolved<.003)return;
-        vec2 q=(p-center)/radius;q.y*=1.+.16*clamp(q.y,-1.,1.);float d=length(q);
-        float edge=clamp(.7/radiusPixels,.025,.5);
-        float alpha=(1.-smoothstep(1.-edge,1.+edge,d))*.66*resolved;
+        float big=smoothstep(4.,14.,radiusPixels);
+        vec2 q=vec2(p.x-center.x,(p.y-center.y)/stretch)/radius;
+        if(q.y>0.)q.y*=1.+.32*big;
+        q.x*=1.+.26*clamp(-q.y,0.,1.)*(.6+.4*big);
+        float sd=hash(center*917.+3.1);
+        float ang=dot(q,q)>.00000001?atan(q.y,q.x):0.;
+        float contour=1.+big*(.055*sin(ang*3.+sd*19.)+.035*sin(ang*5.+sd*41.)+.02*sin(ang*9.+sd*7.));
+        float d=length(q)/contour;
+        float edge=clamp(.7/radiusPixels,.012,.5);
+        float alpha=(1.-smoothstep(1.-edge,1.+edge,d))*mix(.7,.94,big)*resolved;
         if(alpha<.002)return;
-        float detail=smoothstep(2.4,5.5,radiusPixels);
-        float dome=sqrt(max(0.,1.-min(dot(q,q),1.)));
-        // Refraction follows the droplet's projected size, never a fixed fraction
-        // of the viewport. Small beads approach the undistorted background.
-        float displacement=min(11.,radiusPixels*1.15)*resolved*(.45+.55*detail);
-        vec2 rayOffset=(vAlong*q.x+vUp*q.y)*displacement/uViewport*(.6+.4*dome)*2.4;
-        // A resolved bead is a tiny fisheye: it shows a wide, inverted image of the
-        // city, so its bright points compress into specks inside the drop.
-        vec2 fisheye=(vAlong*q.x+vUp*q.y)*.075*detail*(.4+.6*dome);
-        vec3 color=behind(screenUV-rayOffset+fisheye*0.)*(1.-detail*.5)+behind(screenUV+fisheye)*detail*.5*1.35;
-        if(detail>.05){vec2 footprint=vec2(.42,0.)/uCaptureSize;
-          vec3 filtered=(behind(screenUV-rayOffset+footprint)+behind(screenUV-rayOffset-footprint))*.5;
-          color=mix(color,filtered,.28*detail);}
-        float rim=smoothstep(.77,.98,d)*(1.-smoothstep(.98,1.1,d));
-        color*=1.-rim*.55*detail;color*=mix(1.,1.18,dome*detail);
-        vec2 highlight=q-vec2(-.29,.38);float glint=exp(-dot(highlight,highlight)*30.);
-        color+=mix(vec3(.11,.10,.085),vec3(.075,.10,.13),uNight)*glint*detail*1.6;
-        float combined=alpha+accumulated.a*(1.-alpha);
-        accumulated.rgb=(color*alpha+accumulated.rgb*accumulated.a*(1.-alpha))/max(combined,.0001);accumulated.a=combined;
+        float detail=smoothstep(2.4,6.,radiusPixels);
+        float dd=min(d,1.);float h=sqrt(max(0.,1.-dd*dd));
+        vec2 slope=q/max(h,.22);
+        vec2 dirScreen=vAlong*slope.x+vUp*slope.y;
+        vec2 rScreen=vec2(radiusPixels)/uViewport*2.;
+        vec3 small=behind(screenUV-dirScreen*rScreen*.6);
+        // All large-drop optical terms vanish below this resolved size.
+        if(detail==0.){over(small,alpha,acc);return;}
+        vec2 inv=-(vAlong*q.x+vUp*q.y)*rScreen*mix(3.,7.,big);
+        vec2 fringe=dirScreen*rScreen*.05*big;
+        vec3 lensImg=vec3(behind(screenUV+inv+fringe).r,behind(screenUV+inv).g,behind(screenUV+inv-fringe).b);
+        lensImg=mix(lensImg,behind(screenUV+inv*.5)*.9+behind(screenUV+inv*1.5)*.1,.35);
+        vec3 color=mix(small,lensImg*1.12,detail*(1.-smoothstep(.45,1.,dd)));
+        float tir=smoothstep(mix(.7,.6,big),.97,d);
+        float belly=clamp(-q.y*1.2+.15,0.,1.);
+        color*=1.-tir*mix(.45,.86,big)*(.7+.3*belly)*detail;
+        float causticDistance=(d-.74)/.1;float caustic=exp(-causticDistance*causticDistance)*(1.-smoothstep(-.55,0.,q.y))*detail;
+        color+=(behind(screenUV-inv*.3)*1.4+mix(vec3(.06,.05,.04),vec3(.035,.05,.07),uNight))*caustic*.85;
+        float contactDistance=(d-.99)/.03;
+        color+=mix(vec3(.05,.045,.04),vec3(.03,.04,.055),uNight)*exp(-contactDistance*contactDistance)*big;
+        vec2 hl=q-vec2(-.3,.5);float glint=exp(-dot(hl,hl)*mix(30.,110.,big));
+        vec2 hl2=q-vec2(.34,-.52);float glint2=exp(-dot(hl2,hl2)*70.)*.35;
+        color+=mix(vec3(.16,.15,.13),vec3(.11,.14,.19),uNight)*(glint*mix(1.6,3.2,big)+glint2*big)*detail;
+        over(color,alpha,acc);
+      }
+      // A water film strip: a thin cylindrical lens across its width.
+      void film(float across,float width,float strength,float pixel,vec2 screenUV,inout vec4 acc){
+        float wp=width/max(pixel,.00001);float resolved=smoothstep(.45,1.5,wp);
+        float n=across/max(width,.00001);float alpha=(1.-smoothstep(.7,1.,abs(n)))*strength*resolved;
+        if(alpha<.002)return;
+        vec2 offset=vAlong*n*min(7.,wp*.9)/uViewport*2.;
+        // Inverted, compressed image across the strip (cylindrical lens), dark
+        // meniscus edges and a specular line: what makes a wet track readable.
+        float detail=smoothstep(1.5,4.,wp);
+        vec3 color=mix(behind(screenUV-offset),behind(screenUV+vAlong*n*min(18.,wp*2.2)/uViewport*2.),.45*detail)*1.08;
+        float edge=smoothstep(.45,.95,abs(n));color*=1.-edge*.62*detail;
+        float highlightDistance=(n+.42)/.16;
+        color+=mix(vec3(.10,.09,.08),vec3(.06,.085,.11),uNight)*exp(-highlightDistance*highlightDistance)*detail*1.4;
+        over(color,alpha,acc);
       }
       void main(){
         vec2 p=vec2(dot(vWorld,uTangent),vWorld.y)*.25;vec2 uv=gl_FragCoord.xy/uViewport;
-        // Derivatives are evaluated before any varying branch. Use the largest
-        // surface footprint so glancing panes do not alias into a dotted veil.
         float pixel=max(max(length(dFdx(p)),length(dFdy(p))),.00001);
         vec3 viewDelta=cameraPosition-vWorld;float metres=length(viewDelta)*.25;
         float incidence=abs(dot(normalize(viewDelta),uPaneNormal));
         float visibility=(1.-smoothstep(uBeadDistance.x,uBeadDistance.y,metres))*smoothstep(.15,.52,incidence);
         if(uViewValid<.5||visibility<.003)discard;
-        vec4 water=vec4(0.);
-        for(int layer=0;layer<3;layer++){
-          float spacing=layer==0?.016:layer==1?.041:.095;vec2 cell=floor(p/spacing);float salt=uSeed+float(layer)*19.;
-          float occupancy=layer==0?.28:layer==1?.25:.10;
-          if(hash(cell+salt)<occupancy){vec2 center=(cell+.22+.56*vec2(hash(cell+salt+4.1),hash(cell+salt+8.9)))*spacing;
-            float radius=layer==0?mix(.001,.0022,hash(cell+salt+2.)):layer==1?mix(.0024,.0046,hash(cell+salt+3.)):mix(.0048,.0067,hash(cell+salt+9.));
-            lens(p,center,radius,pixel,visibility,uv,water);}
-        }
-        // Impacts: a drop hits, throws a bright crown ring and a few satellite
-        // droplets for ~0.2 s, then settles into a bead that slowly evaporates
-        // into the film. Two cell scales; each cell re-fires on its own clock.
-        for(int k=0;k<2;k++){
-          float sp=k==0?.045:.08;vec2 cell=floor(p/sp);float s=hash(cell+uSeed+71.+float(k)*13.);
-          float cyc=uTime*(.22+s*.38)*uImpactRate+s*7.;float age=fract(cyc),epoch=floor(cyc);
-          if(hash(cell+epoch*.37+uSeed)<.42){
-            vec2 center=(cell+.2+.6*vec2(hash(cell+epoch+1.3),hash(cell+epoch+2.9)))*sp;
-            float burst=1.-smoothstep(0.,.07,age);
-            float rr=mix(.0008,.0058,sqrt(clamp(age/.07,0.,1.)));
-            float ringW=max(.0007,pixel*1.4);float dc=length(p-center);
-            float ring=exp(-pow((dc-rr)/ringW,2.))*burst;
-            float sat=0.;for(int j=0;j<4;j++){float a=hash(cell+epoch+float(j)*3.1)*6.2831;vec2 sd=center+vec2(cos(a),sin(a))*rr*(1.4+hash(cell+float(j))*.8);sat=max(sat,exp(-dot(p-sd,p-sd)/(ringW*ringW*.7)));}
-            sat*=burst;
-            float ringA=max(ring*.75,sat*.6)*visibility*smoothstep(.8,2.4,.0012/pixel);
-            if(ringA>.003){vec3 ringCol=behind(uv-vAlong*(dc-rr)*.004)*1.25+mix(vec3(.05,.045,.04),vec3(.035,.05,.065),uNight);
-              if(ringA>water.a)water=vec4(ringCol,ringA);else water.rgb=mix(water.rgb,ringCol,ringA);}
-            float settle=smoothstep(.05,.12,age)*(1.-smoothstep(.55,1.,age));
-            lens(p,center,mix(.0018,.0036,s),pixel,visibility*settle,uv,water);
+        vec4 beads=vec4(0.),water=vec4(0.);float wipe=0.;
+
+        // ---- Runners: two column scales, two slots per column. A runner starts
+        // where a bead got heavy enough, moves with stick-slip motion, and
+        // leaves a long trail that thins, breaks into beads and dries.
+        for(int L=0;L<2;L++){
+          float W=L==0?.045:.1;float col=floor(p.x/W);
+          for(int k=0;k<2;k++){
+            float id=hash(vec2(col,uSeed+float(k)*7.3+float(L)*31.));
+            if(id<(L==0?.34:.48))continue;
+            float v=mix(.045,.14,hash(vec2(id,uSeed+3.)))*(L==0?1.:1.35)*uRunRate;
+            float f=1.1+id*1.7;float tt=uTime+.62*sin(uTime*f+id*9.)/f;
+            float S=tt*v+id*41.;float epoch=floor(S/3.8);float trav=fract(S/3.8)*3.8;
+            float eh=hash(vec2(col+float(k)*3.,epoch+id*13.));
+            float startY=3.25-eh*eh*1.9;float headY=startY-trav;
+            if(headY<-.3)continue;
+            float pid=id*7.+epoch*1.37;
+            float xb=(col+.3+.4*hash(vec2(epoch,col+id)))*W;
+            float r=mix(.003,.006,hash(vec2(epoch,id)))*(L==0?1.:1.3);
+            // wob is bounded by .0095m; the widest influence is the 3r head wipe.
+            // Outside this padded envelope every trail, bead and clearing term is zero.
+            if(abs(p.x-xb)>.0096+3.01*r)continue;
+            float xp=xb+wob(p.y,pid);float dy=p.y-headY;
+            if(dy>0.&&p.y<startY){
+              float age=dy/max(v,.001);
+              float w=r*mix(.78,.3,smoothstep(0.,.6,dy));
+              float fade=1.-smoothstep(4.,16.,age);
+              wipe=max(wipe,(1.-smoothstep(w*1.4,w*3.,abs(p.x-xp)))*(1.-smoothstep(18.,45.,age)));
+              // The film necks into a dotted line as it thins.
+              float neck=mix(1.,.35+.65*smoothstep(.25,.75,hash(vec2(floor(p.y/.006),pid))),smoothstep(.25,.9,dy));
+              film(p.x-xp,w*neck,.85*fade*visibility,pixel,uv,water);
+              float seg=.017;float cy=floor(p.y/seg);float bh=hash(vec2(cy,pid+5.));
+              if(bh>.5){float by=(cy+.3+.4*hash(vec2(cy,pid)))*seg;
+                if(by>headY+.02&&by<startY){float bAge=(by-headY)/max(v,.001);
+                  vec2 bc=vec2(xb+wob(by,pid)+(hash(vec2(cy,pid+9.))-.5)*w*1.2,by);
+                  lens(p,bc,w*mix(.55,1.15,bh)*1.15,1.12,pixel,visibility*(1.-smoothstep(12.,45.,bAge)),uv,water);}}
+            }
+            // Head: a heavy, bottom-bulged drop; it pauses and gathers at the start.
+            float hy=max(headY,-.3);vec2 hc=vec2(xb+wob(hy,pid),hy);
+            float gather=smoothstep(0.,.06,trav);
+            wipe=max(wipe,1.-smoothstep(r*1.6,r*3.,length((p-hc)*vec2(1.,.6))));
+            lens(p,hc,r*mix(.8,1.,gather),mix(1.08,1.38,gather),pixel,visibility,uv,water);
           }
         }
-        // Sparse slow runners preserve the close view; their tracks disappear
-        // when narrower than a rendered pixel, rather than becoming sharp lines.
-        float column=floor(p.x/.14);float identity=hash(vec2(column,uSeed+37.));
-        if(identity>.86){float progress=(uTime-.18*sin(uTime*1.9+identity*9.))*(.006+identity*.004)+identity;
-          float y=3.55-fract(progress)*4.;float baseX=(column+.28+.44*hash(vec2(column,8.+uSeed)))*.14;float x=baseX+.0017*sin(y*19.+identity*31.);
-          lens(p,vec2(x,y),.0053,pixel,visibility,uv,water);
-          float trackX=baseX+.0017*sin(p.y*19.+identity*31.);float trail=(1.-smoothstep(.0006,.0011,abs(p.x-trackX)))*smoothstep(y,y+.012,p.y)*(1.-smoothstep(y+.025,y+.19,p.y));
-          trail*=smoothstep(.8,2.,.0011/pixel)*visibility*.12;
-          if(trail>water.a)water=vec4(behind(uv+vAlong*clamp((x-p.x)*.5,-1./uViewport.x,1./uViewport.x))*.97,trail);}
-        // Sparse coalesced wet tracks have a gently uneven edge and only a
-        // subpixel optical displacement. They never survive as distant dots.
-        float filmColumn=floor(p.x/.31);float filmId=hash(vec2(filmColumn,uSeed+83.));
-        if(filmId>.88){
-          float filmX=(filmColumn+.2+.6*filmId)*.31+.0018*sin(p.y*13.+filmId*21.);
-          float film=(1.-smoothstep(.003,.014,abs(p.x-filmX)))*(.5+.5*sin(p.y*4.+filmId*27.));
-          float filmAlpha=film*.028*visibility*smoothstep(.7,2.,.014/pixel);
-          if(filmAlpha>water.a)water=vec4(behind(uv+vAlong*(film-.5)*.7/uViewport)*.985,filmAlpha);
+
+        // ---- Settled beads, three sizes. They sag slightly and are cleared
+        // where a runner has passed recently.
+        for(int layer=0;layer<3;layer++){
+          float spacing=layer==0?.014:layer==1?.036:.085;vec2 cell=floor(p/spacing);float salt=uSeed+float(layer)*19.;
+          float occupancy=layer==0?.32:layer==1?.27:.11;
+          if(hash(cell+salt)<occupancy){vec2 center=(cell+.22+.56*vec2(hash(cell+salt+4.1),hash(cell+salt+8.9)))*spacing;
+            float radius=layer==0?mix(.0009,.002,hash(cell+salt+2.)):layer==1?mix(.0022,.0042,hash(cell+salt+3.)):mix(.0044,.0062,hash(cell+salt+9.));
+            lens(p,center,radius,mix(1.04,1.16,hash(cell+salt+6.)),pixel,visibility,uv,beads);}
         }
-        if(water.a<.002)discard;
-        gl_FragColor=water;
+
+        // ---- Arrivals. Rain reaches the glass from above: each drop lands with
+        // a short downward smear, settles into a bead that grows as it merges,
+        // then slides away down the pane with a short trail of its own.
+        for(int k=0;k<2;k++){
+          float sp=k==0?.04:.075;vec2 cell=floor(p/sp);float s=hash(cell+uSeed+71.+float(k)*13.);
+          float cyc=uTime*(.07+s*.11)*uImpactRate+s*7.;float age=fract(cyc),epoch=floor(cyc);
+          if(hash(cell+epoch*.37+uSeed)<.45){
+            vec2 c0=(cell+.25+.5*vec2(hash(cell+epoch+1.3),hash(cell+epoch+2.9)))*sp;
+            float land=1.-smoothstep(0.,.035,age);
+            float grow=mix(.0013,.0032,s)*(.7+.3*smoothstep(.04,.6,age));
+            float slide=smoothstep(.7,1.,age);float drop=slide*slide*mix(.06,.2,s);
+            float pid=s*9.+epoch;vec2 c=vec2(c0.x+(wob(c0.y-drop,pid)-wob(c0.y,pid)),c0.y-drop);
+            float sm=land*mix(.01,.026,s);
+            if(sm>.0005&&p.y>c.y&&p.y<c.y+sm)film(p.x-c.x,grow*.5*(1.-(p.y-c.y)/sm*.6),.55*land*visibility,pixel,uv,water);
+            if(drop>.002&&p.y>c.y&&p.y<c0.y){float xt=c0.x+(wob(p.y,pid)-wob(c0.y,pid));film(p.x-xt,grow*.45,.42*visibility,pixel,uv,water);
+              wipe=max(wipe,(1.-smoothstep(grow*.8,grow*2.,abs(p.x-xt))));}
+            float alive=1.-smoothstep(.96,1.,age);
+            lens(p,c,grow,mix(1.12,1.9,max(land,slide*.6)),pixel,visibility*alive,uv,water);
+          }
+        }
+
+        // Coalesced wet tracks from earlier runners: faint, uneven, vertical.
+        float filmColumn=floor(p.x/.23);float filmId=hash(vec2(filmColumn,uSeed+83.));
+        if(filmId>.8){
+          float filmX=(filmColumn+.2+.6*filmId)*.23+wob(p.y,filmId*29.)*1.4;
+          float band=.5+.5*sin(p.y*3.1+filmId*27.);
+          film(p.x-filmX,.0022*(.6+.4*band),.18*band*visibility,pixel,uv,water);
+        }
+
+        beads.a*=1.-clamp(wipe,0.,1.);
+        vec4 outC=beads;over(water.rgb,water.a,outC);
+        if(outC.a<.002)discard;
+        gl_FragColor=outC;
         #include <tonemapping_fragment>
         #include <encodings_fragment>
       }`;
@@ -288,7 +370,7 @@
       update(time){shared.uTime.value=time;},
       setLightning(strength){shared.uLightning.value=Number.isFinite(strength)?T.MathUtils.clamp(strength,0,1):0;},
       // Test hooks: bead visibility range (metres) and impact frequency multiplier.
-      setGlassTest(o){if(o.beadFadeStart!==undefined)shared.uBeadDistance.value.x=o.beadFadeStart;if(o.beadFadeEnd!==undefined)shared.uBeadDistance.value.y=o.beadFadeEnd;if(o.impactRate!==undefined)shared.uImpactRate.value=o.impactRate;if(o.visible!==undefined)panes.forEach(m=>m.visible=o.visible);},
+      setGlassTest(o){if(o.beadFadeStart!==undefined)shared.uBeadDistance.value.x=o.beadFadeStart;if(o.beadFadeEnd!==undefined)shared.uBeadDistance.value.y=o.beadFadeEnd;if(o.impactRate!==undefined)shared.uImpactRate.value=o.impactRate;if(o.runRate!==undefined)shared.uRunRate.value=o.runRate;if(o.visible!==undefined)panes.forEach(m=>m.visible=o.visible);},
       resize,
       setMood(name){const night=name==='night';shared.uNight.value=night?1:0;rainMaterial.uniforms.uColor.value.copy(linear(night?0xa4b9c5:0xc4cacc));rainMaterial.uniforms.uOpacity.value=night?.52:.36;},
       // City-space metres and linear light colour; use the same authored source
