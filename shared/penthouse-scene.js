@@ -17,6 +17,7 @@
   let textureTimer, elapsed = 0, disposed = false;
   const clock = new T.Clock();
   const cleanups = [], lights = {};
+  const stormWhite = new T.Color(0xe9f1ff);
   const pointer = new T.Vector2(), raycaster = new T.Raycaster();
   const screenHost = document.getElementById('screen-host');
   const screenElement = document.getElementById('screen');
@@ -134,7 +135,7 @@
   }
   async function loadPenthouse() {
     const loader=new T.GLTFLoader();
-    const gltf=await new Promise((resolve,reject)=>loader.load('shared/assets/models/penthouse/penthouse-v2.glb',resolve,event=>{
+    const gltf=await new Promise((resolve,reject)=>loader.load('shared/assets/models/penthouse/penthouse-v2.glb?v=20261021-chair',resolve,event=>{
       const status=document.getElementById('boot-status');if(status)status.textContent=event.total?`Opening the room… ${Math.round(event.loaded/event.total*100)}%`:'Opening the room…';
     },reject));
     if(disposed)return;
@@ -151,13 +152,17 @@
       if(!node.isMesh)return;
       meshes++;triangles+=(node.geometry.index?node.geometry.index.count:node.geometry.attributes.position.count)/3*(node.isInstancedMesh?node.count:1);
       node.castShadow=true;node.receiveShadow=true;
+      const chairUpholstery=node.name.startsWith('CHAIR_')&&!Array.isArray(node.material)&&node.material.name==='Furniture | Charcoal upholstery';
+      // The old upholstery AO bake has dark edge bands. Isolate its correction
+      // from the desk pad, which shares this material; keep indirect light and shadows.
+      if(chairUpholstery)node.material=node.material.clone();
       for(const material of [].concat(node.material)) {
         material.envMapIntensity=.55;
         if(material.aoMap){material.aoMap.generateMipmaps=false;material.aoMap.minFilter=T.LinearFilter;}
         const category=node.userData.ao_category;
         if((category==='room'||category==='furniture')&&node.geometry.attributes.uv2){
           material.lightMap=bounceMaps[category==='room'?0:1];material.lightMapIntensity=1;
-          material.aoMapIntensity=.8;if(!bounceMaterials.includes(material))bounceMaterials.push(material);
+          material.aoMapIntensity=chairUpholstery?0:.8;if(!bounceMaterials.includes(material))bounceMaterials.push(material);
         }
         for(const value of Object.values(material))if(value?.isTexture)value.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
       }
@@ -242,6 +247,8 @@
     resizePostprocessing();
   }
   function refreshRoomProbe() {
+    // A transient strike must never become a persistent environment reflection.
+    if(city?.isLightningActive())return;
     probeDirty=false;
     if(!roomModel)return;
     if(!probeTarget){
@@ -474,9 +481,22 @@
   function showError(message) {
     const loading=document.getElementById('loading');loading.style.opacity='1';loading.style.display='flex';loading.innerHTML='';const panel=document.createElement('div');panel.className='term error-actions';const text=document.createElement('p');text.textContent=message;panel.append(text);const link=document.createElement('a');link.href='?as=leon&scene=desktop';link.textContent='Open the accessible desktop';panel.append(link);loading.append(panel);
   }
+  function updateStormLighting(strength) {
+    // Reuse the existing fixed-direction light and its cached shadows. The floor
+    // captures this flash naturally; no cubemap rebake or extra scene pass is needed.
+    lights.sun.intensity=.045+strength*.72;
+    lights.sun.color.set(0x759ab2).lerp(stormWhite,strength);
+    lights.hemi.intensity=.17+strength*.12;
+    weather?.setLightning(strength);
+  }
   function animate(now) {
     frame=requestAnimationFrame(animate);if(document.hidden||inComputer){clock.getDelta();return;}
-    const budget=flight?0:1000/(lite?30:45);if(now-lastFrame<budget)return;lastFrame=now;
+    const budget=flight?0:1000/(lite?30:60);
+    const sinceLast=now-lastFrame;
+    if(budget&&sinceLast<budget-.5)return;
+    // Carry fractional frame time forward instead of turning 45 fps into 30 at 60 Hz.
+    // The half-millisecond tolerance absorbs requestAnimationFrame timestamp jitter.
+    lastFrame=budget?lastFrame+budget*Math.max(1,Math.floor((sinceLast+.5)/budget)):now;
     const dt=Math.min(clock.getDelta(),.1);if(moving)elapsed+=dt;
     if(keyboardOutline)keyboardOutline.visible=!flight&&(keyboardHovered||now<keyboardFlashUntil);
     if(flight){
@@ -493,7 +513,7 @@
       if(flight.computer)updateComputerFlight(p);
       if(p===1)finishFlight();
     }
-    if(!flight&&!inComputer){controls.update();camera.position.x=T.MathUtils.clamp(camera.position.x,-13.3,13.3);camera.position.y=T.MathUtils.clamp(camera.position.y,1.2,12.0);camera.position.z=T.MathUtils.clamp(camera.position.z,-6.8,20.5);}workstation?.update(elapsed);city.update(elapsed);const hologramLight=city.getHologramLight();weather?.setHologramLight(hologramLight?{...hologramLight,strength:hologramLight.intensity}:null);weather?.update(elapsed);if(probeDirty)refreshRoomProbe();weather?.capture(renderer,scene,camera,[floorReflection]);if(composer)composer.render(dt);else renderer.render(scene,camera);
+    if(!flight&&!inComputer){controls.update();camera.position.x=T.MathUtils.clamp(camera.position.x,-13.3,13.3);camera.position.y=T.MathUtils.clamp(camera.position.y,1.2,12.0);camera.position.z=T.MathUtils.clamp(camera.position.z,-6.8,20.5);}workstation?.update(elapsed);city.update(elapsed,moving&&!reduced);updateStormLighting(city.getLightningIntensity());const hologramLight=city.getHologramLight();weather?.setHologramLight(hologramLight?{...hologramLight,strength:hologramLight.intensity}:null);weather?.update(elapsed);if(probeDirty)refreshRoomProbe();weather?.capture(renderer,scene,camera,[floorReflection]);if(composer)composer.render(dt);else renderer.render(scene,camera);
   }
   async function init() {
     try {
@@ -517,7 +537,11 @@
       wire();
       screenHost.inert=true;screenHost.setAttribute('aria-hidden','true');document.getElementById('motion-toggle').textContent=moving?'Motion on':'Motion off';document.getElementById('motion-toggle').setAttribute('aria-pressed',String(moving));
       ready=true;window.__sceneLoaded=true;document.getElementById('boot-status').textContent='Welcome home.';
-      if(composer)composer.render(0);else renderer.render(scene,camera);frame=requestAnimationFrame(animate);setTimeout(()=>{const loading=document.getElementById('loading');loading.style.opacity='0';setTimeout(()=>loading.style.display='none',460);},350);
+      if(composer)composer.render(0);else renderer.render(scene,camera);
+      // The room/workstation are the only shadow casters; neither they nor the
+      // two shadow-light transforms animate. Preserve these full-resolution maps.
+      renderer.shadowMap.autoUpdate=false;
+      frame=requestAnimationFrame(animate);setTimeout(()=>{const loading=document.getElementById('loading');loading.style.opacity='0';setTimeout(()=>loading.style.display='none',460);},350);
       on(window,'pagehide',event=>{if(!event.persisted)dispose();});
     } catch(error) { console.error('Penthouse scene failed',error);showError('This browser could not open the 3D room. Your desktop is still available.'); }
   }

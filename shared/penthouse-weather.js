@@ -8,14 +8,14 @@
   'use strict';
   window.PenthouseWeather={create:function(T,options={}) {
     const lite=!!options.lite,quality=options.quality||{},group=new T.Group();group.name='Exterior rain and wet glazing';
-    const panes=[],geometries=[],materials=[];
+    const panes=[],paneCorners=[],geometries=[],materials=[];
     let disposed=false,seed=918263,capturedCamera=null,captureConfigured=false;
     const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
     const linear=color=>new T.Color(color).convertSRGBToLinear();
     const viewport=new T.Vector2(1,1),captureSize=new T.Vector2(1,1);
     const target=new T.WebGLRenderTarget(1,1,{minFilter:T.LinearFilter,magFilter:T.LinearFilter,format:T.RGBAFormat,type:T.UnsignedByteType,depthBuffer:true,stencilBuffer:false});
     target.texture.encoding=T.LinearEncoding;target.texture.generateMipmaps=false;
-    const shared={uTime:{value:0},uScene:{value:target.texture},uViewport:{value:viewport},uCaptureSize:{value:captureSize},uCaptured:{value:0},uNight:{value:0},uViewValid:{value:1},uImpactRate:{value:1},uBeadDistance:{value:new T.Vector2(quality.beadFadeStart??2,quality.beadFadeEnd??4.1)}};
+    const shared={uLightning:{value:0},uTime:{value:0},uScene:{value:target.texture},uViewport:{value:viewport},uCaptureSize:{value:captureSize},uCaptured:{value:0},uNight:{value:0},uViewValid:{value:1},uImpactRate:{value:1},uBeadDistance:{value:new T.Vector2(quality.beadFadeStart??2,quality.beadFadeEnd??4.1)}};
     function renderSize(renderer){const current=renderer.getRenderTarget();if(current)viewport.set(current.width,current.height);else renderer.getDrawingBufferSize(viewport);}
 
     // Rain occupies three exterior volumes, in world units (four units/metre).
@@ -39,8 +39,8 @@
     for(const [name,array,size] of [['position',positions,3],['aEnd',ends,1],['aSide',sides,1],['aSpeed',speeds,1],['aVariation',variations,1],['aLayer',layers,1]])rainGeometry.setAttribute(name,new T.BufferAttribute(array,size));
     const hologram={uHoloPosition:{value:new T.Vector3()},uHoloColor:{value:new T.Color(.12,.48,.85)},uHoloRadius:{value:1},uHoloStrength:{value:0}};
     const rainMaterial=new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.DoubleSide,toneMapped:true,extensions:{derivatives:true},
-      uniforms:{uTime:shared.uTime,uViewport:shared.uViewport,...hologram,uNight:shared.uNight,uColor:{value:linear(0xa8bdc8)},uOpacity:{value:.42}},
-      vertexShader:`attribute float aEnd,aSide,aSpeed,aVariation,aLayer;uniform float uTime,uNight,uHoloRadius,uHoloStrength;uniform vec2 uViewport;uniform vec3 uHoloPosition,uHoloColor;
+      uniforms:{uLightning:shared.uLightning,uTime:shared.uTime,uViewport:shared.uViewport,...hologram,uNight:shared.uNight,uColor:{value:linear(0xa8bdc8)},uOpacity:{value:.42}},
+      vertexShader:`attribute float aEnd,aSide,aSpeed,aVariation,aLayer;uniform float uTime,uNight,uHoloRadius,uHoloStrength,uLightning;uniform vec2 uViewport;uniform vec3 uHoloPosition,uHoloColor;
         varying float vAcross,vEnd,vAlpha,vWidth,vSoftness;varying vec3 vLight;
         void main(){
           float top=aLayer<.5?140.:aLayer<1.5?420.:900.;float span=aLayer<.5?230.:aLayer<1.5?760.:1500.;
@@ -73,7 +73,7 @@
           float holo=exp(-hologramDistance*hologramDistance*2.2)*uHoloStrength;
           // Rain is mostly invisible until a motivated local source catches it.
           // A dark ambient floor is deliberately much weaker than lit droplets.
-          vLight=vec3(mix(.16,.075,uNight))+vec3(.64,.73,.80)*windowLight+uHoloColor*holo*.85;
+          vLight=vec3(.72,.80,.94)*uLightning+vec3(mix(.16,.075,uNight))+vec3(.64,.73,.80)*windowLight+uHoloColor*holo*.85;
           // Low drops catch the street's light pollution from beneath.
           float streetGlow=clamp(exp(-(p.y*.25+92.)/34.),0.,1.6);
           vLight+=vec3(.95,.48,.30)*streetGlow*mix(.18,.42,uNight);
@@ -104,9 +104,9 @@
     // towers. They carry the haze colour and street glow, so distant rain reads
     // as moving density rather than as individual lines. World units.
     const curtainMaterial=new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.DoubleSide,toneMapped:true,
-      uniforms:{uTime:shared.uTime,uNight:shared.uNight,uHoloPosition:hologram.uHoloPosition,uHoloColor:hologram.uHoloColor,uHoloRadius:hologram.uHoloRadius,uHoloStrength:hologram.uHoloStrength},
+      uniforms:{uLightning:shared.uLightning,uTime:shared.uTime,uNight:shared.uNight,uHoloPosition:hologram.uHoloPosition,uHoloColor:hologram.uHoloColor,uHoloRadius:hologram.uHoloRadius,uHoloStrength:hologram.uHoloStrength},
       vertexShader:'varying vec3 vWorld;varying vec2 vUv;void main(){vUv=uv;vec4 w=modelMatrix*vec4(position,1.);vWorld=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}',
-      fragmentShader:`uniform float uTime,uNight,uHoloRadius,uHoloStrength;uniform vec3 uHoloPosition,uHoloColor;varying vec3 vWorld;varying vec2 vUv;
+      fragmentShader:`uniform float uTime,uNight,uHoloRadius,uHoloStrength,uLightning;uniform vec3 uHoloPosition,uHoloColor;varying vec3 vWorld;varying vec2 vUv;
         float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
         float n2(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
         void main(){
@@ -119,7 +119,7 @@
           float ym=vWorld.y*.25;float glow=clamp(exp(-(ym+92.)/34.),0.,1.6);
           vec3 c=mix(vec3(.10,.12,.13),vec3(.030,.052,.070),uNight)+vec3(.30,.13,.07)*glow*uNight;
           float holo=exp(-pow(length(vWorld-uHoloPosition)/max(uHoloRadius*1.6,1.),2.))*uHoloStrength;
-          c+=uHoloColor*holo*.35;
+          c+=uHoloColor*holo*.35+vec3(.6,.7,.85)*uLightning;
           float alpha=sheet*texture*edge*(.05+.06*glow);
           gl_FragColor=vec4(c,alpha);
           #include <tonemapping_fragment>
@@ -232,15 +232,61 @@
       const material=new T.ShaderMaterial({uniforms:{...shared,uTangent:{value:new T.Vector3(...tangent)},uPaneNormal:{value:new T.Vector3(...normal)},uSeed:{value:seedValue}},vertexShader,fragmentShader,transparent:true,depthWrite:false,side:T.DoubleSide,toneMapped:true,extensions:{derivatives:true}});materials.push(material);
       const mesh=new T.Mesh(geometry,material);mesh.name=name;mesh.position.set(x,6.4,z);mesh.rotation.y=rotation;mesh.renderOrder=3;mesh.raycast=()=>{};
       mesh.onBeforeRender=(renderer,scene,camera)=>{renderSize(renderer);shared.uViewValid.value=!capturedCamera||camera===capturedCamera?1:0;};
-      panes.push(mesh);group.add(mesh);
+      panes.push(mesh);
+      const positions=geometry.attributes.position;
+      paneCorners.push([0,1,3,2].map(i=>new T.Vector3().fromBufferAttribute(positions,i)));
+      group.add(mesh);
     }
     pane('Rain beads on front glazing',27.92,0,-7.974,0,[1,0,0],[0,0,1],7);
     pane('Rain beads on left glazing',29.92,-13.974,7,Math.PI/2,[0,0,1],[1,0,0],31);
     pane('Rain beads on right glazing',29.92,13.974,7,-Math.PI/2,[0,0,1],[-1,0,0],67);
+    // The wet-glass shader discards every fragment beyond its distance fade.
+    // Clip each real pane to the current view before measuring distance: its
+    // nearest corner/point can be behind the camera while the visible part is far away.
+    const beadFrustum=new T.Frustum(),beadViewProjection=new T.Matrix4(),beadCameraPosition=new T.Vector3();
+    const beadClip=[Array.from({length:16},()=>new T.Vector3()),Array.from({length:16},()=>new T.Vector3())];
+    const beadTriangle=new T.Triangle(),beadSegment=new T.Line3(),beadNearest=new T.Vector3();
+    function hasVisibleBeads(camera){
+      camera.updateWorldMatrix(true,false);group.updateWorldMatrix(true,false);
+      beadCameraPosition.setFromMatrixPosition(camera.matrixWorld);
+      beadViewProjection.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);
+      beadFrustum.setFromProjectionMatrix(beadViewProjection);
+      // Retain a small margin outside the shader fade to stay conservative at
+      // clip boundaries and under GPU/CPU floating-point differences.
+      const reach=Math.max(0,shared.uBeadDistance.value.y+.02)*4,reachSquared=reach*reach;
+      for(let paneIndex=0;paneIndex<panes.length;paneIndex++){
+        const mesh=panes[paneIndex];if(!mesh.visible)continue;
+        mesh.updateWorldMatrix(false,false);
+        let input=beadClip[0],output=beadClip[1],count=4;
+        for(let i=0;i<4;i++)input[i].copy(paneCorners[paneIndex][i]).applyMatrix4(mesh.matrixWorld);
+        for(const plane of beadFrustum.planes){
+          let nextCount=0;
+          for(let i=0;i<count;i++){
+            const a=input[i],b=input[(i+1)%count];
+            const da=plane.distanceToPoint(a)+.0001,db=plane.distanceToPoint(b)+.0001;
+            if(da>=0)output[nextCount++].copy(a);
+            if((da>=0)!==(db>=0))output[nextCount++].copy(a).lerp(b,da/(da-db));
+          }
+          count=nextCount;const swap=input;input=output;output=swap;
+          if(!count)break;
+        }
+        if(count===1&&input[0].distanceToSquared(beadCameraPosition)<=reachSquared)return true;
+        if(count===2){
+          beadSegment.set(input[0],input[1]).closestPointToPoint(beadCameraPosition,true,beadNearest);
+          if(beadNearest.distanceToSquared(beadCameraPosition)<=reachSquared)return true;
+        }
+        for(let i=1;i<count-1;i++){
+          beadTriangle.set(input[0],input[i],input[i+1]).closestPointToPoint(beadCameraPosition,beadNearest);
+          if(beadNearest.distanceToSquared(beadCameraPosition)<=reachSquared)return true;
+        }
+      }
+      return false;
+    }
     function resize(w,h){const requested=quality.captureScale??(lite?.5:.6),maximum=quality.captureMaxWidth??(lite?640:1100);const scale=Math.min(requested,maximum/Math.max(w,1));target.setSize(Math.max(1,Math.round(w*scale)),Math.max(1,Math.round(h*scale)));captureSize.set(target.width,target.height);shared.uCaptured.value=0;}
     resize(innerWidth,innerHeight);
     return {group,
       update(time){shared.uTime.value=time;},
+      setLightning(strength){shared.uLightning.value=Number.isFinite(strength)?T.MathUtils.clamp(strength,0,1):0;},
       // Test hooks: bead visibility range (metres) and impact frequency multiplier.
       setGlassTest(o){if(o.beadFadeStart!==undefined)shared.uBeadDistance.value.x=o.beadFadeStart;if(o.beadFadeEnd!==undefined)shared.uBeadDistance.value.y=o.beadFadeEnd;if(o.impactRate!==undefined)shared.uImpactRate.value=o.impactRate;if(o.visible!==undefined)panes.forEach(m=>m.visible=o.visible);},
       resize,
@@ -257,7 +303,11 @@
       },
       getStats(){return {particles:count,layers:layerCounts.slice(),drawCalls:lite?6:9,capturePasses:1,worldUnitsPerMetre:4};},
       capture(renderer,scene,camera,excluded=[]){
-        if(disposed||!group.visible)return;
+        if(disposed||!group.visible||!hasVisibleBeads(camera)){
+          // Keep the primary camera identity even without a fresh texture:
+          // wet panes must remain suppressed in floor and cube reflections.
+          capturedCamera=camera;shared.uCaptured.value=0;return;
+        }
         if(!captureConfigured){captureConfigured=true;
           // Preserve neon highlights in the lens where the platform supports a
           // renderable half-float target; use the portable byte target otherwise.

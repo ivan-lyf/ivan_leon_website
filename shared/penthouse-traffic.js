@@ -94,11 +94,16 @@
       var fallback=material(new T.MeshStandardMaterial({color:color('#566c7c'),metalness:.7,roughness:.25}));
       addPart(geometry(new T.BoxGeometry(4.4,.6,1.9)),fallback,[0,0,0],[1,1,1],'Traffic loading proxy');
       var headOffsets=[[2.22,-.29,-.83],[2.22,-.29,.83]],tailOffsets=[[-2.14,-.22,-.49],[-2.14,-.22,.49]];
+      // Lamp mounts and directions stay fixed; reuse them for every frame.
+      var navOffsets=[[1.68,-.31,-1.11],[1.68,-.31,1.11]],navDirections=[[.25,.05,-1],[.25,.05,1]];
+      var strobeOffset=[-.97,.75,0],upDirection=[0,1,0],downDirection=[0,-1,0],lampSides=[-1,1];
+      var liftOffsets=[[-1.5,-.82,-.58],[-1.5,-.82,.58]],policeOffsets=[[-.85,.68,-.3],[-.85,.68,.3]];
       // Four driving lamps, two position lights, a roof strobe and two lift accents.
       // The two pursuit vehicles additionally contribute two police roof lamps each.
       var lampsPerCar=9,lightCount=count*lampsPerCar+4,lightPositions=new Float32Array(lightCount*3),lightDirections=new Float32Array(lightCount*3),lightColors=new Float32Array(lightCount*3),lightSizes=new Float32Array(lightCount),lightStrengths=new Float32Array(lightCount);
       var lightGeometry=geometry(new T.BufferGeometry());
       [['position',lightPositions,3],['aDirection',lightDirections,3],['aColor',lightColors,3],['aSize',lightSizes,1],['aStrength',lightStrengths,1]].forEach(function(a){lightGeometry.setAttribute(a[0],new T.BufferAttribute(a[1],a[2]).setUsage(T.DynamicDrawUsage));});
+      var lightAttributes=Object.keys(lightGeometry.attributes).map(function(key){return lightGeometry.attributes[key];});
       var glowMaterial=material(new T.ShaderMaterial({
         uniforms:{uViewportHeight:{value:800}},transparent:true,depthWrite:false,blending:T.AdditiveBlending,fog:false,
         vertexShader:[
@@ -114,10 +119,12 @@
       var glows=new T.Points(lightGeometry,glowMaterial);glows.name='Directional driving lamps, position markers, strobes and lift accents';glows.frustumCulled=false;glows.renderOrder=3;group.add(glows);
       var viewport=new T.Vector4();glows.onBeforeRender=function(renderer){renderer.getCurrentViewport(viewport);glowMaterial.uniforms.uViewportHeight.value=viewport.w;};
       var beamGeometry=geometry(new T.ConeGeometry(.85,7,12,1,true));beamGeometry.rotateZ(Math.PI/2);beamGeometry.translate(3.5,0,0);
+      // Raster interpolation can put a cone-edge UV just below zero. A fractional
+      // power then emits NaN, which HDR bloom spreads into a black rectangle.
       var beamMaterial=material(new T.ShaderMaterial({
         transparent:true,depthWrite:false,side:T.DoubleSide,blending:T.AdditiveBlending,
         vertexShader:'varying vec2 vUv;varying vec3 vNormal,vWorld;void main(){vUv=uv;vec4 world=modelMatrix*instanceMatrix*vec4(position,1.);vWorld=world.xyz;vNormal=normalize(mat3(modelMatrix)*mat3(instanceMatrix)*normal);gl_Position=projectionMatrix*viewMatrix*world;}',
-        fragmentShader:'varying vec2 vUv;varying vec3 vNormal,vWorld;void main(){float face=abs(dot(normalize(vNormal),normalize(cameraPosition-vWorld)));float alpha=pow(vUv.y,1.8)*pow(face,.7)*.029;gl_FragColor=vec4(.48,.69,.83,alpha);}'
+        fragmentShader:'varying vec2 vUv;varying vec3 vNormal,vWorld;void main(){float face=abs(dot(normalize(vNormal),normalize(cameraPosition-vWorld)));float alpha=pow(clamp(vUv.y,0.,1.),1.8)*pow(face,.7)*.029;gl_FragColor=vec4(.48,.69,.83,alpha);}'
       }));
       var beams=new T.InstancedMesh(beamGeometry,beamMaterial,count*2);beams.name='Headlamp scatter in rainy air';beams.frustumCulled=false;beams.instanceMatrix.setUsage(T.DynamicDrawUsage);group.add(beams);
       var policeBar=new T.InstancedMesh(geometry(new T.BoxGeometry(.38,.10,.29)),material(new T.MeshBasicMaterial({color:0xffffff,toneMapped:false})),4);
@@ -126,12 +133,13 @@
       var navRed=color('#ff5141').multiplyScalar(1.3),navGreen=color('#5aff9b').multiplyScalar(1.2),strobeWhite=color('#e9f7ff').multiplyScalar(1.5),liftCyan=color('#48cfe8').multiplyScalar(.7);
       // Read-only city-space data for a renderer's optional non-shadowing light proxies.
       var leadLights=[0,2].map(function(index){return {carIndex:index,position:new T.Vector3(),direction:new T.Vector3(),color:warm.clone(),range:7};});
-      var forward=new T.Vector3(),lightPos=new T.Vector3(),lightIndex=0,policeIndex=0;
+      var forward=new T.Vector3(),lightPos=new T.Vector3(),policeColor=new T.Color(),lightIndex=0,policeIndex=0;
       function lamp(offset,direction,c,size,strength,car){
         lightPos.fromArray(offset).multiplyScalar(car.scale).applyQuaternion(rotation).add(pos);
         if(Array.isArray(direction))forward.fromArray(direction).normalize();else forward.copy(xAxis).multiplyScalar(direction);
         forward.applyQuaternion(rotation);
-        lightPositions.set(lightPos.toArray(),lightIndex*3);lightDirections.set(forward.toArray(),lightIndex*3);lightColors.set(c.toArray(),lightIndex*3);lightSizes[lightIndex]=size*car.scale;lightStrengths[lightIndex]=strength;lightIndex++;
+        var attributeOffset=lightIndex*3;
+        lightPos.toArray(lightPositions,attributeOffset);forward.toArray(lightDirections,attributeOffset);c.toArray(lightColors,attributeOffset);lightSizes[lightIndex]=size*car.scale;lightStrengths[lightIndex]=strength;lightIndex++;
       }
       function update(time) {
         lastTime=time;lightIndex=0;policeIndex=0;
@@ -153,26 +161,26 @@
           });
           tailOffsets.forEach(function(offset){lamp(offset,-1,red,2.15,1.4,car);});
           // Port/starboard markers sit on the split pod shoulders and face outward.
-          lamp([1.68,-.31,-1.11],[.25,.05,-1],navRed,.95,.82,car);
-          lamp([1.68,-.31,1.11],[.25,.05,1],navGreen,.95,.82,car);
+          lamp(navOffsets[0],navDirections[0],navRed,.95,.82,car);
+          lamp(navOffsets[1],navDirections[1],navGreen,.95,.82,car);
           // One short, staggered roof flash every 4.8 s; no continuous sparkle.
           var strobeAge=wrap(time/4.8+index*.371)*4.8;
           var strobe=Math.min(1,strobeAge/.012)*Math.max(0,Math.min(1,(.11-strobeAge)/.045));
-          lamp([-.97,.75,0],[0,1,0],strobeWhite,1.15,strobe*.85,car);
-          [-1,1].forEach(function(sign){lamp([-1.5,-.82,sign*.58],[0,-1,0],liftCyan,.72,.40,car);});
+          lamp(strobeOffset,upDirection,strobeWhite,1.15,strobe*.85,car);
+          lampSides.forEach(function(sign,sideIndex){lamp(liftOffsets[sideIndex],downDirection,liftCyan,.72,.40,car);});
           if(index===0||index===2){
             var lead=leadLights[index/2];lead.position.set(2.22,-.29,0).multiplyScalar(car.scale).applyQuaternion(rotation).add(pos);
             lead.direction.copy(xAxis).applyQuaternion(rotation);lead.range=7*car.scale;
           }
-          if(car.police)[-1,1].forEach(function(sign){
-            var pulse=.2+.8*Math.pow(.5+.5*Math.sin(time*4.6+(sign<0?0:Math.PI)),3),c=sign<0?red:blue,offset=[-.85,.68,sign*.3];
+          if(car.police)lampSides.forEach(function(sign,sideIndex){
+            var pulse=.2+.8*Math.pow(.5+.5*Math.sin(time*4.6+(sign<0?0:Math.PI)),3),c=sign<0?red:blue,offset=policeOffsets[sideIndex];
             lamp(offset,sign,c,2.8,pulse*1.85,car);
-            partPos.fromArray(offset).multiplyScalar(car.scale).applyQuaternion(rotation).add(pos);partScale.setScalar(car.scale);matrix.compose(partPos,rotation,partScale);policeBar.setMatrixAt(policeIndex,matrix);policeBar.setColorAt(policeIndex,c.clone().multiplyScalar(pulse));policeIndex++;
+            partPos.fromArray(offset).multiplyScalar(car.scale).applyQuaternion(rotation).add(pos);partScale.setScalar(car.scale);matrix.compose(partPos,rotation,partScale);policeBar.setMatrixAt(policeIndex,matrix);policeBar.setColorAt(policeIndex,policeColor.copy(c).multiplyScalar(pulse));policeIndex++;
           });
         });
         parts.forEach(function(part){part.mesh.instanceMatrix.needsUpdate=true;});beams.instanceMatrix.needsUpdate=true;policeBar.instanceMatrix.needsUpdate=true;policeBar.instanceColor.needsUpdate=true;
         lightGeometry.setDrawRange(0,lightIndex);
-        Object.keys(lightGeometry.attributes).forEach(function(key){lightGeometry.attributes[key].needsUpdate=true;});
+        lightAttributes.forEach(function(attribute){attribute.needsUpdate=true;});
       }
       function setModel(model) {
         if(!model)return;model.updateMatrixWorld(true);

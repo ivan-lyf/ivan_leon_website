@@ -28,7 +28,9 @@
         'uniform float uTime,uGain,uLayer;varying vec3 vBody,vNormal,vView;',
         'float hash(vec3 p){return fract(sin(dot(p,vec3(27.17,91.73,43.57)))*43758.5453);}',
         'void main(){',
-        ' vec3 n=normalize(vNormal); float rim=pow(1.-abs(dot(n,normalize(vView))),2.1);',
+        // Rounded normalized vectors can have a dot product slightly above one.
+        // Keep the fractional rim power finite before additive HDR blending.
+        ' vec3 n=normalize(vNormal); float rim=pow(clamp(1.-abs(dot(n,normalize(vView))),0.,1.),2.1);',
         ' float volume=.38+.62*pow(clamp(dot(n,normalize(vec3(-.25,.78,.58)))*.5+.5,0.,1.),1.6);',
         ' float side=gl_FrontFacing?1.:.26;',
         // Emitters remain in body space; only their content modulates. Derivative

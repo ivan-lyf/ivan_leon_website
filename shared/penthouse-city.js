@@ -13,6 +13,11 @@
       group.name = 'Rain city — architecture, signs and airborne traffic';
       var geometries = [], materials = [], textures = [];
       var atmosphereEnabled=true;
+      var lightning=window.PenthouseLightning?window.PenthouseLightning.create(THREE,{lite:lite,reducedMotion:options.reducedMotion}):null;
+      if(lightning)group.add(lightning.group);
+      var stormUniforms=lightning?lightning.uniforms:{uLightning:{value:0},uStrike:{value:new THREE.Vector3(0,60,-160)}};
+      var stormGLSL=`uniform float uLightning;uniform vec3 uStrike;
+        float stormLight(vec3 p,vec3 n){if(uLightning<=0.)return 0.;vec3 delta=uStrike-p;vec3 direction=delta/max(length(delta),.001);return uLightning*(.12+.88*max(dot(n,direction),0.));}`;
       var seed = 74192, transform = new THREE.Object3D();
       function random() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
       function range(a, b) { return a + random() * (b - a); }
@@ -31,6 +36,7 @@
         uTop: { value: linear(colors.night.top) }, uHorizon: { value: linear(colors.night.horizon) },
         uBottom: { value: linear(colors.night.bottom) }, uTime: { value: 0 }, uPollution: { value: 1 }
       };
+      Object.assign(skyUniforms,stormUniforms);
       var noiseFunctions = [
         'float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }',
         'float noise(vec2 p) { vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);',
@@ -57,7 +63,7 @@ vec3 cityFogMix(vec3 c,vec3 p){
  float f=smoothstep(fogNear,fogFar,fogDepth);
  #endif
  float g=streetGlow(p.y);f=clamp(f*(1.+g*.9),0.,1.);
- return mix(c,fogColor+streetGlowColor(p)*g*uGlowStrength,f);
+ return mix(c,fogColor+streetGlowColor(p)*g*uGlowStrength+vec3(.16,.18,.21)*uLightning,f);
 #else
  return c;
 #endif
@@ -67,7 +73,7 @@ vec3 cityFogMix(vec3 c,vec3 p){
         side: THREE.BackSide, depthWrite: false, fog: false, uniforms: skyUniforms,
         vertexShader: 'varying vec3 vDirection; void main(){vDirection=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
         fragmentShader: [
-          'varying vec3 vDirection; uniform vec3 uTop,uHorizon,uBottom; uniform float uTime,uPollution;', noiseFunctions,
+          'varying vec3 vDirection; uniform vec3 uTop,uHorizon,uBottom; uniform float uTime,uPollution;', noiseFunctions, stormGLSL,
           'void main(){vec3 d=normalize(vDirection); float altitude=smoothstep(-.06,.48,d.y);',
           'vec3 color=mix(uHorizon,uTop,altitude); color=mix(color,uBottom,1.-smoothstep(-.55,-.07,d.y));',
           'vec2 p=vec2(atan(d.z,d.x)*5.7,asin(clamp(d.y,-1.,1.))*8.3)+vec2(uTime*.0018,0.);',
@@ -80,6 +86,8 @@ vec3 cityFogMix(vec3 c,vec3 p){
           'float pollution=exp(-max(d.y+.02,0.)*5.2);float patchy=fbm(p*.42+3.1);',
           'vec3 cityLight=mix(vec3(.030,.011,.006),vec3(.020,.006,.019),smoothstep(.35,.7,patchy));',
           'color+=cityLight*pollution*(.35+1.1*cloudMass)*uPollution;',
+          'if(uLightning>0.){float flashFocus=exp(-max(0.,1.-dot(d,uStrike/max(length(uStrike),.001)))*10.);',
+          'color+=vec3(.90,.95,1.)*uLightning*(2.5+4.5*flashFocus)*(.72+.28*cloudMass);}',
           'gl_FragColor=vec4(color,1.);', '#include <tonemapping_fragment>', '#include <encodings_fragment>', '}'
         ].join('\n')
       }));
@@ -108,7 +116,7 @@ vec3 cityFogMix(vec3 c,vec3 p){
       }]);
       var logoUniforms={uLogoPos:{value:[]},uLogoColor:{value:[]}};for(var li=0;li<8;li++){logoUniforms.uLogoPos.value.push(new THREE.Vector4(0,-1e4,0,.001));logoUniforms.uLogoColor.value.push(new THREE.Vector4(0,0,0,0));}
       var logoGLSL=window.PenthouseCorporate?window.PenthouseCorporate.glsl:'vec3 logoSpill(vec3 p,vec3 n){return vec3(0.);}';
-      Object.assign(facadeUniforms,hologramUniforms,atmosUniforms,logoUniforms);
+      Object.assign(facadeUniforms,hologramUniforms,atmosUniforms,logoUniforms,stormUniforms);
       var facadeMaterial=material(new THREE.ShaderMaterial({fog:true,extensions:{derivatives:true},uniforms:facadeUniforms,
         vertexShader:`
           #include <common>
@@ -128,6 +136,7 @@ vec3 cityFogMix(vec3 c,vec3 p){
           uniform vec3 uBuilding,uWindow,uCool;uniform float uNight,uExteriorReady;uniform samplerCube uExterior;
           ${noiseFunctions}
           ${glowGLSL}
+          ${stormGLSL}
           ${cityFogGLSL}
           ${hologramGLSL}
           ${practicalGLSL}
@@ -210,7 +219,7 @@ vec3 cityFogMix(vec3 c,vec3 p){
             float key=(.045+.78*pow(max(dot(n,normalize(vec3(-.6,.75,.4))),0.),1.25)*visibility)*mix(1.,.3,uNight);
             float glow=streetGlow(vWorldPosition.y);vec3 glowColor=streetGlowColor(vWorldPosition);
             float skyView=.5+.5*n.y;
-            vec3 facadeLight=vec3(key)+glowColor*glow*(.20+.18*(1.-skyView))+vec3(.03,.044,.06)*skyView*uNight*mix(.6,1.,visibility);
+            vec3 facadeLight=vec3(.65,.72,.86)*stormLight(vWorldPosition,n)+vec3(key)+glowColor*glow*(.20+.18*(1.-skyView))+vec3(.03,.044,.06)*skyView*uNight*mix(.6,1.,visibility);
             vec3 cladding=stone*mix(.76,1.12,hash(vec2(stableSeed,2.)));
             float materialGrain=vFamily>3.5||abs(vFamily-1.)<.4?.18:.06;
             // Long vertical grime runoff below sills and from roof edges.
@@ -247,6 +256,7 @@ vec3 cityFogMix(vec3 c,vec3 p){
             // Downward reflections pick up the glowing haze between the towers.
             float below=1.-smoothstep(-.55,0.,reflectedDirection.y);
             reflected+=streetGlowColor(vWorldPosition+vec3(0.,0.,9.))*streetGlow(vWorldPosition.y-38.)*below*(.05+fresnel*.5)*reflectivity;
+            reflected+=vec3(.6,.7,.9)*uLightning*(.1+fresnel*.45)*smoothstep(-.1,.4,reflectedDirection.y);
             reflected*=mix(1.,.62,dirt)*(1.+rivulet*.6);
             vec3 glassColor=vec3(.0012,.0018,.0022)+dirt*vec3(.004,.0042,.0040)*(.5+glow)+reflected*(.48+.35*streak)+hologramReflection(vWorldPosition,reflectedDirection,paneRoughness)*(.24+fresnel*.65)+localIrradiance*(.035+fresnel*.14);
             // Occupancy by functional zone: ~6-floor bands are vacant, residential,
@@ -358,14 +368,14 @@ vec3 cityFogMix(vec3 c,vec3 p){
       // reflection probe; seams and vertical runoff vary roughness as well as color.
       [structureMaterial,ribMaterial].forEach(function(mat){
         mat.onBeforeCompile=function(shader){
-          Object.assign(shader.uniforms,hologramUniforms,atmosUniforms,logoUniforms);
+          Object.assign(shader.uniforms,hologramUniforms,atmosUniforms,logoUniforms,stormUniforms);
           shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vStructurePosition;varying vec3 vStructureNormal;varying float vMaterialFamily,vMaterialShade;\n#ifdef USE_INSTANCING\nattribute float aFamily,aShade;\n#endif');
           shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',[
             '#include <begin_vertex>','vMaterialFamily=0.;vMaterialShade=1.;','vec4 structurePosition=vec4(transformed,1.);',
             '#ifdef USE_INSTANCING','vMaterialFamily=aFamily;vMaterialShade=aShade;structurePosition=instanceMatrix*structurePosition;','#endif',
             'vStructurePosition=(modelMatrix*structurePosition).xyz*.25;', 'vec3 exteriorNormal=normal;', '#ifdef USE_INSTANCING', 'exteriorNormal=mat3(instanceMatrix)*(exteriorNormal/vec3(dot(instanceMatrix[0].xyz,instanceMatrix[0].xyz),dot(instanceMatrix[1].xyz,instanceMatrix[1].xyz),dot(instanceMatrix[2].xyz,instanceMatrix[2].xyz)));', '#endif', 'vStructureNormal=normalize(mat3(modelMatrix)*exteriorNormal);'
           ].join('\n'));
-          shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vStructurePosition;varying vec3 vStructureNormal;varying float vMaterialFamily,vMaterialShade;\n'+noiseFunctions+'\n'+glowGLSL+'\n'+hologramGLSL+'\n'+practicalGLSL+'\n'+logoGLSL);
+          shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vStructurePosition;varying vec3 vStructureNormal;varying float vMaterialFamily,vMaterialShade;\n'+noiseFunctions+'\n'+glowGLSL+'\n'+hologramGLSL+'\n'+practicalGLSL+'\n'+logoGLSL+'\n'+stormGLSL);
           shader.fragmentShader=shader.fragmentShader.replace('#include <fog_pars_fragment>','#include <fog_pars_fragment>\n'+cityFogGLSL);
           shader.fragmentShader=shader.fragmentShader.replace('#include <fog_fragment>','gl_FragColor.rgb=cityFogMix(gl_FragColor.rgb,vStructurePosition);');
           shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',[
@@ -383,7 +393,7 @@ vec3 cityFogMix(vec3 c,vec3 p){
             normal=normalize(abs(area)*normal-sign(area)*(dFdx(microHeight)*gradX+dFdy(microHeight)*gradY));`);
           shader.fragmentShader=shader.fragmentShader.replace('#include <metalnessmap_fragment>','#include <metalnessmap_fragment>\nmetalnessFactor=vMaterialFamily<.5?.65:vMaterialFamily<1.5?.025:vMaterialFamily<2.5?.78:vMaterialFamily<3.5?.10:.38;');
           shader.fragmentShader=shader.fragmentShader.replace('#include <lights_fragment_end>','#include <lights_fragment_end>\nreflectedLight.directDiffuse*=(.12+.88*vMaterialShade)*.32;reflectedLight.directSpecular*=(.25+.75*vMaterialShade)*.6;reflectedLight.indirectDiffuse*=(.35+.65*vMaterialShade)*.55;');
-          shader.fragmentShader=shader.fragmentShader.replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\ntotalEmissiveRadiance+=(hologramSpill(vStructurePosition,normalize(vStructureNormal))*1.3+logoSpill(vStructurePosition,normalize(vStructureNormal))*2.2+practicalSpill(vStructurePosition,normalize(vStructureNormal))*2.4)*diffuseColor.rgb*.8;totalEmissiveRadiance+=diffuseColor.rgb*((.004+.08*max(dot(normalize(vStructureNormal),normalize(vec3(-.6,.75,.4))),0.))*vMaterialShade+streetGlowColor(sp)*streetGlow(sp.y)*(.16+.14*max(-vStructureNormal.y,0.)));');
+          shader.fragmentShader=shader.fragmentShader.replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\ntotalEmissiveRadiance+=diffuseColor.rgb*vec3(.48,.55,.68)*stormLight(vStructurePosition,normalize(vStructureNormal));totalEmissiveRadiance+=(hologramSpill(vStructurePosition,normalize(vStructureNormal))*1.3+logoSpill(vStructurePosition,normalize(vStructureNormal))*2.2+practicalSpill(vStructurePosition,normalize(vStructureNormal))*2.4)*diffuseColor.rgb*.8;totalEmissiveRadiance+=diffuseColor.rgb*((.004+.08*max(dot(normalize(vStructureNormal),normalize(vec3(-.6,.75,.4))),0.))*vMaterialShade+streetGlowColor(sp)*streetGlow(sp.y)*(.16+.14*max(-vStructureNormal.y,0.)));');
         };
       });
       instances(structure,structureMaterial,'Stone, bronze, ceramic and industrial setbacks',null,true);
@@ -401,16 +411,16 @@ vec3 cityFogMix(vec3 c,vec3 p){
       function loadLighting(){return Promise.all([cityLighting?cityLighting.ready:null,corporate?corporate.ready:null]);}
 
       var hazeMaterial=material(new THREE.ShaderMaterial({
-        uniforms:Object.assign({uHazeColor:{value:linear('#4b6a85')},uTime:{value:0},uDensity:{value:1}},hologramUniforms,atmosUniforms),transparent:true,depthWrite:false,depthTest:true,fog:false,
+        uniforms:Object.assign({uHazeColor:{value:linear('#4b6a85')},uTime:{value:0},uDensity:{value:1}},hologramUniforms,atmosUniforms,stormUniforms),transparent:true,depthWrite:false,depthTest:true,fog:false,
         vertexShader:'varying vec2 vUv;varying vec3 vMistPosition;void main(){vUv=uv;vMistPosition=(modelMatrix*vec4(position,1.)).xyz*.25;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
         fragmentShader:[
-          'varying vec2 vUv;varying vec3 vMistPosition;uniform vec3 uHazeColor;uniform float uTime,uDensity;',noiseFunctions,glowGLSL,hologramGLSL,
+          'varying vec2 vUv;varying vec3 vMistPosition;uniform vec3 uHazeColor;uniform float uTime,uDensity;',noiseFunctions,glowGLSL,hologramGLSL,stormGLSL,
           'void main(){vec2 p=vUv*vec2(6.,2.7)+vec2(uTime*.003,0.);float n=fbm(p+fbm(p*.7)*1.6);',
           'float veil=exp(-pow((vUv.y-.43)*3.8,2.));float edge=smoothstep(0.,.12,vUv.x)*(1.-smoothstep(.88,1.,vUv.x));',
           'edge*=smoothstep(0.,.1,vUv.y)*(1.-smoothstep(.9,1.,vUv.y));float alpha=smoothstep(.19,.76,n)*veil*edge*mix(.25,.43,smoothstep(65.,300.,-vMistPosition.z))*uDensity;',
           'float warm=smoothstep(10.,150.,vMistPosition.x)*.18;vec3 scattering=mix(uHazeColor,vec3(.095,.055,.026),warm);scattering+=hologramGlow(vMistPosition)*.20;',
           'float lowGlow=streetGlow(vMistPosition.y);scattering+=streetGlowColor(vMistPosition)*lowGlow*uGlowStrength*3.4;alpha*=1.+lowGlow*1.1;',
-          'gl_FragColor=vec4(scattering,alpha);','#include <tonemapping_fragment>','#include <encodings_fragment>','}'
+          'scattering+=vec3(.7,.78,.9)*uLightning*.7;gl_FragColor=vec4(scattering,alpha);','#include <tonemapping_fragment>','#include <encodings_fragment>','}'
         ].join('\n')
       }));
       // The upper four layers are the original depth haze; the lower three are
@@ -545,12 +555,14 @@ if(exteriorPMREM)exteriorPMREM.dispose();exteriorPMREM=next;
         group: group,
         setCarModel: setCarModel,
         setWhaleModel:function(gltf){if(whale){whale.load(gltf);updateWhale(0);}},
+        isLightningActive:function(){return !!(lightning&&lightning.group.visible);},
+        getLightningIntensity:function(){return stormUniforms.uLightning.value;},
         getHologramLight:function(){return whale?whale.getLightState():null;},
         refreshReflections:refreshReflections,
         setAtmosphere:function(enabled){atmosphereEnabled=!!enabled;group.children.forEach(function(o){if(/^(Rain-softened atmosphere|Practical-light scattering|Rooftop searchlight shaft|Hologram projector column)/i.test(o.name))o.visible=enabled;});},
         loadLighting: loadLighting,
-        getStats: function(){return {architecture:architectureStats,shadows:cityShadows.stats,towerVolumes:towers.length,facadeFins:ribs.length,architecturalDetails:structure.length,windowReveals:reveals.length,parallaxInteriors:true,billboards:cityLighting?cityLighting.getStats().mediaPanels:0,localLightProxies:cityLighting?cityLighting.getStats().localLightProxies:0,companyMarks:corporate?corporate.getStats().identities:0,orbitalRings:0,signage:signage?signage.getStats():null,corporate:corporate?corporate.getStats():null,obstructionLights:beacons.length,lightShafts:searchlights.length+1,whale:whale?whale.getStats():null,...traffic.getStats()};},
-        update: function (elapsedSeconds) { updateWhale(elapsedSeconds);if(cityLighting)cityLighting.update(elapsedSeconds);skyUniforms.uTime.value=elapsedSeconds;hazeMaterial.uniforms.uTime.value=elapsedSeconds;localMistMaterial.uniforms.uTime.value=elapsedSeconds;animateCars(elapsedSeconds);beaconMaterial.uniforms.uTime.value=elapsedSeconds;updateBeams(elapsedSeconds);if(signage)signage.update(elapsedSeconds);if(corporate)corporate.update(elapsedSeconds); },
+        getStats: function(){return {lightning:lightning?lightning.getStats():null,architecture:architectureStats,shadows:cityShadows.stats,towerVolumes:towers.length,facadeFins:ribs.length,architecturalDetails:structure.length,windowReveals:reveals.length,parallaxInteriors:true,billboards:cityLighting?cityLighting.getStats().mediaPanels:0,localLightProxies:cityLighting?cityLighting.getStats().localLightProxies:0,companyMarks:corporate?corporate.getStats().identities:0,orbitalRings:0,signage:signage?signage.getStats():null,corporate:corporate?corporate.getStats():null,obstructionLights:beacons.length,lightShafts:searchlights.length+1,whale:whale?whale.getStats():null,...traffic.getStats()};},
+        update: function (elapsedSeconds,motionEnabled) { if(lightning)lightning.update(elapsedSeconds,atmosphereEnabled&&(motionEnabled===undefined?!options.reducedMotion:motionEnabled));updateWhale(elapsedSeconds);if(cityLighting)cityLighting.update(elapsedSeconds);skyUniforms.uTime.value=elapsedSeconds;hazeMaterial.uniforms.uTime.value=elapsedSeconds;localMistMaterial.uniforms.uTime.value=elapsedSeconds;animateCars(elapsedSeconds);beaconMaterial.uniforms.uTime.value=elapsedSeconds;updateBeams(elapsedSeconds);if(signage)signage.update(elapsedSeconds);if(corporate)corporate.update(elapsedSeconds); },
         setMood: function (name) {
           var mood=colors[name]||colors.night,night=name==='night';
           setLinear(skyUniforms.uTop.value,mood.top);setLinear(skyUniforms.uHorizon.value,mood.horizon);setLinear(skyUniforms.uBottom.value,mood.bottom);
@@ -559,7 +571,7 @@ if(exteriorPMREM)exteriorPMREM.dispose();exteriorPMREM=next;
           setLinear(hazeMaterial.uniforms.uHazeColor.value,night?'#365265':'#697976');hazeMaterial.uniforms.uDensity.value=night?1.12:.78;
           atmosUniforms.uGlowStrength.value=night?.08:.03;skyUniforms.uPollution.value=night?1:.35;if(signage)signage.setMood(name);if(corporate)corporate.setMood(name);
         },
-        dispose: function () { if(corporate)corporate.dispose();if(signage)signage.dispose();if(whale)whale.dispose();if(cityLighting)cityLighting.dispose();if(exteriorTarget)exteriorTarget.dispose();if(exteriorPMREM)exteriorPMREM.dispose();traffic.dispose();geometries.forEach(function(g){g.dispose();});materials.forEach(function(m){m.dispose();});textures.forEach(function(t){t.dispose();});group.clear(); }
+        dispose: function () { if(lightning)lightning.dispose();if(corporate)corporate.dispose();if(signage)signage.dispose();if(whale)whale.dispose();if(cityLighting)cityLighting.dispose();if(exteriorTarget)exteriorTarget.dispose();if(exteriorPMREM)exteriorPMREM.dispose();traffic.dispose();geometries.forEach(function(g){g.dispose();});materials.forEach(function(m){m.dispose();});textures.forEach(function(t){t.dispose();});group.clear(); }
       };
     }
   };

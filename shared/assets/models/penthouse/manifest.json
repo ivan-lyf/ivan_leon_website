@@ -141,7 +141,7 @@
     "normalStrength": 0.065,
     "finish": "polished charcoal stone"
   },
-  "exportMeshes": 32,
+  "exportMeshes": 33,
   "aoRadiusMeters": 0.3,
   "bakedIndirect": true,
   "indirectBake": {
@@ -166,5 +166,18 @@
     },
     "denoiser": "Blender compositor OpenImageDenoise",
     "denoiseQuality": "High"
+  },
+  "chairRepair": {
+    "version": "20261021",
+    "source": "artwork/penthouse/chair-rebuilt.blend",
+    "changes": [
+      "Piping seated against upholstery",
+      "Connected armrest mounts",
+      "Backrest stays routed behind cushion",
+      "Mechanism mount closes shell gap"
+    ],
+    "sameEnvelope": true,
+    "nonChairBinaryPayloadPreserved": true,
+    "chairMaterialBatches": 6
   }
 }
