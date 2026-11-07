@@ -29,8 +29,7 @@
   let bloomComposite, reflectionVisibility;
   let frame = 0, lastFrame = 0, flight = null, inComputer = false, ready = false;
   let lightOn = true, mood = 'night', moving = !reduced, modelLoaded = false, modelMetrics = null;
-  const ceilingLights = [], ceilingDiffusers = [], bounceMaterials = [], keyboardMeshes = [];
-  let keyboardOutline, keyboardHovered = false, keyboardFlashUntil = 0;
+  const ceilingLights = [], ceilingDiffusers = [], bounceMaterials = [];
   let currentView = 'room', lastFocus, oldPose, screenDirty = true, refreshing = false;
   let screenBounds, computerBlend = 0, backdropBlend = 0, computerAlignment = 0;
   let textureTimer, elapsed = 0, disposed = false;
@@ -54,49 +53,12 @@
     target.addEventListener(event, handler, options);
     cleanups.push(() => target.removeEventListener(event, handler, options));
   }
-  function hotspot(object, name, action, kind) {
-    object.traverse(node => { if(node.isMesh) node.userData.hotspot = {name,action,kind}; });
+  function hotspot(object, name, action) {
+    object.traverse(node => { if(node.isMesh) node.userData.hotspot = {name,action}; });
   }
-  function buildKeyboardOutline() {
-    // Use the authored case silhouette, without tracing all the individual keys.
-    const casing=keyboardMeshes.find(node=>node.name==='KEYBOARD_case')||keyboardMeshes.reduce((largest,node)=>{
-      node.geometry.computeBoundingBox();const size=node.geometry.boundingBox.getSize(new T.Vector3());
-      return !largest||size.x*size.z>largest.area?{node,area:size.x*size.z}:largest;
-    },null)?.node;
-    if(!casing)return;
-    const material=new T.ShaderMaterial({
-      uniforms:{viewport:{value:new T.Vector2(innerWidth,innerHeight)},opacity:{value:1}},
-      vertexShader:`uniform vec2 viewport;
-        void main(){
-          vec4 clip=projectionMatrix*modelViewMatrix*vec4(position,1.);
-          vec2 direction=(projectionMatrix*vec4(normalize(normalMatrix*normal),0.)).xy;
-          // Keep the white contour two CSS pixels wide at both room and desk distances.
-          clip.xy+=direction/max(length(direction),.0001)*4./viewport*clip.w;
-          gl_Position=clip;
-        }`,
-      fragmentShader:'uniform float opacity;void main(){gl_FragColor=vec4(vec3(1.),opacity);}',
-      side:T.BackSide,depthTest:true,depthWrite:false,transparent:true,toneMapped:false
-    });
-    keyboardOutline=new T.Mesh(casing.geometry,material);keyboardOutline.name='Keyboard hover outline';
-    keyboardOutline.visible=false;keyboardOutline.frustumCulled=false;keyboardOutline.renderOrder=8;
-    keyboardOutline.raycast=()=>{};
-    // Interaction hints should not be baked into reflection captures.
-    keyboardOutline.onBeforeRender=(_renderer,_scene,viewCamera)=>{material.uniforms.opacity.value=viewCamera===camera?1:0;};
-    casing.add(keyboardOutline);
-  }
-  function setKeyboardHover(hovered) {
-    keyboardHovered=hovered;
-    if(keyboardOutline)keyboardOutline.visible=hovered||performance.now()<keyboardFlashUntil;
-  }
-  function clearKeyboardFeedback() {
-    keyboardFlashUntil=0;setKeyboardHover(false);
+  function clearHoverFeedback() {
     document.getElementById('room-tooltip')?.classList.remove('visible');
     if(renderer)renderer.domElement.style.cursor='grab';
-  }
-  function pressKeyboard() {
-    if(!ready||inComputer||flight?.computer)return;
-    keyboardFlashUntil=performance.now()+350;
-    if(keyboardOutline)keyboardOutline.visible=true;
   }
   function screenMaterial() {
     const canvas=document.createElement('canvas');canvas.width=768;canvas.height=560;
@@ -258,7 +220,6 @@
         ceilingDiffusers.push(node);hotspot(node,'Switch the ceiling LEDs · L',toggleCeiling);
       }
       if(name.startsWith('COMPUTER_')||name.startsWith('MOUSE_'))hotspot(node,'Use the computer · C',enterComputer);
-      if(name.startsWith('KEYBOARD_')){keyboardMeshes.push(node);hotspot(node,'Click to try the keys · K',pressKeyboard,'keyboard');}
       if(name.startsWith('SCREEN_SURFACE')){screen=node;node.material=screenMaterial();node.castShadow=false;hotspot(node,'Use the computer · C',enterComputer);}
       for(const kind of Object.keys(measured))if(name.startsWith(kind.toUpperCase()+'_'))measured[kind].expandByObject(node);
     });
@@ -431,7 +392,7 @@
     else document.getElementById('view-room').focus({preventScroll:true});
   }
   function startFlight(destination,options={}) {
-    clearKeyboardFeedback();
+    clearHoverFeedback();
     // Flush orbit momentum only while in orbit mode: its four-unit minimum must
     // never push the close-up camera backwards during the screen handoff.
     controls.enabled=false;
@@ -598,8 +559,8 @@
     }
     cleanups.push(()=>cancelAnimationFrame(hoverFrame));
     function hoverAt(e) {
-      if(e.pointerType==='touch'||down||inComputer||flight){setKeyboardHover(false);tip.classList.remove('visible');return;}
-      const h=hit(e);setKeyboardHover(h?.kind==='keyboard');
+      if(e.pointerType==='touch'||down||inComputer||flight){tip.classList.remove('visible');return;}
+      const h=hit(e);
       canvas.style.cursor=h?'pointer':'grab';tip.textContent=h?.name||'';
       tip.style.transform=`translate(${Math.min(innerWidth-220,e.clientX+16)}px,${Math.min(innerHeight-45,e.clientY+18)}px)`;
       tip.classList.toggle('visible',!!h);
@@ -608,7 +569,7 @@
       if(down&&e.pointerId!==down.id){down.moved=true;return;}
       if(e.button!==0||inComputer||flight?.computer){down=null;return;}
       down={x:e.clientX,y:e.clientY,id:e.pointerId,moved:false};takeOver();
-      clearKeyboardFeedback();tip.classList.remove('visible');canvas.style.cursor='grabbing';
+      clearHoverFeedback();tip.classList.remove('visible');canvas.style.cursor='grabbing';
     });
     on(canvas,'pointerup',e=>{
       if(inComputer||flight?.computer){down=null;return;}
@@ -623,11 +584,11 @@
       if(down){if(down.moved)canvas.style.cursor='grabbing';return;}
       queueHover(e);
     });
-    on(canvas,'pointerleave',()=>{down=null;clearKeyboardFeedback();tip.classList.remove('visible');canvas.style.cursor='grab';});
-    on(canvas,'pointercancel',()=>{down=null;clearKeyboardFeedback();tip.classList.remove('visible');});
-    on(controls,'start',()=>{clearKeyboardFeedback();tip.classList.remove('visible');});
+    on(canvas,'pointerleave',()=>{down=null;clearHoverFeedback();tip.classList.remove('visible');canvas.style.cursor='grab';});
+    on(canvas,'pointercancel',()=>{down=null;clearHoverFeedback();tip.classList.remove('visible');});
+    on(controls,'start',()=>{clearHoverFeedback();tip.classList.remove('visible');});
     on(canvas,'wheel',()=>coach.interacted('walk'),{passive:true});
-    on(window,'blur',()=>{down=null;clearKeyboardFeedback();tip.classList.remove('visible');});
+    on(window,'blur',()=>{down=null;clearHoverFeedback();tip.classList.remove('visible');});
     document.querySelectorAll('[data-view]').forEach(b=>on(b,'click',()=>goTo(b.dataset.view)));
     on(document.getElementById('enter-computer'),'click',enterComputer);on(document.getElementById('room-back'),'click',()=>exitComputer());
     on(document.getElementById('ceiling-toggle'),'click',toggleCeiling);on(document.getElementById('motion-toggle'),'click',toggleMotion);
@@ -639,15 +600,15 @@
       if(e.key==='Escape'){if(e.defaultPrevented)return;if(inComputer||flight?.computer)exitComputer();else goTo('room');return;}
       if(inComputer||flight?.computer||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||e.metaKey||e.ctrlKey||e.altKey)return;
       if(e.key==='?'){e.preventDefault();openHelp();return;}
-      const key=e.key.toLowerCase();const actions={c:enterComputer,k:()=>{if(!e.repeat)pressKeyboard();},'1':()=>goTo('room'),'2':()=>goTo('desk'),'3':()=>goTo('city'),l:toggleCeiling,r:()=>goTo('room')};
+      const key=e.key.toLowerCase();const actions={c:enterComputer,'1':()=>goTo('room'),'2':()=>goTo('desk'),'3':()=>goTo('city'),l:toggleCeiling,r:()=>goTo('room')};
       if(actions[key]){e.preventDefault();actions[key]();}
-      if(key.startsWith('arrow')){e.preventDefault();clearKeyboardFeedback();takeOver();controls.nudge(key==='arrowleft'?.09:key==='arrowright'?-.09:0,key==='arrowup'?.06:key==='arrowdown'?-.06:0);}
+      if(key.startsWith('arrow')){e.preventDefault();clearHoverFeedback();takeOver();controls.nudge(key==='arrowleft'?.09:key==='arrowright'?-.09:0,key==='arrowup'?.06:key==='arrowdown'?-.06:0);}
     });
     const observer=new MutationObserver(()=>{screenDirty=true;});observer.observe(screenElement,{childList:true,subtree:true,attributes:true,characterData:true});cleanups.push(()=>observer.disconnect());
     textureTimer=setInterval(refreshScreen,1800);
-    on(window,'resize',()=>{clearKeyboardFeedback();keyboardOutline?.material.uniforms.viewport.value.set(innerWidth,innerHeight);weather?.resize(innerWidth,innerHeight);resizePostprocessing();camera.fov=innerWidth<700?58:52;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(renderPixelRatio());if(inComputer)layoutComputer();else if(flight?.computer==='enter'){const p=computerPose();flight.to=p.position;flight.target=p.target;}});
+    on(window,'resize',()=>{clearHoverFeedback();weather?.resize(innerWidth,innerHeight);resizePostprocessing();camera.fov=innerWidth<700?58:52;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(renderPixelRatio());if(inComputer)layoutComputer();else if(flight?.computer==='enter'){const p=computerPose();flight.to=p.position;flight.target=p.target;}});
     on(reducedQuery,'change',e=>{reduced=e.matches;if(reduced&&moving)toggleMotion();if(reduced)finishFlight();});
-    on(document,'visibilitychange',()=>{clearKeyboardFeedback();clock.getDelta();if(!document.hidden)lastFrame=0;});
+    on(document,'visibilitychange',()=>{clearHoverFeedback();clock.getDelta();if(!document.hidden)lastFrame=0;});
     on(canvas,'webglcontextlost',e=>{e.preventDefault();showError('The graphics connection paused. Reload to return to the room.');});
   }
   function showError(message) {
@@ -671,7 +632,6 @@
     // The half-millisecond tolerance absorbs requestAnimationFrame timestamp jitter.
     lastFrame=budget?lastFrame+budget*Math.max(1,Math.floor((sinceLast+.5)/budget)):now;
     const dt=Math.min(clock.getDelta(),.1);if(moving)elapsed+=dt;
-    if(keyboardOutline)keyboardOutline.visible=!flight&&(keyboardHovered||now<keyboardFlashUntil);
     if(flight){
       const p=Math.min(1,(now-flight.start)/flight.duration);
       let e=flight.computer?p*p*p*(p*(p*6-15)+10):p<.5?4*p*p*p:1-Math.pow(-2*p+2,3)/2;
@@ -754,8 +714,8 @@
   function dispose() {
     disposed=true;arrival?.dispose();flight=null;clearComputer();cancelAnimationFrame(frame);clearInterval(textureTimer);cleanups.forEach(fn=>fn());
     // The workstation owns its generated resources; the live desktop texture
-    // and interaction outline belong to this scene. Remove those before cleanup.
-    if(workstation){keyboardOutline?.material.dispose();keyboardOutline?.parent?.remove(keyboardOutline);workstation.dispose();screenTexture?.dispose();}
+    // belongs to this scene. Release it before cleanup.
+    if(workstation){workstation.dispose();screenTexture?.dispose();}
     reflectionVisibility?.dispose();bloomComposite?.dispose();
     controls?.dispose();city?.dispose();weather?.dispose();bloomPass?.dispose();outputPass?.material.dispose();fxaaPass?.material.dispose();composer?.renderTarget1.dispose();composer?.renderTarget2.dispose();probeTarget?.dispose();probeMap?.dispose();floorReflection?.getRenderTarget().dispose();
     const geometries=new Set(),materials=new Set(),textures=new Set();scene?.traverse(o=>{if(o.geometry)geometries.add(o.geometry);[].concat(o.material||[]).forEach(m=>{materials.add(m);for(const value of Object.values(m)){if(value?.isTexture)textures.add(value);}});});geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());renderer?.dispose();

@@ -68,7 +68,6 @@ Open http://localhost:8000/?as=leon or http://localhost:8000/?as=ivan. No build 
 - `C`: use the computer; `Esc`: return to the room.
 - `L`: ceiling LEDs. `R`: reset view. The scene stays at night.
 - The glass, computer, mouse, and ceiling diffusers can also be clicked.
-- Click or tap the keyboard (or press `K`) for silent key movement. Keyboard hover has no white outline or clicking sound.
 - Motion can be paused; reduced-motion preferences are respected.
 - Plain desktop fallback: `?scene=desktop` (with `?as=` for either owner).
 
@@ -187,9 +186,9 @@ The exterior import preserved the existing room design, furniture dimensions, re
 
 The current desk uses `shared/penthouse-workstation.js`, adapted from the site owner's `workstation.zip`. It replaces only the original computer, keyboard and mouse meshes and adds their cabling and a small floor service port. The keyboard and mouse sit on the raised mat, and the cable tubes clear both the mat and tabletop before dropping behind the desk. The room, desk, chair, enlarged desk mat, glazing, ceiling panels, city, reflection pipeline and night-lighting settings are retained. No additional model download or build step is needed.
 
-The terminal has aged ABS and gunmetal surfaces, a curved CRT, vents, a data card and status lights. The 67-key keyboard has a white hover outline and silent click/tap/`K` feedback; keyboard sound is disabled. Its status animation uses the existing motion clock, so pause and reduced-motion preferences apply. The mouse and computer keep their entry actions.
+The terminal has aged ABS and gunmetal surfaces, a curved CRT, vents, a data card and status lights. The 67-key keyboard is decorative: it has no hover outline, click action, shortcut or sound. Its status animation uses the existing motion clock, so pause and reduced-motion preferences apply. The mouse and computer keep their entry actions.
 
-The CRT samples the existing live desktop texture with distance-aware filtering to reduce dither aliasing. The camera continues its existing screen-aligned entry and return transition; keyboard feedback stays a separate action. Imported-resource handling preserves atlases shared with the room, retires replaced resources, releases rebuilt cable geometry, and keeps workstation disposal idempotent. The live desktop texture remains owned by the scene.
+The CRT samples the existing live desktop texture with distance-aware filtering to reduce dither aliasing. The camera continues its existing screen-aligned entry and return transition. Imported-resource handling preserves atlases shared with the room, retires replaced resources, releases rebuilt cable geometry, and keeps workstation disposal idempotent. The live desktop texture remains owned by the scene.
 
 See `artwork/workstation/README.md` for the integrated contract. `artwork/workstation/HANDOFF.md` preserves the upstream ZIP brief with a provenance note; its standalone preview and layout describe the supplied package. The native Blender files retain the previous workstation and have not been regenerated for this browser-only replacement. Source-distribution and local-archive details are in `artwork/README.md`.
 

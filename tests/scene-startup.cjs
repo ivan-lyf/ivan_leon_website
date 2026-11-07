@@ -20,7 +20,7 @@ function fixture({ hidden = false, inComputer = false, lite = false, fallback = 
   function runStage(name) { events.push(name); if (failure === name) throw error; }
   context = {
     frame: 0, lastFrame: 0, disposed: false, flight: null, inComputer, lite, moving: true, elapsed: 0,
-    keyboardOutline: null, reduced: false, probeDirty: true, floorReflection: {}, scene: {},
+    reduced: false, probeDirty: true, floorReflection: {}, scene: {},
     document: { hidden, getElementById(id) { assert.equal(id, 'loading'); return loading; } },
     clock: { getDelta: () => .016 }, T: { MathUtils: { clamp: (x, lo, hi) => Math.max(lo, Math.min(hi, x)) } },
     camera: { position: { x: 0, y: 6, z: 4 } }, controls: { update: () => runStage('controls') },

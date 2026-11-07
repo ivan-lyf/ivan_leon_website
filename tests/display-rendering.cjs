@@ -54,9 +54,9 @@ function make({ width = 2550, height = 1440, dpr = 1, coarse = false, cores = 8 
     },
     renderer, scene: new T.Scene(), camera: null,
     composer: null, bloomPass: null, outputPass: null, fxaaPass: null, bloomComposite: null,
-    hdrEnabled: true, keyboardOutline: null, inComputer: false, flight: null,
+    hdrEnabled: true, inComputer: false, flight: null,
     quality: { maxRatio: Infinity, bloomScale: 1 },
-    clearKeyboardFeedback() {},
+    clearHoverFeedback() {},
     weather: { resize(w, h) { this.lastSize = [w, h]; } }
   });
   vm.runInContext(fs.readFileSync(path.join(repo, 'shared/penthouse-bloom-composite.js'), 'utf8'), sandbox);
