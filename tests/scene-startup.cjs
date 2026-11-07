@@ -24,6 +24,8 @@ function fixture({ hidden = false, inComputer = false, lite = false, fallback = 
     document: { hidden, getElementById(id) { assert.equal(id, 'loading'); return loading; } },
     clock: { getDelta: () => .016 }, T: { MathUtils: { clamp: (x, lo, hi) => Math.max(lo, Math.min(hi, x)) } },
     camera: { position: { x: 0, y: 6, z: 4 } }, controls: { update: () => runStage('controls') },
+    // Overlay/monitor hooks run after rendering and are exercised in the browser.
+    updateComputerHint() {}, monitorFrame() {}, coach: { show() {} }, hintAllowed: false,
     workstation: { update: () => runStage('workstation') },
     city: { update: () => runStage('city'), getLightningIntensity: () => 0, getHologramLight: () => null },
     updateStormLighting: () => runStage('storm'),

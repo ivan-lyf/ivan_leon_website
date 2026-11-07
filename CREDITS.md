@@ -1,41 +1,19 @@
 # Asset Credits
 
-## Classic-room 3D models
-
-| Asset | Author | Source | License | Verified |
-|---|---|---|---|---|
-| Low-Poly Freeride Skis | Romainhj | https://sketchfab.com/3d-models/low-poly-freeride-skis-8b27a5ff5c6f436ab18d6d1d5862aeb5 | CC Attribution (CC BY 4.0) | 2026-07-02 |
-| Low-poly Keyboard | (user-supplied file) | provided by site owner | user-supplied | 2026-07-03 |
-| Old Table Lamp v01 | (user-supplied file) | provided by site owner | user-supplied | 2026-07-02 |
-| 1960s Office Chair | (user-supplied file) | provided by site owner | user-supplied | 2026-07-03 |
-
-Models were optimized for web delivery (Draco mesh compression + WebP textures ≤1024px via
-gltf-transform); geometry and materials otherwise unmodified.
-
 ## Textures
 
-Wood PBR set (`shared/assets/textures/wood_*.jpg`): pre-existing in the repository
-(downscaled to 1024px). Floor planks, desk-wood grain accents, and all grime/label
-textures are generated procedurally at runtime — no third-party texture assets.
+Wood maps (`shared/assets/textures/wood_color.jpg`, `wood_normal.jpg`): pre-existing in the repository
+(downscaled to 1024px). Wall plaster normal map (`shared/assets/textures/plaster_normal.jpg`) from the
+"Plaster001" set on ambientCG.com — https://ambientcg.com/view?id=Plaster001 — CC0 1.0 (verified 2026-07-02),
+downscaled/re-encoded. These are used by the penthouse Blender authoring scripts.
 
-Wall plaster PBR set ("Plaster001") from ambientCG.com — https://ambientcg.com/view?id=Plaster001 — CC0 1.0 (verified 2026-07-02), downscaled/re-encoded.
-Ceiling plaster ("Plaster002") from ambientCG.com — https://ambientcg.com/view?id=Plaster002 — CC0 1.0 (verified 2026-07-02).
-
-## Audio
-
-The ambient room tone is synthesized in-browser with the Web Audio API
-(`shared/scene-audio.js`) — no recorded asset, no third-party license.
-
-## Other classic-room geometry
-
-The Macintosh, desk, mug, and room geometry are procedural (built in code
-with Three.js primitives) — no external assets. The table lamp is the user-supplied
-GLB credited above.
+The earlier classic Macintosh room (its Sketchfab/user-supplied models, extra textures and synthesized
+room tone) was retired on 2026-11-07; both owners now share the penthouse entrance.
 
 
-## Leon's penthouse
+## The penthouse
 
-The original penthouse architecture, desk, chair, compact computer, keyboard, mouse and ceiling LED panels were created for this website in Blender 5.1. The current browser workstation replaces the compact computer, keyboard and mouse with the owner-supplied procedural package credited below; the room and editable Blender checkpoint retain their original authoring provenance. The chair is an original model for this scene; the classic room retains its existing credited chair and table lamp assets. Leon's penthouse has no desk lamp.
+The original penthouse architecture, desk, chair, compact computer, keyboard, mouse and ceiling LED panels were created for this website in Blender 5.1. The current browser workstation replaces the compact computer, keyboard and mouse with the owner-supplied procedural package credited below; the room and editable Blender checkpoint retain their original authoring provenance. The chair is an original model for this scene. The penthouse has no desk lamp.
 
 The editable Blender file and reproducible authoring scripts are in `artwork/penthouse/`. The web model is `shared/assets/models/penthouse/penthouse-v2.glb`. The Blender source retains the individual authored objects and lighting rig; the GLB groups meshes for web delivery and embeds Cycles-baked ambient occlusion. The skyline, atmospheric and wet-glass/rain shaders began as original implementation work; the current exterior also incorporates revisions from the user-provided `Cyberpunk penthouse scene realism.zip`, as noted below. The scene opens at night, with four recessed square ceiling panels, polished stone reflections and a local cubemap of the actual room.
 
@@ -49,7 +27,7 @@ AXL, Prism and Vectra are original fictional corporate marks, originally drawn i
 
 ### Vendored runtime libraries
 
-The existing Three.js r128, OrbitControls, GLTFLoader, DRACOLoader, and html-to-image 1.11.11 runtime dependencies are vendored at their prior versions for dependable local previews. License notices are included in `shared/vendor/`. Draco decoders are the official Three.js r128 distribution, under Apache-2.0; their license is included in `shared/vendor/draco/LICENSE.txt`.
+The existing Three.js r128, OrbitControls (used by the whale preview in `artwork/`), GLTFLoader, DRACOLoader, and html-to-image 1.11.11 runtime dependencies are vendored at their prior versions for dependable local previews. License notices are included in `shared/vendor/`. Draco decoders are the official Three.js r128 distribution, under Apache-2.0; their license is included in `shared/vendor/draco/LICENSE.txt`.
 
 Additional Three.js r128 helpers, under the same MIT license:
 

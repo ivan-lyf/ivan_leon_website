@@ -1,4 +1,4 @@
-/* LM-7 workstation: Leon's desk terminal, keyboard and mouse. Three.js r128.
+/* LM-7 workstation: the owner's desk terminal, keyboard and mouse. Three.js r128.
  * A second-hand 2070s terminal: yellowed ABS bezel over a gunmetal CRT body with
  * heatsink fins, a bolted-on uplink module with antenna, a KUJIRA data card in
  * the slot, asset and high-voltage stickers. JIS 65% mechanical keyboard in an
@@ -269,7 +269,10 @@
     box(computer, gunmetal, 'COMPUTER_badge-plate', [-.055, lift + .05, front + .0008], [.064, .024, .0025]);
     decal(computer, cv(512, 192, x => {
       x.fillStyle = '#c9cdd2'; x.font = '800 104px "Helvetica Neue",Arial,sans-serif'; x.textBaseline = 'middle';
-      let px = 26; 'LEON'.split('').forEach(l => { x.fillStyle = '#16181b'; x.fillText(l, px + 2, 82); x.fillStyle = '#c9cdd2'; x.fillText(l, px, 80); px += x.measureText(l).width + 18; });
+      const plate = String(options.nameplate || 'LEON').slice(0, 6);
+      // Wider names tighten their tracking so the badge never overflows.
+      const track = plate.length > 4 ? 6 : 18;
+      let px = 26; plate.split('').forEach(l => { x.fillStyle = '#16181b'; x.fillText(l, px + 2, 82); x.fillStyle = '#c9cdd2'; x.fillText(l, px, 80); px += x.measureText(l).width + track; });
       x.fillStyle = '#8f969e'; x.font = '500 30px "Hiragino Sans","Noto Sans JP",sans-serif'; x.fillText('端末 LM-7 · 大阪製', 30, 156);
     }), 'COMPUTER_badge', .06, .0225, [-.055, lift + .05, front + .0022]);
     box(computer, rubber, 'COMPUTER_card-slot', [.055, lift + .072, front + .0005], [.124, .011, .004]);

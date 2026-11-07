@@ -85,7 +85,19 @@ function cameraViews() {
     { name: 'elevated', position: [0, 12, 7], target: [0, 0, 3] },
     { name: 'top-down', position: [0, 12, 7], target: [0, 0, 7] }
   ];
-  // Sample the room's allowed OrbitControls angles, distances and position bounds.
+  // The look controller's full envelope: room bounds, yaw limits and pitch
+  // limits including the soft overshoot, read from production.
+  const look = fs.readFileSync(path.join(repo, 'shared/penthouse-look.js'), 'utf8');
+  const range = name => JSON.parse(look.match(new RegExp(name + ': (\\[[^\\]]+\\])'))[1].replace(/(^|[\[ ,])(-?)\./g, '$1$20.'));
+  const bounds = look.match(/bounds: \{ min: (\[[^\]]+\]), max: (\[[^\]]+\]) \}/).slice(1).map(v => JSON.parse(v));
+  const [yawRange, pitchRange] = [range('yaw'), range('pitch')];
+  for (const x of [bounds[0][0], 0, bounds[1][0]]) for (const y of [bounds[0][1], 5.4, bounds[1][1]]) for (const z of [bounds[0][2], 7, bounds[1][2]]) {
+    for (const yaw of [yawRange[0], 0, yawRange[1]]) for (const pitch of [pitchRange[0] - .16, 0, pitchRange[1] + .16]) {
+      const d = [-Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch)];
+      views.push({ name: 'look-' + views.length, position: [x, y, z], target: [x + d[0] * 6, y + d[1] * 6, z + d[2] * 6] });
+    }
+  }
+  // Broad coverage retained from the earlier orbit envelope.
   for (const target of [[-3.5, 4.9, -5.5], [-3.2, 3.4, -.3], [0, 5.8, -33]]) {
     for (const theta of [-.65, -.4, 0, .4, .85]) for (const phi of [.34, .4, .5, .53]) {
       for (const distance of [4, 12, 24, 32]) {

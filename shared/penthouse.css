@@ -3,7 +3,6 @@
 html.penthouse { color-scheme: dark; }
 .penthouse body { background: #201c19; color: #eee9df; font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; }
 .penthouse #gl { touch-action: none; outline: none; }
-.penthouse #hud, .penthouse #vignette, .penthouse #audio-toggle { display: none; }
 .penthouse .room-ui { display: block; }
 /* Layers: canvas 1, atmosphere 2, room UI 5, desktop 45, desktop close 46, dialogs 60. */
 .penthouse .room-shade { position: fixed; inset: 0; z-index: 2; pointer-events: none; background: linear-gradient(180deg, rgba(10,13,15,.45), transparent 22%, transparent 68%, rgba(10,13,15,.58)); }
@@ -13,6 +12,14 @@ html.penthouse { color-scheme: dark; }
 .penthouse .room-button { appearance: none; background: transparent; color: #e8e3da; border: 1px solid transparent; border-radius: 3px; padding: 11px 15px; font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; transition: background .2s, border-color .2s, color .2s; }
 .penthouse .room-button:hover { background: #15191c80; border-color: #eee5d333; color: #fffaf1; }
 .penthouse .room-button[aria-pressed="true"] { background: #181b1b75; border-color: #eee5d344; }
+/* The navigation reads as buttons at a glance: a translucent plate, a visible edge. */
+.penthouse .room-nav .room-button { background: #12171ab8; border-color: #eee5d32e; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.penthouse .room-nav .room-button:hover { background: #1b2125d9; border-color: #eee5d366; }
+.penthouse .room-nav .room-button[aria-pressed="true"] { background: #2a2620d9; border-color: #ffdcaa77; color: #ffe6c2; }
+.penthouse .room-button.room-primary { background: #e9c99a; border-color: #e9c99a; color: #191511; font-weight: 600; }
+.penthouse .room-button.room-primary:hover { background: #f6dcb4; border-color: #f6dcb4; color: #120f0c; }
+.penthouse .room-button kbd { display: inline-block; min-width: 1.5em; margin-left: 6px; padding: 1px 5px; border: 1px solid currentColor; border-radius: 3px; font: 600 10px/1.4 ui-monospace, Menlo, monospace; text-align: center; opacity: .55; }
+.penthouse .room-tools .room-button kbd { margin: 0 4px 0 0; }
 .penthouse :is(button, a):focus-visible { outline: 2px solid #ffe0ab; outline-offset: 4px; }
 .penthouse #room-footer { position: fixed; z-index: 5; right: 40px; bottom: 32px; display: flex; justify-content: flex-end; align-items: flex-end; gap: 24px; transition: opacity .3s; pointer-events: none; }
 .penthouse #room-footer > * { pointer-events: auto; }
@@ -72,7 +79,6 @@ html.penthouse { color-scheme: dark; }
 /* Quiet progress before the room's first rendered frame. */
 .arrival { display: none; }
 .penthouse #loading { z-index: 70; background: #090e10; transition: opacity 200ms ease-out; }
-.penthouse #loading > .term { display: none; }
 .penthouse #loading.arrival-leaving { opacity: 0; pointer-events: none; }
 .penthouse.room-loading :is(#room-header,#room-footer) { visibility: hidden; }
 .penthouse .arrival {
@@ -91,4 +97,35 @@ html.penthouse { color-scheme: dark; }
 .penthouse .arrival[data-state="error"] :is(.arrival-percent,.arrival-progress) { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .penthouse #loading, .penthouse #arrival-fill { transition: none; }
+}
+
+/* First-visit guidance. */
+.penthouse #room-coach { position: fixed; z-index: 30; left: 50%; top: 50%; width: min(340px, calc(100vw - 32px)); padding: 24px 24px 20px; transform: translate(-50%, -46%); opacity: 0; transition: opacity .3s ease-out, transform .3s ease-out; background: #151a1df0; border: 1px solid #eee5d340; border-radius: 6px; box-shadow: 0 18px 70px #0009; color: #eee9df; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.penthouse #room-coach.visible { opacity: 1; transform: translate(-50%, -50%); }
+.penthouse #room-coach[hidden] { display: none; }
+.penthouse #room-coach h2 { margin: 0 0 12px; font-size: 20px; font-weight: 500; letter-spacing: -.3px; }
+.penthouse #room-coach ul { margin: 0 0 20px; padding: 0; list-style: none; display: grid; gap: 9px; font-size: 13px; color: #c9ccc9; }
+.penthouse #room-coach li::before { content: '·'; margin-right: 8px; color: #e9c99a; }
+.penthouse #room-coach b { color: #f3e2c8; font-weight: 600; }
+.penthouse .coach-actions { display: flex; gap: 8px; }
+.penthouse .coach-actions .room-button { flex: 1; border-color: #eee5d340; }
+/* A hand-sized dot sweeping side to side: "drag". */
+.penthouse .coach-drag { position: relative; height: 26px; margin-bottom: 14px; border-bottom: 1px dashed #eee5d330; }
+.penthouse .coach-drag span { position: absolute; left: 40%; top: 4px; width: 16px; height: 16px; border-radius: 50%; background: #e9c99a; box-shadow: 0 0 0 5px #e9c99a33; animation: coach-drag 2.2s ease-in-out infinite; }
+@keyframes coach-drag { 0%, 100% { transform: translateX(-60px); } 50% { transform: translateX(60px); } }
+.penthouse #room-hint { position: fixed; z-index: 5; left: 40px; bottom: 32px; margin: 0; display: flex; gap: 14px; padding: 9px 14px; border-radius: 999px; background: #12171ab0; border: 1px solid #eee5d326; color: #c9ccc9; font-size: 11.5px; pointer-events: none; opacity: 0; transition: opacity .5s; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.penthouse #room-hint.visible { opacity: 1; }
+.penthouse #room-hint b { color: #f3e2c8; font-weight: 600; }
+.penthouse #computer-hint { position: fixed; z-index: 4; left: 0; top: 0; padding: 7px 12px; border-radius: 999px; border: 1px solid #e9c99a; background: #191511d9; color: #f6dcb4; font: 600 11.5px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; cursor: pointer; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .25s; }
+.penthouse #computer-hint.visible { opacity: 1; pointer-events: auto; animation: hint-pulse 2.4s ease-in-out infinite; }
+.penthouse #computer-hint::after { content: ''; position: absolute; left: 50%; bottom: -7px; width: 1px; height: 7px; background: #e9c99a; }
+@keyframes hint-pulse { 0%, 100% { box-shadow: 0 0 0 0 #e9c99a55; } 50% { box-shadow: 0 0 0 7px #e9c99a00; } }
+.penthouse:is(.in-computer,.computer-transition,.room-loading) :is(#room-hint,#computer-hint,#room-coach) { opacity: 0 !important; pointer-events: none !important; }
+.penthouse #perf-panel { position: fixed; z-index: 80; left: 50%; bottom: 84px; transform: translateX(-50%); margin: 0; padding: 8px 10px; background: #000c; color: #9fe8b8; font: 11px/1.5 ui-monospace, Menlo, monospace; pointer-events: none; white-space: pre; }
+@media (max-width: 700px), (pointer: coarse) {
+  .penthouse #room-hint { display: none; }
+  .penthouse .room-button kbd { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .penthouse .coach-drag span, .penthouse #computer-hint.visible { animation: none; }
 }

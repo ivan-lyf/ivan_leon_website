@@ -1290,14 +1290,30 @@
     $("#card-other", body).addEventListener("click", gotoOther);
   }
 
+  // Ambient desktop life (critters, pop-up notes) can be paused by a host scene
+  // while the screen is only seen from across the room; nothing mutates the DOM then.
+  let ambientOn = true, desktopStarted = false;
+  function setAmbient(on) {
+    on = !!on;
+    if (on === ambientOn) return;
+    ambientOn = on;
+    if (!desktopStarted) return;
+    if (on) { setupCritters(); setupDeskNotes(); }
+    else {
+      critterTimers.forEach(clearTimeout); critterTimers = [];
+      deskNoteTimers.forEach(clearTimeout); deskNoteTimers = [];
+      desktop.querySelectorAll(".desknote").forEach((n) => n.remove());
+    }
+  }
+
   function startDesktop() {
+    desktopStarted = true;
     desktop.classList.remove("hidden");
     renderWallpaper();
     placeIcons();
     setupNowPlaying();
     setupGitHub();
-    setupCritters();
-    setupDeskNotes();
+    if (ambientOn) { setupCritters(); setupDeskNotes(); }
     window.addEventListener("resize", debounce(placeIcons, 200));
     // intro: glide a fake mouse to "About Me" and double-click it open
     requestAnimationFrame(() => introOpenAbout());
@@ -1801,6 +1817,7 @@
     gotoOther,
     gotoLeon: gotoOther, // backward-compat alias
     openControlPanel,
+    setAmbient,
   };
 
   if (document.readyState === "loading") {

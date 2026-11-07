@@ -10,12 +10,13 @@
     (function () {
       var q = new URLSearchParams(location.search);
       var leon = q.get('as') === 'leon' || (!q.has('as') && location.hostname.includes('leonmeng.xyz'));
-      window.ROOM_MODE = q.get('scene') === 'desktop' ? 'desktop' : leon && q.get('scene') !== 'classic' ? 'penthouse' : 'classic';
+      // Both people share the same penthouse entrance; only the owner details differ.
+      window.ROOM_OWNER = leon ? { key: 'leon', name: 'Leon Meng', short: 'Leon' } : { key: 'ivan', name: 'Ivan Luo', short: 'Ivan' };
+      window.ROOM_MODE = q.get('scene') === 'desktop' ? 'desktop' : 'penthouse';
       if (window.ROOM_MODE === 'penthouse') document.documentElement.classList.add('penthouse');
-      if (leon) {
-        document.title = 'Leon Meng | A room above the city';
-        document.querySelector('meta[name=description]').content = 'A personal space for Leon Meng, above a city of tomorrow. Explore the room and the projects on the computer.';
-      }
+      var owner = window.ROOM_OWNER;
+      document.title = owner.name + ' | A room above the city';
+      document.querySelector('meta[name=description]').content = 'A personal space for ' + owner.name + ', above a city of tomorrow. Explore the room and the projects on the computer.';
     })();
   </script>
   <!-- 1-bit Mac OS styling (Chicago font, CRT) — unchanged engine stylesheet -->
@@ -23,18 +24,12 @@
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
-    body {
-      background: radial-gradient(120% 95% at 50% 18%, #ffe9cf 0%, #f6cda0 58%, #e9b988 100%);
-      font-family: ui-monospace, 'Courier New', monospace; color: #4a3f30;
-    }
+    body { background: #090e10; font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; color: #eee9df; }
     #gl { position: fixed; inset: 0; z-index: 1; }
-    #vignette { position: fixed; inset: 0; z-index: 2; pointer-events: none;
-      background: radial-gradient(115% 100% at 50% 42%, rgba(0,0,0,0) 52%, rgba(28,16,6,0.30) 100%); }
 
-    /* Live screen engine: rasterised to a texture for the 3D mesh + used for
-       click hit-testing. Invisible on the page; the 3D mesh shows it. When the
-       viewer zooms in, mac-scene.js scales this element up to fill the viewport
-       for direct interaction. */
+    /* Live screen engine: rasterised to a texture for the 3D monitor. When the
+       visitor uses the computer, penthouse-scene.js scales this element over the
+       monitor for direct interaction. */
     #screen-host {
       position: fixed; left: 0; top: 0; width: 640px; height: 469px;
       opacity: 0; pointer-events: auto; z-index: 0; overflow: hidden;
@@ -48,98 +43,67 @@
     /* the 3D curve provides the CRT bulge; drop the flat oval vignette */
     #screen-host .crt-vignette, #screen-host .crt-flicker { display: none !important; }
 
-    #hud {
-      position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
-      z-index: 5; display: flex; gap: 16px; align-items: center;
-      background: rgba(34, 26, 18, 0.72); color: #ffe9cf;
-      border: 1px solid rgba(255, 233, 207, 0.25);
-      padding: 9px 16px; border-radius: 999px;
-      font-family: ui-monospace, 'Courier New', monospace; font-size: 12px; letter-spacing: 0.3px;
-      -webkit-font-smoothing: antialiased; backdrop-filter: blur(6px);
-      pointer-events: none; user-select: none; transition: opacity 0.6s;
-    }
-    #hud b { color: #ffd9a8; font-weight: 600; }
-    #hud .sep { opacity: 0.35; }
-    #audio-toggle { position: fixed; right: 18px; bottom: 18px; z-index: 6;
-      width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
-      background: rgba(34,26,18,0.72); border: 1px solid rgba(255,233,207,0.25);
-      border-radius: 999px; font-size: 17px; line-height: 1; cursor: pointer;
-      backdrop-filter: blur(6px); opacity: 0.85; }
-    #audio-toggle:hover { opacity: 1; }
-    /* boot overlay — Macintosh terminal, shown until the whole 3D scene loads */
-    #loading {
-      position: fixed; inset: 0; z-index: 9; display: flex; align-items: center; justify-content: center;
-      background: #050505;
-      transition: opacity 0.45s;
-    }
-    #loading .term {
-      margin: 0;
-      font-family: 'Monaco', ui-monospace, 'Courier New', monospace;
-      font-size: 15px; line-height: 1.55;
-      color: #eaeaea;
-      -webkit-font-smoothing: none;
-      width: min(560px, 86vw);
-      text-shadow: 0 0 2px rgba(220,220,220,0.35);
-    }
-    #loading .term .dim { color: #7d7d7d; }
-    #loading .term .blink { animation: term-blink 1s steps(1) infinite; }
-    @keyframes term-blink { 50% { opacity: 0; } }
+    #loading { position: fixed; inset: 0; z-index: 9; display: flex; align-items: center; justify-content: center; background: #090e10; }
   </style>
-  <link rel="stylesheet" href="shared/penthouse.css?v=20261022-minimal-arrival" />
+  <link rel="stylesheet" href="shared/penthouse.css?v=20261107-shared-entrance" />
 </head>
 <body>
-  <div id="loading"><pre class="term"><span class="dim">Device</span>
-System Software 1.0
-
-Initializing 3D environment ...
-<span id="boot-status">Loading assets ... 0/8</span>
-<span id="boot-bar-term">[······················]</span> <span class="blink">█</span></pre>
-    <section class="arrival" id="arrival" aria-label="Loading Leon’s penthouse">
+  <div id="loading">
+    <section class="arrival" id="arrival" aria-label="Loading the penthouse">
       <div class="arrival-readout">
         <p id="arrival-status" role="status" aria-live="polite">Loading…</p>
         <span class="arrival-percent" aria-hidden="true"><span id="arrival-percent">0</span>%</span>
       </div>
       <div class="arrival-progress" id="arrival-progress" role="progressbar" aria-label="Loading the penthouse" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="arrival-fill" aria-hidden="true"></span></div>
-      <a class="arrival-fallback" href="?as=leon&amp;scene=desktop">Open desktop</a>
+      <a class="arrival-fallback" id="arrival-fallback" href="?scene=desktop">Open desktop</a>
     </section>
   </div>
+  <script>document.getElementById('arrival-fallback').href = '?as=' + window.ROOM_OWNER.key + '&scene=desktop';</script>
   <script src="shared/penthouse-arrival.js?v=20261022-minimal-arrival"></script>
-  <div id="hud">
-    <span><b>Drag</b> to orbit</span><span class="sep">·</span>
-    <span><b>Scroll in</b> to enter</span><span class="sep">·</span>
-    <span><b>Esc</b> to exit</span>
-  </div>
-  <div id="vignette"></div>
   <div class="room-ui room-shade" aria-hidden="true"></div>
   <header id="room-header" class="room-ui">
     <nav class="room-nav" aria-label="Explore the room">
-      <button class="room-button" id="view-room" data-view="room" aria-pressed="true">The room</button>
-      <button class="room-button" data-view="desk" aria-pressed="false">At the desk</button>
-      <button class="room-button" data-view="city" aria-pressed="false">City view</button>
-      <button class="room-button" id="enter-computer">Use computer ↗</button>
+      <button class="room-button" id="view-room" data-view="room" aria-pressed="true">The room <kbd>1</kbd></button>
+      <button class="room-button" data-view="desk" aria-pressed="false">At the desk <kbd>2</kbd></button>
+      <button class="room-button" data-view="city" aria-pressed="false">City view <kbd>3</kbd></button>
+      <button class="room-button room-primary" id="enter-computer">Use computer <kbd>C</kbd></button>
     </nav>
   </header>
   <footer id="room-footer" class="room-ui">
     <div class="room-tools" aria-label="Room atmosphere">
       <button class="room-button" id="ceiling-toggle" aria-pressed="true">Ceiling on</button>
       <button class="room-button" id="motion-toggle" aria-pressed="true">Motion on</button>
-      <button class="room-button" id="help-toggle" aria-label="Room controls and keyboard shortcuts">Controls</button>
+      <button class="room-button" id="help-toggle" aria-label="Room controls and keyboard shortcuts"><kbd>?</kbd> Controls</button>
     </div>
   </footer>
+  <p id="room-hint" class="room-ui" aria-hidden="true"><span><b>Drag</b> to look</span><span><b>Scroll</b> to move</span><span><b>?</b> controls</span></p>
+  <section id="room-coach" class="room-ui" role="dialog" aria-labelledby="coach-title" hidden>
+    <div class="coach-drag" aria-hidden="true"><span></span></div>
+    <h2 id="coach-title">Welcome in.</h2>
+    <ul>
+      <li><b>Drag</b> to look around</li>
+      <li><b>Scroll</b> or pinch to move closer</li>
+      <li><b>Click the computer</b> to see the projects</li>
+    </ul>
+    <div class="coach-actions">
+      <button class="room-button room-primary" id="coach-close">Got it</button>
+      <button class="room-button" id="coach-help">All controls</button>
+    </div>
+  </section>
+  <button id="computer-hint" class="room-ui" tabindex="-1">Use the computer <span aria-hidden="true">↵</span></button>
   <div id="room-tooltip" class="room-ui" aria-hidden="true"></div>
   <div id="computer-backdrop" class="room-ui"></div>
   <button id="room-back" class="room-ui room-button">← Back to the room <span aria-hidden="true"> · Esc</span></button>
   <dialog id="room-help" class="room-dialog" aria-labelledby="help-title">
     <h2 id="help-title">Make yourself at home.</h2>
-    <p>Look around, sit at the desk, or take in the city. There is room for more, in time.</p>
-    <dl><dt>Look around</dt><dd>Drag / Arrow keys</dd><dt>Move closer</dt><dd>Scroll / Pinch</dd><dt>Room / Desk / City</dt><dd>1 / 2 / 3</dd><dt>Use the computer</dt><dd>C</dd><dt>Try the keyboard</dt><dd>K</dd><dt>Ceiling LEDs</dt><dd>L</dd><dt>Return to the room</dt><dd>Esc / R</dd></dl>
+    <p>Look around, sit at the desk, or take in the city. The projects live on the computer.</p>
+    <dl><dt>Look around</dt><dd>Drag / Arrow keys</dd><dt>Move forward / back</dt><dd>Scroll / Pinch</dd><dt>Room / Desk / City</dt><dd>1 / 2 / 3</dd><dt>Use the computer</dt><dd>Click it / C</dd><dt>Try the keyboard</dt><dd>K</dd><dt>Ceiling LEDs</dt><dd>L</dd><dt>Return to the room</dt><dd>Esc / R</dd><dt>This list</dt><dd>?</dd></dl>
     <button class="room-button" id="help-close">Back to exploring</button>
   </dialog>
 
   <!-- ============================================================
-       Live Mac OS engine markup (IDENTICAL to the original index.html
-       so mac.js / profile-*.js run untouched). mac-scene.js renders this
-       onto the 3D Macintosh's curved screen.
+       Live Mac OS engine markup, unchanged so mac.js / profile-*.js run
+       untouched. penthouse-scene.js renders it onto the room's monitor.
        ============================================================ -->
   <div id="screen-host">
     <div class="stage">
@@ -186,13 +150,10 @@ Initializing 3D environment ...
 
   <!-- Three.js (UMD r128) + DOM-to-texture -->
   <script src="shared/vendor/three.min.js"></script>
-  <script src="shared/vendor/OrbitControls.js"></script>
   <script src="shared/vendor/GLTFLoader.js"></script>
   <script src="shared/vendor/DRACOLoader.js"></script>
   <script src="shared/vendor/html-to-image.js"></script>
 
-  <!-- 3D Macintosh shell -->
-  <script src="shared/mac-scene.js"></script>
   <script src="shared/vendor/Reflector.js"></script>
   <script src="shared/vendor/RectAreaLightUniformsLib.js"></script>
   <script src="shared/vendor/CopyShader.js"></script>
@@ -215,50 +176,38 @@ Initializing 3D environment ...
   <script src="shared/penthouse-lightning.js?v=20261022-lightning"></script>
   <script src="shared/penthouse-city.js?v=20261022-frame-budget"></script>
   <script src="shared/penthouse-weather.js?v=20261022-gravity-rain"></script>
-  <script src="shared/penthouse-workstation.js?v=20261022-render-efficiency"></script>
+  <script src="shared/penthouse-workstation.js?v=20261107-nameplate"></script>
   <script src="shared/penthouse-lighting-optimization.js?v=20261022-frame-budget"></script>
   <script src="shared/penthouse-reflection-visibility.js?v=20261022-frame-budget"></script>
   <script src="shared/penthouse-bloom-composite.js?v=20261022-frame-budget"></script>
-  <script src="shared/penthouse-scene.js?v=20261022-frame-budget"></script>
+  <script src="shared/penthouse-look.js?v=20261107-look"></script>
+  <script src="shared/penthouse-scene.js?v=20261107-shared-entrance"></script>
 
   <!-- Per-person content + domain-agnostic engine (UNCHANGED) -->
   <script src="ivan/profile.js"></script>
   <script src="leon/profile.js"></script>
-  <script src="shared/mac.js"></script>
+  <script src="shared/mac.js?v=20261107-ambient"></script>
 
   <script>
     (function () {
       var ld = document.getElementById('loading');
+      var desktopLink = '?as=' + window.ROOM_OWNER.key + '&amp;scene=desktop';
       if (window.ROOM_MODE === 'penthouse') {
-        if (window.THREE && window.THREE.OrbitControls && window.PenthouseCity && window.PenthouseScene) {
+        if (window.THREE && window.PenthouseLook && window.PenthouseCity && window.PenthouseScene) {
           window.PenthouseScene.init();
+        } else if (window.PenthouseArrival) {
+          window.PenthouseArrival.fail('The room could not open. Your desktop is still available.');
         } else {
-          if(window.PenthouseArrival)window.PenthouseArrival.fail('The room could not open. Your desktop is still available.');
-          else { ld.querySelector('.arrival').style.display='none';ld.querySelector('.term').style.display='block';ld.querySelector('.term').innerHTML='The 3D room could not load.<br><a href="?as=leon&amp;scene=desktop">Open the desktop</a>'; }
+          ld.innerHTML = '<p>The 3D room could not load. <a href="' + desktopLink + '">Open the desktop</a></p>';
         }
-      } else if (window.ROOM_MODE === 'desktop') {
+      } else {
         ld.remove();
-        document.getElementById('hud').remove();
-        document.getElementById('vignette').remove();
         var host = document.getElementById('screen-host');
         function fitDesktop() {
           var s = Math.min(innerWidth / 640, innerHeight / 469);
           host.style.cssText = 'opacity:1;z-index:10;transform-origin:top left;transform:translate(' + ((innerWidth - 640*s)/2) + 'px,' + ((innerHeight - 469*s)/2) + 'px) scale(' + s + ')';
         }
         fitDesktop(); window.addEventListener('resize', fitDesktop);
-      } else {
-        var audio = document.createElement('script'); audio.src = 'shared/scene-audio.js'; document.body.appendChild(audio);
-        window.MacScene.init();
-        var hud = document.getElementById('hud'), t0 = Date.now();
-        var iv = setInterval(function () {
-          if (window.__sceneLoaded || Date.now() - t0 > 30000) {
-            clearInterval(iv);
-            setTimeout(function () {
-              ld.style.opacity = '0'; setTimeout(function () { ld.remove(); }, 500);
-              setTimeout(function () { if (hud) hud.style.opacity = '0'; }, 6000);
-            }, 450);
-          }
-        }, 120);
       }
     })();
   </script>

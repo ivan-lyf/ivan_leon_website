@@ -55,6 +55,7 @@ function make({ width = 2550, height = 1440, dpr = 1, coarse = false, cores = 8 
     renderer, scene: new T.Scene(), camera: null,
     composer: null, bloomPass: null, outputPass: null, fxaaPass: null, bloomComposite: null,
     hdrEnabled: true, keyboardOutline: null, inComputer: false, flight: null,
+    quality: { maxRatio: Infinity, bloomScale: 1 },
     clearKeyboardFeedback() {},
     weather: { resize(w, h) { this.lastSize = [w, h]; } }
   });
@@ -140,6 +141,18 @@ for (const test of cases) {
   instance.dispose();
 }
 
+// Reduced quality tiers cap the pixel ratio, but never below native density on 1x.
+for (const [test, maxRatio, expected] of [
+  [{ width: 1920, height: 1080, dpr: 1 }, 1.25, 1.25], [{ width: 1920, height: 1080, dpr: 1 }, 1, 1],
+  [{ width: 1440, height: 900, dpr: 2 }, 1.25, 1.25], [{ width: 1440, height: 900, dpr: 2 }, 1, 1],
+  [{ width: 390, height: 844, dpr: 3, coarse: true }, 1, 1]
+]) {
+  const instance = make(test);
+  instance.sandbox.quality.maxRatio = maxRatio;
+  near(instance.ratio(), expected, 'tier cap ' + maxRatio + ' at ' + test.dpr + 'x');
+  instance.dispose();
+}
+
 for (const cores of [2, 4, 8, 16]) {
   for (const width of [390, 699, 700, 1440, 2550]) {
     const instance = make({ width, height: 900, dpr: 2, cores });
@@ -171,4 +184,4 @@ for (const step of [
   fresh.dispose();
 }
 resizing.dispose();
-console.log('PASS display rendering: 7 density cases; 20 desktop tier cases; 6 resize transitions; Retina path, 6MP budget, HDR targets, FXAA texel sizes and camera projections preserved.');
+console.log('PASS display rendering: 7 density cases; 5 quality-tier caps; 20 desktop tier cases; 6 resize transitions; Retina path, 6MP budget, HDR targets, FXAA texel sizes and camera projections preserved.');

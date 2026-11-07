@@ -21,16 +21,13 @@ Terminal is the first one: a small read-only shell (`ls`, `cd`, `cat`, `pwd`,
 `clear`, `help`) over a virtual filesystem whose `projects/` directory is generated
 from the same `projects` array the windows use, so the two cannot drift apart.
 
-## The classic 3D front end
+## The 3D front end
 
-`index.html` renders the live site onto a 3D Macintosh built in `shared/mac-scene.js`
-(Three.js, vendored locally). `html-to-image` copies the on-screen DOM to a texture
-on the curved glass, and clicks are mapped back onto it. Drag to orbit, scroll in a
-little to enter — the camera swings around to face the screen head-on and glides in,
-then the screen scales up so you can use it directly. Press Esc to exit.
+`index.html` opens both owners in the same sky penthouse (below). `html-to-image`
+copies the live Mac OS desktop to a texture on the room's monitor; using the computer
+scales the real desktop over it so you can interact directly. Press Esc to return.
 
-To run the plain 2D version instead, point a page at the Mac OS markup and the three
-scripts (`ivan/profile.js`, `leon/profile.js`, `shared/mac.js`) without the scene.
+For the plain 2D version, add `?scene=desktop`.
 
 ## Two domains, one codebase
 
@@ -53,9 +50,9 @@ Add `?as=leon` or `?as=ivan` to force a side without changing the hostname. This
 useful for editing one person's page while working on the other's machine.
 
 
-## Leon's sky penthouse
+## The sky penthouse
 
-Leon enters an original, sparse penthouse through `?as=leon` (also selected automatically on `leonmeng.xyz`). Ivan's side opens its classic room. The profiles and desktop content remain shared as before.
+Both owners enter the same original, sparse penthouse and city view. The owner (from `?as=` or the hostname) sets the monitor nameplate, the screen placeholder and the desktop shown on the computer; everything else is shared. The earlier classic Macintosh room was retired on 2026-11-07.
 
 Run from the repository root:
 
@@ -63,17 +60,25 @@ Run from the repository root:
 python3 -m http.server 8000 --bind 127.0.0.1
 ```
 
-Open http://localhost:8000/?as=leon. No build or package installation is required for the preview; the runtime libraries and scene assets are local.
+Open http://localhost:8000/?as=leon or http://localhost:8000/?as=ivan. No build or package installation is required for the preview; the runtime libraries and scene assets are local.
 
-- Drag to look around; scroll or pinch to move closer.
+- Drag to look around: the view turns in place, with soft edges that spring back. Scroll or pinch to walk forward and back; walking stops at the walls and glass. Arrow keys also look around.
+- First visit: a short card explains drag / scroll / the computer, then a small hint chip stays in the corner. A label above the monitor stays until the computer is first used. Press `?` for every control.
 - `1`, `2`, `3`: room, desk, city positions.
 - `C`: use the computer; `Esc`: return to the room.
 - `L`: ceiling LEDs. `R`: reset view. The scene stays at night.
 - The glass, computer, mouse, and ceiling diffusers can also be clicked.
 - Click or tap the keyboard (or press `K`) for silent key movement. Keyboard hover has no white outline or clicking sound.
 - Motion can be paused; reduced-motion preferences are respected.
-- Plain desktop fallback: `?as=leon&scene=desktop`.
-- Original room comparison: `?as=leon&scene=classic`.
+- Plain desktop fallback: `?scene=desktop` (with `?as=` for either owner).
+
+### Performance
+
+- `?perf` shows FPS, frame-time percentiles, draw calls, triangles and the quality tier.
+- Quality starts at the full approved look and steps down one tier after about two seconds of slow frames (p90 above 24 ms on desktop or 45 ms on touch). It never steps back up within a visit. The tiers reduce the floor-reflection size and update rate, then the wet-glass capture and bloom resolution, and finally the pixel ratio. `?quality=0..3` pins a tier for comparison.
+- On reduced tiers, the floor mirror reuses its previous capture on alternate frames while the camera holds still. It always re-renders while the camera moves, so it never swims.
+- The live desktop is only rasterised while the monitor is large enough to read (or right before you use the computer), and it runs in idle time. The desktop's wandering critters and pop-up notes pause while you're in the room.
+- Hover ray tests run at most once per frame, against the room only.
 
 Computer entry uses a continuous camera zoom with the live desktop aligned to the monitor during the handoff. Esc or Back reverses the transition to the saved view; reduced-motion mode skips the camera travel.
 
@@ -196,14 +201,15 @@ Run these dependency-free checks with Node.js from the repository root:
 ```sh
 node tests/facade-stability.cjs
 node tests/floor-reflection.cjs
+node tests/look-controls.cjs
 ```
 
-The facade check exercises actual shader expressions with Float32 precision perturbations and overlapping interior shadows. Instance seeds are snapped to a stable value before occupancy hashing; interior attenuation stays nonnegative, while unresolved blinds and room detail are filtered in the shader. The floor check uses the actual room geometry and reflector implementation across 279 camera poses. Both tests include the original failing calculations as controls.
+The facade check exercises actual shader expressions with Float32 precision perturbations and overlapping interior shadows. Instance seeds are snapped to a stable value before occupancy hashing; interior attenuation stays nonnegative, while unresolved blinds and room detail are filtered in the shader. The floor check uses the actual room geometry and reflector implementation across 522 camera poses, including the look controller's full position, yaw and pitch envelope. The look check covers soft limits, wall-bounded walking, release momentum and frame-rate-independent smoothing. Both tests include the original failing calculations as controls.
 
 
 ### Arrival display and banner placement
 
-The penthouse opens with a minimal dark loading screen: a small loading label, genuine percentage, thin continuous progress line and desktop shortcut. Progress follows the room download, city assets, traffic and first rendered view; it never advances on a simulated timer. There is no minimum hold time, and reduced-motion mode skips the brief fade. The desktop link remains available during loading or errors. `shared/penthouse-arrival.js` owns this DOM-only display; classic and plain-desktop modes retain their existing flow. Run `node tests/arrival.cjs` for progress, failure and disposal checks.
+The penthouse opens with a minimal dark loading screen: a small loading label, genuine percentage, thin continuous progress line and desktop shortcut. Progress follows the room download, city assets, traffic and first rendered view; it never advances on a simulated timer. There is no minimum hold time, and reduced-motion mode skips the brief fade. The desktop link remains available during loading or errors. `shared/penthouse-arrival.js` owns this DOM-only display for both owners; the plain-desktop mode skips it. Run `node tests/arrival.cjs` for progress, failure and disposal checks.
 
 The current tenant-banner layout distributes 73 panels across 18 buildings visible from the starting room camera, with at most six panels on any building and four on the smaller unbranded tower left of KUJIRA. Twenty-six animated panels occupy nearer facades, including scrolling, flipping and pulsing art. All 53 supplied designs remain in the full-quality layout. Banners sit higher on the facades; company logos keep their original assets and positions. Repeated artwork is excluded from the same building, neighboring building footprints within 60 city metres, and nearby positions in the room composition. Each sign has a facade-fitted cabinet and two embedded brackets, combined into the existing architectural instance batch. The atlas and two instanced signage draws are unchanged. See `artwork/signage/README.md` for placement details and `tests/signage-layout.cjs` for visibility and clearance checks.
 

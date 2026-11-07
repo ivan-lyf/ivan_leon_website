@@ -118,14 +118,13 @@ assert.equal(panes.filter(p=>p.axis===2).length,6);
 assert.equal(panes.filter(p=>p.axis===0 && p.max[0]<0).length,4);
 assert.equal(panes.filter(p=>p.axis===0 && p.min[0]>0).length,4);
 
-// Read camera limits from production. Disjoint boxes prove that every permitted
-// orbit position (not just sampled poses) remains outside every thin glass solid.
-const cameraMin=[],cameraMax=[];
-for(const axis of ['x','y','z']) {
-  const match=source.match(new RegExp('camera.position.'+axis+'=T.MathUtils.clamp\\(camera.position.'+axis+',([-.\\d]+),([-.\\d]+)\\)'));
-  assert(match,'Read actual '+axis+' camera bounds');
-  cameraMin.push(Number(match[1]));cameraMax.push(Number(match[2]));
-}
+// Read camera limits from the production look controller. Disjoint boxes prove
+// that every permitted position (not just sampled poses) stays outside every thin glass solid.
+const lookSource=fs.readFileSync(path.join(__dirname,'../shared/penthouse-look.js'),'utf8');
+const boundsMatch=lookSource.match(/bounds: \{ min: (\[[^\]]+\]), max: (\[[^\]]+\]) \}/);
+assert(boundsMatch,'Read actual camera bounds');
+const cameraMin=JSON.parse(boundsMatch[1].replace(/(^|[,\[ ])-?\./g,m=>m.replace('.','0.'))),cameraMax=JSON.parse(boundsMatch[2].replace(/(^|[,\[ ])-?\./g,m=>m.replace('.','0.')));
+assert.equal(cameraMin.length,3);assert.equal(cameraMax.length,3);
 const floorMatch=source.match(/floorReflection\.position\.set\(0,([-.\d]+),7\)/);
 assert(floorMatch);
 const floorY=Number(floorMatch[1]);

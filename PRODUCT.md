@@ -6,7 +6,7 @@ brand
 
 ## Users
 
-Visitors exploring Leon Meng’s personal work and interests through a room and its interactive computer. The shared repository also serves Ivan Luo’s separate classic Macintosh scene.
+Visitors exploring Leon Meng’s or Ivan Luo’s personal work and interests through the same penthouse room and its interactive computer; each owner’s domain shows their own desktop.
 
 ## Product Purpose
 

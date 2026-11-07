@@ -1,8 +1,25 @@
-/* Leon's original sky penthouse. Native Three.js; profile/desktop content stays in mac.js. */
+/* The sky penthouse entrance shared by both owners. Native Three.js; profile/desktop content stays in mac.js. */
 (function () {
   'use strict';
   const T = window.THREE;
   const arrival = window.PenthouseArrival;
+  const owner = window.ROOM_OWNER || { key: 'leon', name: 'Leon Meng', short: 'Leon' };
+  // Quality tiers step down only when frames are measurably slow. Tier 0 is the
+  // full approved look; later tiers trade reflection/bloom detail before resolution.
+  const QUALITY_TIERS = [
+    { name: 'full', maxRatio: Infinity, reflection: 1024, reflectionEvery: 1, captureScale: .6, bloomScale: 1 },
+    { name: 'balanced', maxRatio: Infinity, reflection: 768, reflectionEvery: 2, captureScale: .45, bloomScale: 1 },
+    { name: 'light', maxRatio: 1.25, reflection: 512, reflectionEvery: 2, captureScale: .4, bloomScale: .5 },
+    { name: 'minimal', maxRatio: 1, reflection: 512, reflectionEvery: 3, captureScale: .32, bloomScale: .5 }
+  ];
+  const search = new URLSearchParams(location.search);
+  // ?quality=0..3 pins a tier for comparisons; ?perf shows the frame readout.
+  const forcedQuality = search.has('quality') && QUALITY_TIERS[Number(search.get('quality'))] ? Number(search.get('quality')) : null;
+  let qualityTier = forcedQuality ?? 0;
+  const quality = Object.assign({}, QUALITY_TIERS[qualityTier]);
+  const weatherQuality = {};
+  const frameSamples = [];
+  let slowSince = 0, monitorFrom = 0, lastSample = 0, perfPanel = null, perfUpdated = 0;
   const reducedQuery = matchMedia('(prefers-reduced-motion: reduce)');
   let reduced = reducedQuery.matches;
   // Keep desktop quality stable across window sizes and reported CPU counts.
@@ -84,7 +101,7 @@
   function screenMaterial() {
     const canvas=document.createElement('canvas');canvas.width=768;canvas.height=560;
     const ctx=canvas.getContext('2d');ctx.fillStyle='#1e2e29';ctx.fillRect(0,0,768,560);
-    ctx.fillStyle='#b6cdb8';ctx.textAlign='center';ctx.font='34px Monaco,monospace';ctx.fillText('LEON MENG',384,245);
+    ctx.fillStyle='#b6cdb8';ctx.textAlign='center';ctx.font='34px Monaco,monospace';ctx.fillText(owner.name.toUpperCase(),384,245);
     ctx.font='19px Monaco,monospace';ctx.fillText('A space for what comes next.',384,290);
     screenTexture=new T.CanvasTexture(canvas);screenTexture.encoding=T.sRGBEncoding;
     screenTexture.flipY=false;screenTexture.minFilter=T.LinearFilter;
@@ -120,6 +137,55 @@
     scene.add(floorReflection);
     reflectionVisibility=window.PenthouseReflectionVisibility?.attach(T,floorReflection);
   }
+  function gateFloorReflection() {
+    if(!floorReflection)return;
+    // On reduced tiers, reuse the previous mirror capture on alternate frames
+    // while the camera holds still. A moving camera always re-renders, so the
+    // reflection never swims; only the city's own motion updates at a lower rate.
+    const render=floorReflection.onBeforeRender,lastView=new T.Matrix4();let count=0;
+    floorReflection.onBeforeRender=function(_renderer,_scene,viewCamera){
+      if(viewCamera===camera&&quality.reflectionEvery>1){
+        const still=lastView.equals(viewCamera.matrixWorld);lastView.copy(viewCamera.matrixWorld);
+        if(!still)count=0;else if(count++%quality.reflectionEvery)return;
+      }
+      return render.apply(this,arguments);
+    };
+    applyReflectionSize();
+  }
+  function applyReflectionSize() {
+    const size=lite?Math.min(512,quality.reflection):quality.reflection,target=floorReflection?.getRenderTarget();
+    if(target&&target.width!==size)target.setSize(size,size);
+  }
+  function applyQuality() {
+    Object.assign(quality,QUALITY_TIERS[qualityTier]);
+    applyReflectionSize();
+    if(weather){weatherQuality.captureScale=lite?Math.min(.5,quality.captureScale):quality.captureScale;weather.resize(innerWidth,innerHeight);}
+    renderer.setPixelRatio(renderPixelRatio());resizePostprocessing();
+  }
+  // Rolling frame-interval monitor. After a warm-up, two seconds of slow frames
+  // step down one tier. It never steps back up, so quality cannot oscillate.
+  function monitorFrame(now) {
+    if(perfPanel){updatePerfPanel(now);renderer.info.reset();}
+    if(flight||inComputer||document.hidden){frameSamples.length=0;slowSince=0;lastSample=0;return;}
+    if(!monitorFrom)monitorFrom=now+3000;
+    // Very slow frames count (capped), so the slowest machines still step down.
+    // Hidden tabs, flights and the computer reset lastSample, so their gaps never count.
+    if(lastSample)frameSamples.push(Math.min(250,now-lastSample));
+    lastSample=now;if(frameSamples.length>90)frameSamples.shift();
+    if(now<monitorFrom||forcedQuality!==null||qualityTier>=QUALITY_TIERS.length-1||frameSamples.length<12)return;
+    const sorted=frameSamples.slice().sort((a,b)=>a-b),p90=sorted[Math.floor(sorted.length*.9)];
+    if(p90<=(lite?45:24)){slowSince=0;return;}
+    if(!slowSince){slowSince=now;return;}
+    if(now-slowSince<2000)return;
+    qualityTier++;applyQuality();frameSamples.length=0;slowSince=0;monitorFrom=now+1500;
+  }
+  function updatePerfPanel(now) {
+    if(now-perfUpdated<500)return;perfUpdated=now;
+    const sorted=frameSamples.slice().sort((a,b)=>a-b),at=q=>sorted.length?sorted[Math.min(sorted.length-1,Math.floor(sorted.length*q))]:0;
+    const mean=sorted.reduce((a,b)=>a+b,0)/(sorted.length||1);
+    perfPanel.textContent=`${(1000/(mean||1)).toFixed(0)} fps · p50 ${at(.5).toFixed(1)} ms · p95 ${at(.95).toFixed(1)} ms\n`+
+      `tier ${qualityTier} ${quality.name} · ratio ${renderer.getPixelRatio().toFixed(2)} · ${renderer.info.render.calls} calls · ${(renderer.info.render.triangles/1000).toFixed(0)}k tris`;
+  }
   function buildCeilingLights() {
     T.RectAreaLightUniformsLib?.init();
     for(const [x,z] of [[-6.2,-2],[6.2,-2],[-6.2,10.4],[6.2,10.4]]) {
@@ -146,7 +212,7 @@
     const textureLoader=new T.TextureLoader();
     const bounceMaps=await Promise.all(['room','furniture'].map(category=>new Promise((resolve,reject)=>textureLoader.load(`shared/assets/models/penthouse/indirect-${category}.png`,texture=>{texture.flipY=false;texture.encoding=T.LinearEncoding;texture.generateMipmaps=false;texture.minFilter=T.LinearFilter;resolve(texture);},undefined,reject))));
     const model=gltf.scene;roomModel=model;model.name='Blender penthouse';model.scale.setScalar(4);scene.add(model);model.updateMatrixWorld(true);
-    workstation=window.PenthouseWorkstation.create(T,{anisotropy:Math.min(8,renderer.capabilities.getMaxAnisotropy())});
+    workstation=window.PenthouseWorkstation.create(T,{anisotropy:Math.min(8,renderer.capabilities.getMaxAnisotropy()),nameplate:owner.short.toUpperCase()});
     window.PenthouseWorkstation.replaceIn(T,model,workstation);
     model.updateMatrixWorld(true);
     // Establish room depth before shading the city hidden behind opaque floors,
@@ -203,7 +269,7 @@
     presets.computer={position:[center.x,center.y,center.z+3.8],target:center.toArray()};
     modelMetrics={meshes,triangles:Math.round(triangles),dimensionsMeters:{}};
     for(const [kind,bounds] of Object.entries(measured))if(!bounds.isEmpty())modelMetrics.dimensionsMeters[kind]=bounds.getSize(new T.Vector3()).multiplyScalar(.25).toArray().map(v=>Math.round(v*1000)/1000);
-    modelLoaded=true;buildFloorReflection();buildCeilingLights();
+    modelLoaded=true;buildFloorReflection();gateFloorReflection();buildCeilingLights();
     const glow=new T.PointLight(0xb9d8c3,.07,2.5);glow.position.copy(center).add(new T.Vector3(0,0,.3));scene.add(glow);
   }
 
@@ -220,11 +286,12 @@
   }
   function renderPixelRatio() {
     const native=Math.min(devicePixelRatio||1,lite?1.25:1.6);
-    if(lite||native>=1.5)return native;
+    if(lite||native>=1.5)return Math.min(native,quality.maxRatio);
     // Standard-density desktops need extra samples for fine windows and edges.
     // Preserve the Retina path and bound only the additional work to six megapixels.
+    // Slower quality tiers cap this supersampling before anything else is reduced.
     const budgeted=Math.sqrt(6000000/(innerWidth*innerHeight));
-    return Math.max(native,Math.min(1.5,budgeted));
+    return Math.min(Math.max(native,Math.min(1.5,budgeted)),Math.max(1,quality.maxRatio));
   }
   function resizePostprocessing() {
     if(!composer)return;
@@ -232,6 +299,8 @@
     composer.setPixelRatio(ratio);composer.setSize(innerWidth,innerHeight);
     const width=Math.floor(composer.renderTarget1.width),height=Math.floor(composer.renderTarget1.height);
     fxaaPass?.uniforms.resolution.value.set(1/width,1/height);
+    // Lighter tiers blur bloom from a half-size source; the glow stays soft either way.
+    if(bloomPass&&quality.bloomScale<1)bloomPass.setSize(Math.max(1,Math.round(width*quality.bloomScale)),Math.max(1,Math.round(height*quality.bloomScale)));
   }
   function buildPostprocessing() {
     if(!T.EffectComposer||!T.RenderPass||!T.UnrealBloomPass||!T.ShaderPass||!T.CopyShader)return;
@@ -351,7 +420,7 @@
     roomBack.focus({preventScroll:true});
   }
   function clearComputer() {
-    inComputer=false;computerBlend=0;backdropBlend=0;computerAlignment=0;
+    inComputer=false;computerBlend=0;backdropBlend=0;computerAlignment=0;setDesktopAmbient(false);
     root.classList.remove('in-computer','computer-transition');
     screenHost.classList.remove('is-open');screenHost.style.cssText='';
     screenHost.inert=true;screenHost.setAttribute('aria-hidden','true');computerBackdrop.style.opacity='';
@@ -365,7 +434,6 @@
     clearKeyboardFeedback();
     // Flush orbit momentum only while in orbit mode: its four-unit minimum must
     // never push the close-up camera backwards during the screen handoff.
-    if(controls.enabled&&!flight){const damping=controls.enableDamping;controls.enableDamping=false;controls.update();controls.enableDamping=damping;}
     controls.enabled=false;
     flight={start:performance.now(),duration:options.computer==='enter'?1450:options.computer==='exit'?1000:1250,
       from:camera.position.clone(),fromTarget:controls.target.clone(),to:destination.position,target:destination.target,...options};
@@ -376,13 +444,19 @@
     const done=flight;flight=null;
     camera.position.copy(done.to);controls.target.copy(done.target);camera.lookAt(controls.target);
     if(done.computer==='enter'){
-      inComputer=true;controls.enabled=false;root.classList.add('in-computer');root.classList.remove('computer-transition');
+      inComputer=true;controls.enabled=false;setDesktopAmbient(true);root.classList.add('in-computer');root.classList.remove('computer-transition');
       screenHost.classList.add('is-open');screenHost.inert=false;screenHost.setAttribute('aria-hidden','false');layoutComputer();
     }else{
       if(done.computer==='exit'){clearComputer();restoreRoomFocus();}
-      controls.enabled=true;controls.update();
+      controls.enabled=true;controls.setPose(camera.position,controls.target);
     }
     done.after?.();
+  }
+  // Hand the camera to the visitor, stopping any preset flight where it is.
+  function takeOver() {
+    const interrupted=!!flight&&!flight.computer;if(interrupted)flight=null;
+    if(interrupted||!controls.enabled)controls.setPose(camera.position,controls.target);
+    controls.enabled=true;
   }
   function goTo(name,after) {
     if(!ready||!presets[name])return;
@@ -398,8 +472,9 @@
       prepareComputer();selectView('computer');startFlight(computerPose(),{computer:'enter',fromBlend,fromBackdrop,fromAlignment});return;
     }
     lastFocus=document.activeElement;
+    if(!computerUsed){computerUsed=true;remember('penthouse-computer');}
     oldPose={position:camera.position.clone(),target:controls.target.clone(),view:currentView};
-    screenDirty=true;refreshScreen();
+    screenDirty=true;refreshScreen(true);
     selectView('computer');startFlight(computerPose(),{computer:'enter',fromBlend:0,fromBackdrop:0,fromAlignment:0});
     if(!reduced)prepareComputer();else{roomChrome.forEach(el=>el.inert=true);roomBack.focus({preventScroll:true});}
   }
@@ -408,12 +483,12 @@
     const target=destination||oldPose||{...pose('room'),view:'room'};
     const fromBlend=computerBlend,fromBackdrop=backdropBlend,fromAlignment=computerAlignment;
     inComputer=false;root.classList.remove('in-computer');screenHost.classList.remove('is-open');
-    prepareComputer();screenDirty=true;refreshScreen();selectView(target.view);
+    prepareComputer();screenDirty=true;refreshScreen(true);selectView(target.view);
     startFlight(target,{computer:'exit',fromBlend,fromBackdrop,fromAlignment,after});
   }
   function exitComputer(returnToRoom=true) {
     if(!inComputer&&!flight?.computer)return;
-    if(!returnToRoom){flight=null;clearComputer();controls.enabled=true;return;}
+    if(!returnToRoom){flight=null;clearComputer();takeOver();return;}
     leaveComputer();
   }
   function updateComputerFlight(p) {
@@ -444,17 +519,84 @@
   function toggleMotion() {
     moving=!moving;document.getElementById('motion-toggle').setAttribute('aria-pressed',String(moving));document.getElementById('motion-toggle').textContent=moving?'Motion on':'Motion off';
   }
-  function refreshScreen() {
+  // Rasterising the desktop is a long main-thread task. From across the room the
+  // monitor is a few dozen pixels, so only refresh it when it can be read.
+  function screenReadable() {
+    if(!screenBounds||!camera)return true;
+    const center=screenBounds.getCenter(new T.Vector3()).project(camera);
+    if(center.z<-1||center.z>1||Math.abs(center.x)>1.15||Math.abs(center.y)>1.15)return false;
+    return projectedScreenRect().h>=110;
+  }
+  function refreshScreen(force) {
     if(!screenTexture||!screenDirty||refreshing||inComputer||document.hidden||!window.htmlToImage)return;
+    if(!force&&!screenReadable())return;
     refreshing=true;screenDirty=false;
+    if(force)rasterizeScreen();
+    else if(window.requestIdleCallback)requestIdleCallback(rasterizeScreen,{timeout:600});
+    else setTimeout(rasterizeScreen,0);
+  }
+  function rasterizeScreen() {
+    if(disposed){refreshing=false;return;}
     window.htmlToImage.toCanvas(screenElement,{pixelRatio:1.25,backgroundColor:'#000',cacheBust:false,skipFonts:true}).then(c=>{if(disposed)return;const surface=document.createElement('canvas');surface.width=512;surface.height=384;const ctx=surface.getContext('2d');ctx.filter='blur(.8px)';ctx.drawImage(c,0,0,512,384);screenTexture.image=surface;screenTexture.needsUpdate=true;}).catch(()=>{screenDirty=true;}).finally(()=>{refreshing=false;});
   }
   function hit(event) {
     pointer.set(event.clientX/innerWidth*2-1,-event.clientY/innerHeight*2+1);raycaster.setFromCamera(pointer,camera);
-    return raycaster.intersectObjects(scene.children.filter(child=>child!==city.group),true)[0]?.object.userData.hotspot;
+    // Only the room can hold hotspots; skipping rain, mirrors and the city keeps
+    // hover cheap while room surfaces still occlude what is behind them.
+    return roomModel?raycaster.intersectObjects([roomModel],true)[0]?.object.userData.hotspot:null;
   }
+  function remembered(key) { try { return localStorage.getItem(key)==='1'; } catch(_) { return false; } }
+  function remember(key) { try { localStorage.setItem(key,'1'); } catch(_) { /* storage is optional */ } }
+  // First-visit guidance: a short card names the three things the room does, then
+  // a quiet chip keeps the basics in view. Returning visitors only get the chip.
+  const coach=(()=>{
+    const card=document.getElementById('room-coach'),chip=document.getElementById('room-hint');
+    let active=false,timer=0,idleTimer=0;
+    function quietChip() {
+      chip?.classList.remove('visible');clearTimeout(idleTimer);
+      // Bring the reminder back after a long pause, in case the visitor is stuck.
+      idleTimer=setTimeout(()=>{if(!inComputer)chip?.classList.add('visible');},25000);
+    }
+    function dismiss() {
+      if(!active)return;active=false;clearTimeout(timer);remember('penthouse-coach');
+      card.classList.remove('visible');setTimeout(()=>{if(!active)card.hidden=true;},320);
+      chip?.classList.add('visible');
+    }
+    function show() {
+      if(!card)return;
+      if(remembered('penthouse-coach')){chip?.classList.add('visible');return;}
+      active=true;card.hidden=false;requestAnimationFrame(()=>card.classList.add('visible'));
+      timer=setTimeout(dismiss,reduced?14000:10000);
+    }
+    function interacted() { if(active)dismiss();else quietChip(); }
+    cleanups.push(()=>{clearTimeout(timer);clearTimeout(idleTimer);});
+    return {show,dismiss,interacted};
+  })();
+  const computerHint=document.getElementById('computer-hint');
+  let computerUsed=remembered('penthouse-computer'),hintAllowed=false,hintX=-1,hintY=-1,hintShown=false;
+  // A label pinned above the monitor until the visitor first opens the computer.
+  function updateComputerHint() {
+    if(!computerHint)return;
+    let show=hintAllowed&&!computerUsed&&!inComputer&&!flight&&!!screenBounds&&!controls?.isDragging();
+    if(show){
+      const center=screenBounds.getCenter(new T.Vector3()).project(camera);
+      show=center.z<1&&Math.abs(center.x)<.92&&Math.abs(center.y)<.85;
+      if(show){
+        const rect=projectedScreenRect(),x=Math.round(rect.x+rect.w/2),y=Math.round(rect.y);
+        if(x!==hintX||y!==hintY){hintX=x;hintY=y;computerHint.style.transform=`translate(${x}px,${y}px) translate(-50%,calc(-100% - 12px))`;}
+      }
+    }
+    if(show!==hintShown){hintShown=show;computerHint.classList.toggle('visible',show);computerHint.tabIndex=show?0:-1;}
+  }
+  function setDesktopAmbient(on) { window.Mac?.setAmbient?.(on); }
   function wire() {
-    let down=null;const canvas=renderer.domElement,tip=document.getElementById('room-tooltip');
+    let down=null,hoverEvent=null,hoverFrame=0;const canvas=renderer.domElement,tip=document.getElementById('room-tooltip');
+    // Pointer events can arrive several times per frame; ray-test at most once per frame.
+    function queueHover(e) {
+      hoverEvent=e;if(hoverFrame)return;
+      hoverFrame=requestAnimationFrame(()=>{hoverFrame=0;const pending=hoverEvent;hoverEvent=null;if(pending&&!disposed)hoverAt(pending);});
+    }
+    cleanups.push(()=>cancelAnimationFrame(hoverFrame));
     function hoverAt(e) {
       if(e.pointerType==='touch'||down||inComputer||flight){setKeyboardHover(false);tip.classList.remove('visible');return;}
       const h=hit(e);setKeyboardHover(h?.kind==='keyboard');
@@ -465,8 +607,8 @@
     on(canvas,'pointerdown',e=>{
       if(down&&e.pointerId!==down.id){down.moved=true;return;}
       if(e.button!==0||inComputer||flight?.computer){down=null;return;}
-      down={x:e.clientX,y:e.clientY,id:e.pointerId,moved:false};flight=null;controls.enabled=true;
-      clearKeyboardFeedback();tip.classList.remove('visible');
+      down={x:e.clientX,y:e.clientY,id:e.pointerId,moved:false};takeOver();
+      clearKeyboardFeedback();tip.classList.remove('visible');canvas.style.cursor='grabbing';
     });
     on(canvas,'pointerup',e=>{
       if(inComputer||flight?.computer){down=null;return;}
@@ -477,24 +619,29 @@
       hoverAt(e);
     });
     on(canvas,'pointermove',e=>{
-      if(down&&Math.hypot(e.clientX-down.x,e.clientY-down.y)>=5)down.moved=true;
-      hoverAt(e);
+      if(down&&!down.moved&&Math.hypot(e.clientX-down.x,e.clientY-down.y)>=5){down.moved=true;coach.interacted('look');}
+      if(down){if(down.moved)canvas.style.cursor='grabbing';return;}
+      queueHover(e);
     });
     on(canvas,'pointerleave',()=>{down=null;clearKeyboardFeedback();tip.classList.remove('visible');canvas.style.cursor='grab';});
     on(canvas,'pointercancel',()=>{down=null;clearKeyboardFeedback();tip.classList.remove('visible');});
     on(controls,'start',()=>{clearKeyboardFeedback();tip.classList.remove('visible');});
+    on(canvas,'wheel',()=>coach.interacted('walk'),{passive:true});
     on(window,'blur',()=>{down=null;clearKeyboardFeedback();tip.classList.remove('visible');});
     document.querySelectorAll('[data-view]').forEach(b=>on(b,'click',()=>goTo(b.dataset.view)));
     on(document.getElementById('enter-computer'),'click',enterComputer);on(document.getElementById('room-back'),'click',()=>exitComputer());
     on(document.getElementById('ceiling-toggle'),'click',toggleCeiling);on(document.getElementById('motion-toggle'),'click',toggleMotion);
-    const help=document.getElementById('room-help');on(document.getElementById('help-toggle'),'click',()=>help.showModal());on(document.getElementById('help-close'),'click',()=>help.close());
+    const help=document.getElementById('room-help');const openHelp=()=>{if(!help.open){coach.dismiss();help.showModal();}};on(document.getElementById('help-toggle'),'click',openHelp);on(document.getElementById('help-close'),'click',()=>help.close());
+    on(document.getElementById('coach-close'),'click',()=>coach.dismiss());on(document.getElementById('coach-help'),'click',openHelp);
+    on(document.getElementById('computer-hint'),'click',enterComputer);
     on(window,'keydown',e=>{
       if(help.open)return;
       if(e.key==='Escape'){if(e.defaultPrevented)return;if(inComputer||flight?.computer)exitComputer();else goTo('room');return;}
       if(inComputer||flight?.computer||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||e.metaKey||e.ctrlKey||e.altKey)return;
+      if(e.key==='?'){e.preventDefault();openHelp();return;}
       const key=e.key.toLowerCase();const actions={c:enterComputer,k:()=>{if(!e.repeat)pressKeyboard();},'1':()=>goTo('room'),'2':()=>goTo('desk'),'3':()=>goTo('city'),l:toggleCeiling,r:()=>goTo('room')};
       if(actions[key]){e.preventDefault();actions[key]();}
-      if(key.startsWith('arrow')){e.preventDefault();clearKeyboardFeedback();flight=null;controls.enabled=true;const off=camera.position.clone().sub(controls.target),s=new T.Spherical().setFromVector3(off);s.theta+=key==='arrowleft'?.07:key==='arrowright'?-.07:0;s.phi+=key==='arrowup'?-.04:key==='arrowdown'?.04:0;s.phi=T.MathUtils.clamp(s.phi,controls.minPolarAngle,controls.maxPolarAngle);s.theta=T.MathUtils.clamp(s.theta,controls.minAzimuthAngle,controls.maxAzimuthAngle);camera.position.setFromSpherical(s).add(controls.target);controls.update();}
+      if(key.startsWith('arrow')){e.preventDefault();clearKeyboardFeedback();takeOver();controls.nudge(key==='arrowleft'?.09:key==='arrowright'?-.09:0,key==='arrowup'?.06:key==='arrowdown'?-.06:0);}
     });
     const observer=new MutationObserver(()=>{screenDirty=true;});observer.observe(screenElement,{childList:true,subtree:true,attributes:true,characterData:true});cleanups.push(()=>observer.disconnect());
     textureTimer=setInterval(refreshScreen,1800);
@@ -505,7 +652,7 @@
   }
   function showError(message) {
     if(arrival){arrival.fail(message);return;}
-    const loading=document.getElementById('loading');loading.style.opacity='1';loading.style.display='flex';loading.innerHTML='';const panel=document.createElement('div');panel.className='term error-actions';panel.style.display='block';const text=document.createElement('p');text.textContent=message;panel.append(text);const link=document.createElement('a');link.href='?as=leon&scene=desktop';link.textContent='Open the accessible desktop';panel.append(link);loading.append(panel);
+    const loading=document.getElementById('loading');loading.style.opacity='1';loading.style.display='flex';loading.innerHTML='';const panel=document.createElement('div');panel.className='term error-actions';panel.style.display='block';const text=document.createElement('p');text.textContent=message;panel.append(text);const link=document.createElement('a');link.href='?as='+owner.key+'&scene=desktop';link.textContent='Open the accessible desktop';panel.append(link);loading.append(panel);
   }
   function updateStormLighting(strength) {
     // Reuse the existing fixed-direction light and its cached shadows. The floor
@@ -539,11 +686,14 @@
       if(flight.computer)updateComputerFlight(p);
       if(p===1)finishFlight();
     }
-    if(!flight&&!inComputer){controls.update();camera.position.x=T.MathUtils.clamp(camera.position.x,-13.3,13.3);camera.position.y=T.MathUtils.clamp(camera.position.y,1.2,12.0);camera.position.z=T.MathUtils.clamp(camera.position.z,-6.8,20.5);}workstation?.update(elapsed);city.update(elapsed,moving&&!reduced);updateStormLighting(city.getLightningIntensity());const hologramLight=city.getHologramLight();weather?.setHologramLight(hologramLight?{...hologramLight,strength:hologramLight.intensity}:null);weather?.update(elapsed);if(probeDirty)refreshRoomProbe();weather?.capture(renderer,scene,camera,[floorReflection]);if(composer)composer.render(dt);else renderer.render(scene,camera);
+    if(!flight&&!inComputer)controls.update(dt);workstation?.update(elapsed);city.update(elapsed,moving&&!reduced);updateStormLighting(city.getLightningIntensity());const hologramLight=city.getHologramLight();weather?.setHologramLight(hologramLight?{...hologramLight,strength:hologramLight.intensity}:null);weather?.update(elapsed);if(probeDirty)refreshRoomProbe();weather?.capture(renderer,scene,camera,[floorReflection]);if(composer)composer.render(dt);else renderer.render(scene,camera);
+    updateComputerHint();monitorFrame(now);
     return true;
   }
   async function init() {
     try {
+      // The desktop's wandering critters and notes only matter on the computer.
+      setDesktopAmbient(false);
       window.PenthouseLightingOptimization?.install(T);
       scene=new T.Scene();scene.fog=new T.FogExp2(0x9b7150,.0042);
       // The composer renders scene edges into an ordinary HDR target and applies
@@ -553,9 +703,9 @@
       renderer=new T.WebGLRenderer({antialias:!hasPostFXAA,alpha:false,powerPreference:'high-performance'});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(renderPixelRatio());hdrEnabled=!!(T.EffectComposer&&T.RenderPass&&T.UnrealBloomPass&&T.ShaderPass&&T.CopyShader&&renderer.capabilities.isWebGL2&&renderer.extensions.has('EXT_color_buffer_float'));
       // Keep this stable before any material compiles: Three r128 does not always
       // invalidate its program cache when only the renderer tone-mapping mode changes.
-      renderer.outputEncoding=hdrEnabled?T.LinearEncoding:T.sRGBEncoding;renderer.toneMapping=hdrEnabled?T.NoToneMapping:T.ACESFilmicToneMapping;renderer.toneMappingExposure=.97;renderer.shadowMap.enabled=!lite;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.domElement.id='gl';renderer.domElement.setAttribute('aria-label','Leon’s penthouse overlooking a futuristic city. Use the room controls or keyboard shortcuts to explore.');renderer.domElement.setAttribute('role','img');document.body.append(renderer.domElement);
+      renderer.outputEncoding=hdrEnabled?T.LinearEncoding:T.sRGBEncoding;renderer.toneMapping=hdrEnabled?T.NoToneMapping:T.ACESFilmicToneMapping;renderer.toneMappingExposure=.97;renderer.shadowMap.enabled=!lite;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.domElement.id='gl';renderer.domElement.setAttribute('aria-label',owner.short+'’s penthouse overlooking a futuristic city. Use the room controls or keyboard shortcuts to explore.');renderer.domElement.setAttribute('role','img');document.body.append(renderer.domElement);
       camera=new T.PerspectiveCamera(innerWidth<700?58:52,innerWidth/innerHeight,.1,4000);const start=pose('room');camera.position.copy(start.position);
-      controls=new T.OrbitControls(camera,renderer.domElement);controls.target.copy(start.target);controls.enableDamping=true;controls.dampingFactor=.08;controls.enablePan=false;controls.minDistance=4;controls.maxDistance=32;controls.minPolarAngle=Math.PI*.34;controls.maxPolarAngle=Math.PI*.53;controls.minAzimuthAngle=-.65;controls.maxAzimuthAngle=.85;controls.rotateSpeed=.48;controls.zoomSpeed=.6;controls.update();
+      controls=window.PenthouseLook.create(T,camera,renderer.domElement,{target:start.target});
       arrival?.stage('Opening the room and city…');arrival?.progress('city',.05);
       environment();const lighting=await fetch('shared/assets/city-lighting.json').then(r=>{if(!r.ok)throw new Error('City lighting could not load');return r.json();});
       city=window.PenthouseCity.create(T,{lite,reducedMotion:reduced,lighting});city.group.scale.setScalar(4);scene.add(city.group);
@@ -565,11 +715,13 @@
       if(disposed){[traffic,hologram].forEach(g=>g.scene.traverse(o=>{o.geometry?.dispose();if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose());}));return;}
       city.setCarModel(traffic.scene);city.setWhaleModel(hologram);
       arrival?.progress('traffic',1);arrival?.stage('Opening the view…');arrival?.progress('view',.1);
-      weather=window.PenthouseWeather?.create(T,{lite});if(weather){scene.add(weather.group);weather.resize(innerWidth,innerHeight);}
+      weatherQuality.captureScale=lite?Math.min(.5,quality.captureScale):quality.captureScale;
+      weather=window.PenthouseWeather?.create(T,{lite,quality:weatherQuality});if(weather){scene.add(weather.group);weather.resize(innerWidth,innerHeight);}
       buildPostprocessing();setMood();
       // Optional review view keeps exposure fixed while isolating aerial perspective.
       if(new URLSearchParams(location.search).get('review')==='clear'){scene.fog.density=0;city.setAtmosphere(false);}
       wire();
+      if(search.has('perf')){perfPanel=document.createElement('pre');perfPanel.id='perf-panel';perfPanel.className='room-ui';document.body.append(perfPanel);renderer.info.autoReset=false;}
       screenHost.inert=true;screenHost.setAttribute('aria-hidden','true');document.getElementById('motion-toggle').textContent=moving?'Motion on':'Motion off';document.getElementById('motion-toggle').setAttribute('aria-pressed',String(moving));
       ready=true;window.__sceneLoaded=true;
       if(composer)composer.render(0);else renderer.render(scene,camera);
@@ -588,6 +740,7 @@
             cancelAnimationFrame(frame);frame=requestAnimationFrame(firstFrame);return;
           }
           if(arrival)arrival.finish();else{const loading=document.getElementById('loading');loading.style.display='none';}
+          hintAllowed=true;coach.show();
         } catch(error) {
           cancelAnimationFrame(frame);frame=0;
           console.error('Penthouse scene failed',error);
@@ -607,5 +760,5 @@
     controls?.dispose();city?.dispose();weather?.dispose();bloomPass?.dispose();outputPass?.material.dispose();fxaaPass?.material.dispose();composer?.renderTarget1.dispose();composer?.renderTarget2.dispose();probeTarget?.dispose();probeMap?.dispose();floorReflection?.getRenderTarget().dispose();
     const geometries=new Set(),materials=new Set(),textures=new Set();scene?.traverse(o=>{if(o.geometry)geometries.add(o.geometry);[].concat(o.material||[]).forEach(m=>{materials.add(m);for(const value of Object.values(m)){if(value?.isTexture)textures.add(value);}});});geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());renderer?.dispose();
   }
-  window.PenthouseScene={init,enterComputer,exitComputer,goTo,setMood,dispose,getStatus:()=>({ready,modelLoaded,modelMetrics,workstation:workstation?.getStats(),city:city?.getStats?.(),weather:!!weather,mood,lightOn,moving,view:currentView,inComputer,transition:flight?.computer||null,lite,rendering:{pixelRatio:renderer?.getPixelRatio(),hdr:hdrEnabled},drawCalls:renderer?.info.render.calls})};
+  window.PenthouseScene={init,enterComputer,exitComputer,goTo,setMood,dispose,getStatus:()=>({ready,modelLoaded,modelMetrics,workstation:workstation?.getStats(),city:city?.getStats?.(),weather:!!weather,mood,lightOn,moving,view:currentView,inComputer,transition:flight?.computer||null,lite,rendering:{pixelRatio:renderer?.getPixelRatio(),hdr:hdrEnabled,qualityTier,quality:quality.name,forced:forcedQuality!==null,monitor:{samples:frameSamples.length,slowFor:slowSince?Math.round(performance.now()-slowSince):0,warmup:Math.max(0,Math.round(monitorFrom-performance.now()))}},look:controls?.getState?.(),drawCalls:renderer?.info.render.calls})};
 })();
