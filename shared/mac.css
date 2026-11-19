@@ -1686,6 +1686,7 @@ img { image-rendering: pixelated; }
 .term .term-user { font-weight: bold; }
 
 .term .term-inputline {
+  position: relative;
   display: flex;
   align-items: flex-start;
   margin: 0;
@@ -1713,7 +1714,7 @@ img { image-rendering: pixelated; }
 /* the real input: present for keyboard/IME, never seen */
 .term .term-hidden-input {
   position: absolute;
-  left: -9999px;
+  left: 0;
   top: 0;
   width: 1px;
   height: 1px;

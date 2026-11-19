@@ -558,9 +558,11 @@
 
     lineEl.appendChild(promptEl);
     lineEl.appendChild(typedEl);
+    // the input lives on the prompt line: browsers scroll a focused input into
+    // view on every keystroke, so it must sit where the user is typing
+    lineEl.appendChild(input);
     root.appendChild(out);
     root.appendChild(lineEl);
-    root.appendChild(input);
 
     const state = { cwd: TERM_HOME.slice() };
     const history = [];
@@ -651,7 +653,7 @@
       const sel = doc.defaultView.getSelection && doc.defaultView.getSelection().toString();
       if (sel && sel.trim()) return;
       e.preventDefault();
-      input.focus();
+      input.focus({ preventScroll: true });
     });
 
     print("Macintosh Terminal 1.0");
